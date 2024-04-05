@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "lexis/LexicalAnalyzer.h"
+
 using std::string, std::vector, std::cout, std::endl;
 
 enum class SyntaxNodeType { VARIABLE, ASTERISK, FUNCTION, ASSIGNMENT };
@@ -25,7 +27,7 @@ struct SyntaxNode {
 
 class SyntaxTreeBuilder {
  public:
-  SyntaxNode build(const string& program) {
+  static SyntaxNode build(const vector<Token>& program) {
 
   }
 };

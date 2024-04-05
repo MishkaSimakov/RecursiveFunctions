@@ -21,6 +21,32 @@
 3. В программе можно использовать натуральные числа, при этом `n`, где n - натуральное,
     эквивалентно композиции n функций successor, применённой к функции 0.
 
+## Грамматика
+```
+program := statement ';' program
+         | EMPTY
+statement := function_name '(' arguments_list ')' '=' function_name '(' composition_arguments ')'
+
+arguments_list = EMPTY | nonempty_arguments_list
+nonempty_arguments_list := variable_name ',' nonempty_arguments_list
+                         | variable_name '+' '1'
+                         | '0'
+                         | variable_name
+                
+composition_arguments = EMPTY | nonempty_composition_arguments
+nonempty_composition_arguments := function_name '(' nonempty_composition_arguments ')' ',' nonempty_composition_arguments
+                                | variable_name ',' nonempty_composition_arguments
+                                | INTEGER ',' nonempty_composition_arguments
+                                | '*' ',' nonempty_composition_arguments
+                                | function_name '(' nonempty_composition_arguments ')'
+                                | variable_name
+                                | INTEGER
+                                | '*'
+                       
+// string is sequence containing only [a-z], [A-Z] and underscore symbols
+// function_name and variable_name are string
+```
+
 ## Идея работы интерпретатора
 Перед запуском программы будет выполняться препроцессинг кода.
 Он будет предельно прост:
