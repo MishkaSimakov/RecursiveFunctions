@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "lexis/LexicalAnalyzer.h"
 #include "preprocessor/Preprocessor.h"
 
 using namespace std;
@@ -15,40 +16,8 @@ using namespace std;
 constexpr bool kShowDebugTrace = false;
 size_t current_recursion_depth = 1;
 
-string Preprocess(unordered_map<string, string>& files) {
-  if (files.size() != 1) {
-    throw std::runtime_error("multiple files is not supported yet");
-  }
-
-  string file = files.begin()->second;
-  string without_preprocessing_directives;
-
-  ifstream is(file);
-
-  string buffer;
-  while (std::getline(is, buffer)) {
-    if (buffer.starts_with("#")) {
-      continue;
-    }
-
-    without_preprocessing_directives += buffer;
-  }
-
-  string final;
-
-  for (auto symbol : without_preprocessing_directives) {
-    if (std::isspace(symbol) == 0) {
-      final += symbol;
-    }
-  }
-
-  return final;
-}
-
-vector<vector<string>> GetDefinitions(const string& filename) {
-  unordered_map<string, string> files = {{"arithmetics", filename}};
-  string file_contents = Preprocess(files);
-  stringstream is(file_contents);
+vector<vector<string>> GetDefinitions(const string& program) {
+  stringstream is(program);
 
   vector<vector<string>> result;
   string buffer;
@@ -458,5 +427,12 @@ int main() {
 
   preprocessor.set_main("secret");
 
-  std::cout << preprocessor.process() << std::endl;
+  string program = preprocessor.process();
+  std::cout << program << std::endl;
+
+  auto tokens = LexicalAnalyzer::get_tokens(program);
+
+  for (auto& token : tokens) {
+    cout << static_cast<size_t>(token.type) << " " << token.value << endl;
+  }
 }
