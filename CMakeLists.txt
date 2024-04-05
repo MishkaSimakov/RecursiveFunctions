@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_FLAGS "-fsanitize=address")
 
-add_executable(RecursiveFunctions main.cpp)
+add_executable(RecursiveFunctions main.cpp
+        src/preprocessor/Preprocessor.h)
 
 target_include_directories(RecursiveFunctions PUBLIC src)

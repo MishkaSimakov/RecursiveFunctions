@@ -1,12 +1,13 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <ranges>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include "preprocessor/Preprocessor.h"
 
 using namespace std;
 
@@ -354,94 +355,108 @@ void AddSystemFunctions(
   program["successor"] = {successor, call_node};
 }
 
+// int main() {
+//   string filename =
+//       "/Users/mihailsimakov/Documents/Programs/CLionProjects/"
+//       "RecursiveFunctions/tests/arithmetics.rec";
+//
+//   auto lines = GetDefinitions(filename);
+//
+//   unordered_map<string, pair<FunctionDefinition, Callable*>> program;
+//
+//   AddSystemFunctions(program);
+//
+//   for (const auto& line : lines) {
+//     auto [name, value] = ParseFunction(line);
+//
+//     string function_name = name->value;
+//
+//     if (!IsRecursive(name)) {
+//       if (program.contains(function_name)) {
+//         throw std::runtime_error("redefinition!");
+//       }
+//
+//       program.emplace(function_name,
+//                       std::move(GetFunction(program, name, value)));
+//     } else {
+//       bool is_first = name->children.back()->value == "0";
+//
+//       if (is_first == program.contains(name->value)) {
+//         throw std::runtime_error(
+//             "Recursive function initial case must precede recursive case.");
+//       }
+//
+//       size_t arguments_count = name->children.size();
+//       if (is_first) {
+//         RecursiveCallable* callable = new RecursiveCallable;
+//         unordered_set<string> variables;
+//         callable->initial = GetFunctionCallNode(program, value, variables);
+//
+//         FunctionDefinition definition;
+//         definition.name = name->value;
+//         definition.arguments.resize(arguments_count);
+//
+//         for (size_t i = 0; i < arguments_count - 1; ++i) {
+//           string argument_name = name->children[i]->value;
+//           definition.arguments[i] = {argument_name,
+//                                      variables.contains(argument_name)};
+//         }
+//
+//         definition.arguments[arguments_count - 1] = {"", true};
+//
+//         program[name->value] = {definition, callable};
+//         continue;
+//       }
+//
+//       auto& function = program[name->value];
+//
+//       RecursiveCallable* callable =
+//           static_cast<RecursiveCallable*>(function.second);
+//
+//       callable->self_definition = &function.first;
+//
+//       unordered_set<string> variables;
+//       callable->recursive = GetFunctionCallNode(program, value, variables);
+//
+//       for (size_t i = 0; i < arguments_count; ++i) {
+//         string argument_name = name->children[i]->value;
+//         function.first.arguments[i] = {argument_name,
+//                                        function.first.arguments[i].second ||
+//                                            variables.contains(argument_name)};
+//       }
+//
+//       auto& back = function.first.arguments.back().first;
+//       back.pop_back();
+//       back.pop_back();
+//
+//       callable->recursive_argument_used =
+//           variables.contains(function.first.name);
+//     }
+//   }
+//
+//   cout << "prepared! Now executing..." << endl;
+//
+//   cout << "is 37 prime?" << endl;
+//
+//   Callable& prime_checker = *program["is_prime"].second;
+//   unordered_map<string, int> arguments = {{"number", 5}};
+//
+//   cout << (prime_checker(arguments) == 1 ? "YES, it's prime!"
+//                                          : "NO, some cringe has happened");
+//
+//   return 0;
+// }
+
 int main() {
-  string filename =
+  Preprocessor preprocessor;
+  std::filesystem::path base_path =
       "/Users/mihailsimakov/Documents/Programs/CLionProjects/"
-      "RecursiveFunctions/tests/arithmetics.rec";
+      "RecursiveFunctions/tests";
 
-  auto lines = GetDefinitions(filename);
+  preprocessor.add_file("arithmetics", base_path / "arithmetics.rec");
+  preprocessor.add_file("secret", base_path / "secret.rec");
 
-  unordered_map<string, pair<FunctionDefinition, Callable*>> program;
+  preprocessor.set_main("secret");
 
-  AddSystemFunctions(program);
-
-  for (const auto& line : lines) {
-    auto [name, value] = ParseFunction(line);
-
-    string function_name = name->value;
-
-    if (!IsRecursive(name)) {
-      if (program.contains(function_name)) {
-        throw std::runtime_error("redefinition!");
-      }
-
-      program.emplace(function_name,
-                      std::move(GetFunction(program, name, value)));
-    } else {
-      bool is_first = name->children.back()->value == "0";
-
-      if (is_first == program.contains(name->value)) {
-        throw std::runtime_error(
-            "Recursive function initial case must precede recursive case.");
-      }
-
-      size_t arguments_count = name->children.size();
-      if (is_first) {
-        RecursiveCallable* callable = new RecursiveCallable;
-        unordered_set<string> variables;
-        callable->initial = GetFunctionCallNode(program, value, variables);
-
-        FunctionDefinition definition;
-        definition.name = name->value;
-        definition.arguments.resize(arguments_count);
-
-        for (size_t i = 0; i < arguments_count - 1; ++i) {
-          string argument_name = name->children[i]->value;
-          definition.arguments[i] = {argument_name,
-                                     variables.contains(argument_name)};
-        }
-
-        definition.arguments[arguments_count - 1] = {"", true};
-
-        program[name->value] = {definition, callable};
-        continue;
-      }
-
-      auto& function = program[name->value];
-
-      RecursiveCallable* callable =
-          static_cast<RecursiveCallable*>(function.second);
-
-      callable->self_definition = &function.first;
-
-      unordered_set<string> variables;
-      callable->recursive = GetFunctionCallNode(program, value, variables);
-
-      for (size_t i = 0; i < arguments_count; ++i) {
-        string argument_name = name->children[i]->value;
-        function.first.arguments[i] = {argument_name,
-                                       function.first.arguments[i].second ||
-                                           variables.contains(argument_name)};
-      }
-
-      auto& back = function.first.arguments.back().first;
-      back.pop_back();
-      back.pop_back();
-
-      callable->recursive_argument_used =
-          variables.contains(function.first.name);
-    }
-  }
-
-  cout << "prepared! Now executing..." << endl;
-
-  cout << "is 37 prime?" << endl;
-
-  Callable& prime_checker = *program["is_prime"].second;
-  unordered_map<string, int> arguments = {{"number", 37}};
-
-  cout << (prime_checker(arguments) == 1 ? "YES, it's prime!"
-                                         : "NO, some cringe has happened");
-
-  return 0;
+  std::cout << preprocessor.process() << std::endl;
 }
