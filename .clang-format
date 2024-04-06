@@ -3,4 +3,3 @@ BasedOnStyle: Google
 DerivePointerAlignment: false
 PointerAlignment: Left
 AlignOperands: true
-AlignConsecutiveAssignments: true

@@ -9,6 +9,7 @@
 
 #include "lexis/LexicalAnalyzer.h"
 #include "preprocessor/Preprocessor.h"
+#include "syntax/SyntaxTreeBuilder.h"
 
 using namespace std;
 
@@ -416,17 +417,15 @@ void AddSystemFunctions(
 //   return 0;
 // }
 
-#include "syntax/SyntaxTreeBuilder.h"
-
 int main() {
   Preprocessor preprocessor;
   std::filesystem::path base_path =
       "/Users/mihailsimakov/Documents/Programs/CLionProjects/"
       "RecursiveFunctions/tests";
 
-  preprocessor.add_file("arithmetics", base_path / "arithmetics.rec");
+  preprocessor.add_file("sum", base_path / "sum.rec");
 
-  preprocessor.set_main("arithmetics");
+  preprocessor.set_main("sum");
 
   string program = preprocessor.process();
   std::cout << program << std::endl;

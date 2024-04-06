@@ -9,6 +9,7 @@ add_executable(RecursiveFunctions main.cpp
         src/preprocessor/Preprocessor.h
         src/syntax/SyntaxTreeBuilder.h
         src/lexis/LexicalAnalyzer.h
-        src/log/Logger.h)
+        src/log/Logger.h
+        src/syntax/SyntaxConsumers.h)
 
 target_include_directories(RecursiveFunctions PUBLIC src)
