@@ -8,6 +8,7 @@ set(CMAKE_CXX_FLAGS "-fsanitize=address")
 add_executable(RecursiveFunctions main.cpp
         src/preprocessor/Preprocessor.h
         src/syntax/SyntaxTreeBuilder.h
-        src/lexis/LexicalAnalyzer.h)
+        src/lexis/LexicalAnalyzer.h
+        src/log/Logger.h)
 
 target_include_directories(RecursiveFunctions PUBLIC src)

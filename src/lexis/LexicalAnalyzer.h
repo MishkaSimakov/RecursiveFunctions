@@ -27,6 +27,31 @@ struct Token {
   string value;
 };
 
+inline string GetTokenDescription(const Token& token) {
+  switch (token.type) {
+    case TokenType::IDENTIFIER:
+      return "identifier(" + token.value + ")";
+    case TokenType::CONSTANT:
+      return "constant(" + token.value + ")";
+    case TokenType::LPAREN:
+      return "left parenthesis";
+    case TokenType::RPAREN:
+      return "right parenthesis";
+    case TokenType::OPERATOR:
+      return "operator(" + token.value + ")";
+    case TokenType::SEMICOLON:
+      return "semicolon";
+    case TokenType::ASTERISK:
+      return "asterisk";
+    case TokenType::COMMA:
+      return "comma";
+    case TokenType::ERROR:
+      return "error";
+    default:
+      return "something strange";
+  }
+}
+
 class LexicalAnalyzer {
   static TokenType get_symbol_affiliation(char symbol) {
     if (std::isdigit(symbol) != 0) {
@@ -91,8 +116,8 @@ class LexicalAnalyzer {
           result.push_back(current_token);
         }
 
-        is_first = false;
-        current_token.type = affiliation;
+        is_first            = false;
+        current_token.type  = affiliation;
         current_token.value = symbol;
         continue;
       }

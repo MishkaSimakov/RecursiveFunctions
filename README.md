@@ -25,26 +25,29 @@
 ```
 program := statement ';' program
          | EMPTY
-statement := function_name '(' arguments_list ')' '=' function_name '(' composition_arguments ')'
+statement := FUNCTION_NAME '(' arguments_list ')' '=' 
+        (FUNCTION_NAME '(' composition_arguments ')' 
+            | INTEGER)
 
 arguments_list = EMPTY | nonempty_arguments_list
-nonempty_arguments_list := variable_name ',' nonempty_arguments_list
-                         | variable_name '+' '1'
+nonempty_arguments_list := VARIABLE_NAME ',' nonempty_arguments_list
+                         | VARIABLE_NAME '+' '1'
                          | '0'
-                         | variable_name
+                         | VARIABLE_NAME
                 
 composition_arguments = EMPTY | nonempty_composition_arguments
-nonempty_composition_arguments := function_name '(' nonempty_composition_arguments ')' ',' nonempty_composition_arguments
-                                | variable_name ',' nonempty_composition_arguments
+nonempty_composition_arguments := FUNCTION_NAME '(' nonempty_composition_arguments ')' ',' nonempty_composition_arguments
+                                | VARIABLE_NAME ',' nonempty_composition_arguments
                                 | INTEGER ',' nonempty_composition_arguments
                                 | '*' ',' nonempty_composition_arguments
-                                | function_name '(' nonempty_composition_arguments ')'
-                                | variable_name
+                                | FUNCTION_NAME '(' nonempty_composition_arguments ')'
+                                | VARIABLE_NAME
                                 | INTEGER
                                 | '*'
                        
 // string is sequence containing only [a-z], [A-Z] and underscore symbols
-// function_name and variable_name are string
+// FUNCTION_NAME and VARIABLE_NAME are strings
+// FUNCTION_NAME, VARIABLE_NAME, INTEGER, EMPTY and all symbols in '' are terminating characters.
 ```
 
 ## Идея работы интерпретатора
