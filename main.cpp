@@ -9,7 +9,8 @@
 
 #include "lexis/LexicalAnalyzer.h"
 #include "preprocessor/Preprocessor.h"
-#include "syntax/SyntaxTreeBuilder.h"
+#include "syntax/RecursiveFunctionsSyntax.h"
+#include "syntax/buffalo/SyntaxTreeBuilder.h"
 
 using namespace std;
 
@@ -74,7 +75,7 @@ pair<Node*, Node*> ParseFunction(const vector<string>& definition) {
     }
 
     if (token == "(") {
-      current_node       = current_node->children.back();
+      current_node = current_node->children.back();
       current_node->type = NodeType::FunctionCall;
       continue;
     }
@@ -88,7 +89,7 @@ pair<Node*, Node*> ParseFunction(const vector<string>& definition) {
       continue;
     }
 
-    Node* node  = new Node;
+    Node* node = new Node;
     node->value = token;
     current_node->children.push_back(node);
     node->parent = current_node;
@@ -96,10 +97,10 @@ pair<Node*, Node*> ParseFunction(const vector<string>& definition) {
         IsUnsignedNumber(token) ? NodeType::Constant : NodeType::Variable;
   }
 
-  Node* left_child   = temp_node.children.front();
+  Node* left_child = temp_node.children.front();
   left_child->parent = nullptr;
 
-  Node* right_child   = temp_node.children.back();
+  Node* right_child = temp_node.children.back();
   right_child->parent = nullptr;
 
   return {left_child, right_child};
@@ -119,13 +120,13 @@ struct FunctionDefinition {
 };
 
 struct Callable {
-  virtual ~Callable()                                                 = default;
+  virtual ~Callable() = default;
   virtual int operator()(const unordered_map<string, int>& arguments) = 0;
 };
 
 struct CompositeCallable : Callable {
   FunctionDefinition* function = nullptr;
-  Callable* function_body      = nullptr;
+  Callable* function_body = nullptr;
   vector<Callable*> argument_calls;
 
   int operator()(const unordered_map<string, int>& arguments) override {
@@ -211,8 +212,8 @@ struct SuccessorCallable : Callable {
 
 struct RecursiveCallable : Callable {
   FunctionDefinition* self_definition = nullptr;
-  Callable* initial                   = nullptr;
-  Callable* recursive                 = nullptr;
+  Callable* initial = nullptr;
+  Callable* recursive = nullptr;
 
   bool recursive_argument_used = true;
 
@@ -241,7 +242,7 @@ struct RecursiveCallable : Callable {
     --new_arguments.at(recursion_parameter.first);
 
     if (recursive_argument_used) {
-      int value                            = (*this)(new_arguments);
+      int value = (*this)(new_arguments);
       new_arguments[self_definition->name] = value;
     }
 
@@ -277,8 +278,8 @@ Callable* GetFunctionCallNode(
     throw std::runtime_error("undefined function: " + node->value);
   }
 
-  auto& function        = program[node->value];
-  result->function      = &function.first;
+  auto& function = program[node->value];
+  result->function = &function.first;
   result->function_body = function.second;
 
   if (result->function->arguments_count() != node->children.size()) {
@@ -305,11 +306,11 @@ pair<FunctionDefinition, Callable*> GetFunction(
   Callable* callable = GetFunctionCallNode(program, value_node, variables);
 
   FunctionDefinition definition;
-  definition.name        = definition_node->value;
+  definition.name = definition_node->value;
   size_t arguments_count = definition_node->children.size();
   definition.arguments.resize(arguments_count);
   for (size_t i = 0; i < arguments_count; ++i) {
-    string name             = definition_node->children[i]->value;
+    string name = definition_node->children[i]->value;
     definition.arguments[i] = {name, variables.contains(name)};
   }
 
@@ -432,52 +433,8 @@ int main() {
 
   auto tokens = LexicalAnalyzer::get_tokens(program);
 
-  SyntaxConsumers::GrammarRulesT rules;
-
-  enum RuleIdentifiers {
-    PROGRAM,
-    STATEMENT,
-    ARGUMENTS_LIST,
-    NONEMPTY_ARGUMENTS_LIST,
-    COMPOSITION_ARGUMENTS,
-    NONEMPTY_COMPOSITION_ARGUMENTS
-  };
-
   Logger::disable_category(Logger::Category::SYNTAX);
 
-  {
-    using namespace SyntaxConsumers;
-
-    // clang-format off
-    rules[PROGRAM] = EatRule(STATEMENT) + EatToken(TokenType::SEMICOLON) + EatRule(PROGRAM);
-    rules[PROGRAM] |= EatEmpty();
-
-    std::unique_ptr<Consumer> function_call = EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN);
-    function_call |= EatToken(TokenType::CONSTANT);
-    function_call |= EatToken(TokenType::IDENTIFIER);
-
-    rules[STATEMENT] = EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + std::move(function_call);
-
-    rules[ARGUMENTS_LIST] = EatRule(NONEMPTY_ARGUMENTS_LIST) | EatEmpty();
-
-    rules[NONEMPTY_ARGUMENTS_LIST] = EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_ARGUMENTS_LIST);
-    rules[NONEMPTY_ARGUMENTS_LIST] |= EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::OPERATOR, "+") + EatToken(TokenType::CONSTANT, "1");
-    rules[NONEMPTY_ARGUMENTS_LIST] |= EatToken(TokenType::CONSTANT, "0");
-    rules[NONEMPTY_ARGUMENTS_LIST] |= EatToken(TokenType::IDENTIFIER);
-
-    rules[COMPOSITION_ARGUMENTS] = EatRule(NONEMPTY_COMPOSITION_ARGUMENTS) | EatEmpty();
-
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] = EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS);
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS);
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::CONSTANT) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS);
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::ASTERISK) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS);
-
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN);
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::IDENTIFIER);
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::CONSTANT);
-    rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= EatToken(TokenType::ASTERISK);
-    // clang-format on
-  }
-
-  SyntaxTreeBuilder::build(tokens, rules, PROGRAM);
+  SyntaxTreeBuilder::build(tokens, RecursiveFunctionsSyntax::GetSyntax(),
+                           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 }

@@ -37,14 +37,3 @@ nonempty_composition_arguments := FUNCTION_NAME '(' nonempty_composition_argumen
 // FUNCTION_NAME and VARIABLE_NAME are strings
 // FUNCTION_NAME, VARIABLE_NAME, INTEGER, EMPTY and all symbols in '' are terminating characters.
 ```
-
-## Идея работы интерпретатора
-Перед запуском программы будет выполняться препроцессинг кода.
-Он будет предельно прост:
-1. Убираем # "comment"
-2. Заменяем во всех файлах #include "filename" на текст самого файла.
-    (надо будет дерево построить и идти, начиная с листьев)
-3. Убрать все пробелы и переносы строк
-
-На выходе получаем однострочный файл со всем кодом.
-Он подаётся на вход программе, которая строит дерево разбора всего этого кода.
