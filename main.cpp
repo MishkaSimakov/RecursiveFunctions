@@ -59,57 +59,8 @@ struct Node {
   NodeType type;
 };
 
-bool IsUnsignedNumber(const string& value) {
-  return std::ranges::all_of(
-      value.begin(), value.end(),
-      [](char value) -> bool { return std::isdigit(value) != 0; });
-}
-
-pair<Node*, Node*> ParseFunction(const vector<string>& definition) {
-  // create temp node
-  Node temp_node;
-  Node* current_node = &temp_node;
-
-  for (const string& token : definition) {
-    if (token == "=") {
-      continue;
-    }
-
-    if (token == "(") {
-      current_node = current_node->children.back();
-      current_node->type = NodeType::FunctionCall;
-      continue;
-    }
-
-    if (token == ")") {
-      current_node = current_node->parent;
-      continue;
-    }
-
-    if (token == ",") {
-      continue;
-    }
-
-    Node* node = new Node;
-    node->value = token;
-    current_node->children.push_back(node);
-    node->parent = current_node;
-    node->type =
-        IsUnsignedNumber(token) ? NodeType::Constant : NodeType::Variable;
-  }
-
-  Node* left_child = temp_node.children.front();
-  left_child->parent = nullptr;
-
-  Node* right_child = temp_node.children.back();
-  right_child->parent = nullptr;
-
-  return {left_child, right_child};
-}
-
-bool IsRecursive(Node* function) {
-  string last_argument = function->children.back()->value;
-  return last_argument == "0" || last_argument.ends_with("+1");
+bool IsRecursive(const SyntaxNode& node) {
+  return node.children.back()->type == SyntaxNodeType::RECURSION_PARAMETER;
 }
 
 struct FunctionDefinition {
@@ -262,35 +213,37 @@ struct RecursiveCallable : Callable {
 
 Callable* GetFunctionCallNode(
     unordered_map<string, pair<FunctionDefinition, Callable*>>& program,
-    Node* node, unordered_set<string>& variables) {
-  if (node->type == NodeType::Constant) {
-    return new ConstantCallable(std::stoi(node->value));
+    const SyntaxNode& value_node, unordered_set<string>& variables) {
+  const string& value = value_node.value;
+
+  if (value_node.type == SyntaxNodeType::CONSTANT) {
+    return new ConstantCallable(std::stoi(value));
   }
 
-  if (node->type == NodeType::Variable) {
-    variables.insert(node->value);
-    return new ProjectorCallable(node->value);
+  if (value_node.type == SyntaxNodeType::VARIABLE) {
+    variables.insert(value);
+    return new ProjectorCallable(value);
   }
 
   // node is function call
   CompositeCallable* result = new CompositeCallable;
 
-  if (!program.contains(node->value)) {
-    throw std::runtime_error("undefined function: " + node->value);
+  if (!program.contains(value_node.value)) {
+    throw std::runtime_error("undefined function: " + value_node.value);
   }
 
-  auto& function = program[node->value];
+  auto& function = program[value_node.value];
   result->function = &function.first;
   result->function_body = function.second;
 
-  if (result->function->arguments_count() != node->children.size()) {
+  if (result->function->arguments_count() != value_node.children.size()) {
     throw std::runtime_error("function called with wrong count of arguments");
   }
 
-  result->argument_calls.reserve(node->children.size());
-  for (const auto& child : node->children) {
+  result->argument_calls.reserve(value_node.children.size());
+  for (const auto& child : value_node.children) {
     result->argument_calls.push_back(
-        GetFunctionCallNode(program, child, variables));
+        GetFunctionCallNode(program, *child, variables));
   }
 
   return result;
@@ -298,8 +251,8 @@ Callable* GetFunctionCallNode(
 
 pair<FunctionDefinition, Callable*> GetFunction(
     unordered_map<string, pair<FunctionDefinition, Callable*>>& program,
-    Node* definition_node, Node* value_node) {
-  if (program.contains(definition_node->value)) {
+    const SyntaxNode& info_node, const SyntaxNode& value_node) {
+  if (program.contains(info_node.value)) {
     throw std::runtime_error("usage before definition!");
   }
 
@@ -307,11 +260,11 @@ pair<FunctionDefinition, Callable*> GetFunction(
   Callable* callable = GetFunctionCallNode(program, value_node, variables);
 
   FunctionDefinition definition;
-  definition.name = definition_node->value;
-  size_t arguments_count = definition_node->children.size();
+  definition.name = info_node.value;
+  size_t arguments_count = info_node.children.size();
   definition.arguments.resize(arguments_count);
   for (size_t i = 0; i < arguments_count; ++i) {
-    string name = definition_node->children[i]->value;
+    string name = info_node.children[i]->value;
     definition.arguments[i] = {name, variables.contains(name)};
   }
 
@@ -327,98 +280,6 @@ void AddSystemFunctions(
   program["successor"] = {successor, call_node};
 }
 
-// int main() {
-//   string filename =
-//       "/Users/mihailsimakov/Documents/Programs/CLionProjects/"
-//       "RecursiveFunctions/tests/arithmetics.rec";
-//
-//   auto lines = GetDefinitions(filename);
-//
-//   unordered_map<string, pair<FunctionDefinition, Callable*>> program;
-//
-//   AddSystemFunctions(program);
-//
-//   for (const auto& line : lines) {
-//     auto [name, value] = ParseFunction(line);
-//
-//     string function_name = name->value;
-//
-//     if (!IsRecursive(name)) {
-//       if (program.contains(function_name)) {
-//         throw std::runtime_error("redefinition!");
-//       }
-//
-//       program.emplace(function_name,
-//                       std::move(GetFunction(program, name, value)));
-//     } else {
-//       bool is_first = name->children.back()->value == "0";
-//
-//       if (is_first == program.contains(name->value)) {
-//         throw std::runtime_error(
-//             "Recursive function initial case must precede recursive case.");
-//       }
-//
-//       size_t arguments_count = name->children.size();
-//       if (is_first) {
-//         RecursiveCallable* callable = new RecursiveCallable;
-//         unordered_set<string> variables;
-//         callable->initial = GetFunctionCallNode(program, value, variables);
-//
-//         FunctionDefinition definition;
-//         definition.name = name->value;
-//         definition.arguments.resize(arguments_count);
-//
-//         for (size_t i = 0; i < arguments_count - 1; ++i) {
-//           string argument_name = name->children[i]->value;
-//           definition.arguments[i] = {argument_name,
-//                                      variables.contains(argument_name)};
-//         }
-//
-//         definition.arguments[arguments_count - 1] = {"", true};
-//
-//         program[name->value] = {definition, callable};
-//         continue;
-//       }
-//
-//       auto& function = program[name->value];
-//
-//       RecursiveCallable* callable =
-//           static_cast<RecursiveCallable*>(function.second);
-//
-//       callable->self_definition = &function.first;
-//
-//       unordered_set<string> variables;
-//       callable->recursive = GetFunctionCallNode(program, value, variables);
-//
-//       for (size_t i = 0; i < arguments_count; ++i) {
-//         string argument_name = name->children[i]->value;
-//         function.first.arguments[i] = {argument_name,
-//                                        function.first.arguments[i].second ||
-//                                            variables.contains(argument_name)};
-//       }
-//
-//       auto& back = function.first.arguments.back().first;
-//       back.pop_back();
-//       back.pop_back();
-//
-//       callable->recursive_argument_used =
-//           variables.contains(function.first.name);
-//     }
-//   }
-//
-//   cout << "prepared! Now executing..." << endl;
-//
-//   cout << "is 37 prime?" << endl;
-//
-//   Callable& prime_checker = *program["is_prime"].second;
-//   unordered_map<string, int> arguments = {{"number", 5}};
-//
-//   cout << (prime_checker(arguments) == 1 ? "YES, it's prime!"
-//                                          : "NO, some cringe has happened");
-//
-//   return 0;
-// }
-
 int main() {
   Preprocessor preprocessor;
   std::filesystem::path base_path =
@@ -429,13 +290,94 @@ int main() {
 
   preprocessor.set_main("arithmetics");
 
-  string program = preprocessor.process();
-  std::cout << program << std::endl;
+  string program_text = preprocessor.process();
 
-  auto tokens = LexicalAnalyzer::get_tokens(program);
+  auto tokens = LexicalAnalyzer::get_tokens(program_text);
 
   Logger::disable_category(Logger::Category::SYNTAX);
 
-  SyntaxTreeBuilder::build(tokens, RecursiveFunctionsSyntax::GetSyntax(),
-                           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
+  auto syntax_tree = SyntaxTreeBuilder::build(
+      tokens, RecursiveFunctionsSyntax::GetSyntax(),
+      RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
+
+  unordered_map<string, pair<FunctionDefinition, Callable*>> program;
+  AddSystemFunctions(program);
+
+  for (const auto& assignment : syntax_tree->children) {
+    const auto& info_node = *assignment->children.front();
+    const auto& value_node = *assignment->children.back();
+
+    string function_name = info_node.value;
+
+    if (!IsRecursive(info_node)) {
+      if (program.contains(function_name)) {
+        throw std::runtime_error("redefinition!");
+      }
+
+      program.emplace(function_name,
+                      std::move(GetFunction(program, info_node, value_node)));
+    } else {
+      bool is_first = info_node.children.back()->value == "0";
+
+      if (is_first == program.contains(function_name)) {
+        throw std::runtime_error(
+            "Recursive function initial case must precede recursive case.");
+      }
+
+      size_t arguments_count = info_node.children.size();
+      if (is_first) {
+        RecursiveCallable* callable = new RecursiveCallable;
+        unordered_set<string> variables;
+        callable->initial = GetFunctionCallNode(program, value_node, variables);
+
+        FunctionDefinition definition;
+        definition.name = function_name;
+        definition.arguments.resize(arguments_count);
+
+        for (size_t i = 0; i < arguments_count - 1; ++i) {
+          string argument_name = info_node.children[i]->value;
+          definition.arguments[i] = {argument_name,
+                                     variables.contains(argument_name)};
+        }
+
+        definition.arguments[arguments_count - 1] = {"", true};
+
+        program[function_name] = {definition, callable};
+        continue;
+      }
+
+      auto& function = program[function_name];
+
+      RecursiveCallable* callable =
+          static_cast<RecursiveCallable*>(function.second);
+
+      callable->self_definition = &function.first;
+
+      unordered_set<string> variables;
+      callable->recursive = GetFunctionCallNode(program, value_node, variables);
+
+      for (size_t i = 0; i < arguments_count; ++i) {
+        string argument_name = info_node.children[i]->value;
+        function.first.arguments[i] = {argument_name,
+                                       function.first.arguments[i].second ||
+                                           variables.contains(argument_name)};
+      }
+
+      callable->recursive_argument_used =
+          variables.contains(function.first.name);
+    }
+  }
+
+  cout << "prepared! Now executing..." << endl;
+
+  size_t value_to_check = 37;
+  cout << "is " << value_to_check << " prime?" << endl;
+
+  Callable& prime_checker = *program["is_prime"].second;
+  unordered_map<string, int> arguments = {{"number", value_to_check}};
+
+  cout << (prime_checker(arguments) == 1 ? "YES, it's prime!"
+                                         : "NO, it's not prime!");
+
+  return 0;
 }
