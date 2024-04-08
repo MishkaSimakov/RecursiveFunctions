@@ -89,7 +89,7 @@ class SyntaxTreeBuilder {
       throw std::runtime_error("No rules matched your program.");
     }
 
-    // PrintSyntaxTree(*construct_syntax_tree(consumption_root));
+    PrintSyntaxTree(*construct_syntax_tree(consumption_root));
 
     return construct_syntax_tree(consumption_root);
   }

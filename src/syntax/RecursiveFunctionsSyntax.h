@@ -15,7 +15,11 @@ enum RuleIdentifiers {
   NONEMPTY_ARGUMENTS_LIST,
   COMPOSITION_ARGUMENTS,
   NONEMPTY_COMPOSITION_ARGUMENTS,
-  RECURSION_PARAMETER
+  RECURSION_PARAMETER,
+
+  FUNCTION_CALL,
+  CALL_ARGUMENTS,
+  NONEMPTY_CALL_ARGUMENTS
 };
 
 // rules for building syntax tree
@@ -111,6 +115,7 @@ inline auto GetSyntax() {
   rules[PROGRAM] |= Branch(EatEmpty());
 
   rules[STATEMENT] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), BuildStatementNode);
+  rules[STATEMENT] |= Branch(EatRule(FUNCTION_CALL), Handover);
 
   rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), BuildFunctionNode);
   rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::CONSTANT), GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT));
@@ -138,6 +143,18 @@ inline auto GetSyntax() {
 
   rules[RECURSION_PARAMETER] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::OPERATOR, "+") + EatToken(TokenType::CONSTANT, "1"), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
   rules[RECURSION_PARAMETER] |= Branch(EatToken(TokenType::CONSTANT, "0"), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
+
+  rules[FUNCTION_CALL] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(CALL_ARGUMENTS) + EatToken(TokenType::RPAREN), BuildFunctionNode);
+
+  rules[CALL_ARGUMENTS] |= Branch(EatRule(NONEMPTY_CALL_ARGUMENTS), Handover);
+  rules[CALL_ARGUMENTS] |= Branch(EatEmpty());
+
+  rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(CALL_ARGUMENTS) + EatToken(TokenType::RPAREN) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_CALL_ARGUMENTS), CompactList(BuildFunctionNode));
+  rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_CALL_ARGUMENTS), CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+
+  rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(CALL_ARGUMENTS) + EatToken(TokenType::RPAREN), GetListRootBuilder(BuildFunctionNode));
+  rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+
   // clang-format on
 
   return rules;
