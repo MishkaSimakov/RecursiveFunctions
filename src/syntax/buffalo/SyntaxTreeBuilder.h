@@ -23,6 +23,53 @@ class SyntaxTreeBuilder {
     return node->build_syntax_tree(built_syntax_nodes);
   }
 
+  static void PrintSyntaxTreeRecursive(const std::string& prefix,
+                                       const unique_ptr<SyntaxNode>& node,
+                                       bool is_last) {
+    if (node != nullptr) {
+      std::cout << prefix;
+
+      std::cout << (is_last ? "└── " : "├── ");
+
+      // print the value of the node
+      string result;
+      switch (node->type) {
+        case SyntaxNodeType::ROOT:
+          result = "Root";
+          break;
+        case SyntaxNodeType::VARIABLE:
+          result = "Var{" + node->value + "}";
+          break;
+        case SyntaxNodeType::CONSTANT:
+          result = "Num{" + node->value + "}";
+          break;
+        case SyntaxNodeType::ASTERISK:
+          result = "*";
+          break;
+        case SyntaxNodeType::FUNCTION:
+          result = "Func{" + node->value + "}";
+          break;
+        case SyntaxNodeType::ASSIGNMENT:
+          result = "=";
+          break;
+        case SyntaxNodeType::RECURSION_PARAMETER:
+          result = "Rec{" + node->value + "}";
+          break;
+      }
+      std::cout << result << std::endl;
+
+      // enter the next tree level - left and right branch
+      for (size_t i = 0; i < node->children.size(); ++i) {
+        PrintSyntaxTreeRecursive(prefix + (is_last ? "    " : "│   "),
+                                 node->children[i], i == node->children.size() - 1);
+      }
+    }
+  }
+
+  static void PrintSyntaxTree(const unique_ptr<SyntaxNode>& node) {
+    PrintSyntaxTreeRecursive("", node, true);
+  }
+
  public:
   static void build(const vector<Token>& program,
                     const SyntaxConsumers::GrammarRulesT& rules,
@@ -45,6 +92,8 @@ class SyntaxTreeBuilder {
 
     unique_ptr<SyntaxNode> syntax_root =
         construct_syntax_tree(consumption_root);
+
+    PrintSyntaxTree(syntax_root);
 
     cout << "Success!" << endl;
   }

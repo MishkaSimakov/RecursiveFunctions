@@ -23,14 +23,6 @@ struct SyntaxNode {
 
   explicit SyntaxNode(SyntaxNodeType type, string value = "")
       : type(type), value(std::move(value)) {}
-
-  // SyntaxNode(const SyntaxNode& other) {
-  //   std::cout << "copied" << std::endl;
-  //
-  //   type = other.type;
-  //   value = other.value;
-  //   children = other.children;
-  // }
 };
 
 #endif  // SYNTAXNODE_H

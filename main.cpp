@@ -425,9 +425,9 @@ int main() {
       "/Users/mihailsimakov/Documents/Programs/CLionProjects/"
       "RecursiveFunctions/tests";
 
-  preprocessor.add_file("sum", base_path / "sum.rec");
+  preprocessor.add_file("arithmetics", base_path / "arithmetics.rec");
 
-  preprocessor.set_main("sum");
+  preprocessor.set_main("arithmetics");
 
   string program = preprocessor.process();
   std::cout << program << std::endl;
@@ -436,6 +436,6 @@ int main() {
 
   Logger::disable_category(Logger::Category::SYNTAX);
 
-  SyntaxTreeBuilder::build(tokens, AdditionSyntax::GetSyntax(),
-                           AdditionSyntax::RuleIdentifiers::EXPRESSION);
+  SyntaxTreeBuilder::build(tokens, RecursiveFunctionsSyntax::GetSyntax(),
+                           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 }

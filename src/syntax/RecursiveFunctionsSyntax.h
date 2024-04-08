@@ -6,6 +6,7 @@
 namespace RecursiveFunctionsSyntax {
 using namespace SyntaxConsumers;
 
+// non-terminals list
 enum RuleIdentifiers {
   PROGRAM,
   STATEMENT,
@@ -17,101 +18,126 @@ enum RuleIdentifiers {
   RECURSION_PARAMETER
 };
 
-inline unique_ptr<SyntaxNode> PrintParams(const TreeBuilderParams& parameters) {
-  for (auto& v : parameters) {
-    cout << "[" << static_cast<size_t>(v->type) << " " << v->value << "] ";
-  }
-  cout << endl;
-
-  return nullptr;
-}
-
-inline SyntaxNode ConstructRecursionParameterNode(
-    const TreeBuilderParams& params) {
-  return SyntaxNode(SyntaxNodeType::RECURSION_PARAMETER, params[0]->value);
-}
-
-inline SyntaxNode ConstructAsteriskNode(const TreeBuilderParams&) {
-  return SyntaxNode(SyntaxNodeType::ASTERISK);
-}
-
-inline SyntaxNode ConstructConstantNode(const TreeBuilderParams& params) {
-  return SyntaxNode(SyntaxNodeType::CONSTANT, params[0]->value);
-}
-
-inline SyntaxNode ConstructVariableNode(const TreeBuilderParams& params) {
-  return SyntaxNode(SyntaxNodeType::VARIABLE, params[0]->value);
-}
-
-inline unique_ptr<SyntaxNode> ConstructFunctionNode(TreeBuilderParams& params) {
-  auto node =
-      std::make_unique<SyntaxNode>(SyntaxNodeType::FUNCTION, params[0]->value);
-  node->children = std::move(params[2]->children);
-
-  return node;
-}
-
-auto GetNodeConstructor(auto&&... args) {
-  return [&](TreeBuilderParams&) {
-    return std::make_unique<SyntaxNode>(std::forward<decltype(args)>(args)...);
+// rules for building syntax tree
+inline auto GetNodeConstructor(SyntaxNodeType node_type) {
+  return [node_type](TreeBuilderParams&) {
+    return std::make_unique<SyntaxNode>(node_type);
   };
 }
 
-auto GetFirstParamNodeConstructor(auto&&... args) {
-  return [&](const TreeBuilderParams& params) {
-    return std::make_unique<SyntaxNode>(std::forward<decltype(args)>(args)...,
-                                        params[0]->value);
+inline auto GetFirstParamNodeBuilder(SyntaxNodeType node_type) {
+  return [node_type](const TreeBuilderParams& params) {
+    return std::make_unique<SyntaxNode>(node_type, params[0]->value);
+  };
+}
+
+auto GetListRootBuilder(auto&& lambda) {
+  return [lambda](TreeBuilderParams& params) {
+    auto root_node = std::make_unique<SyntaxNode>(SyntaxNodeType::ROOT);
+
+    root_node->children.push_back(std::move(lambda(params)));
+
+    return root_node;
   };
 }
 
 auto CompactList(auto&& lambda) {
-  return [&](TreeBuilderParams& params) {
-    unique_ptr<SyntaxNode> node = lambda(params);
-    auto& children = node->children;
-    auto& other_children = params.back()->children;
-    children.insert(children.end(),
-                    std::make_move_iterator(other_children.begin()),
-                    std::make_move_iterator(other_children.end()));
+  return [lambda](TreeBuilderParams& params) {
+    auto element_node = lambda(params);
+    auto root_node = std::move(params.back());
 
-    return node;
+    root_node->children.insert(root_node->children.begin(),
+                               std::move(element_node));
+
+    return root_node;
   };
 }
 
+inline auto BuildProgramNode(TreeBuilderParams& params) {
+  auto node = std::move(params[2]);
+
+  if (node == nullptr) {
+    node = std::make_unique<SyntaxNode>(SyntaxNodeType::ROOT);
+  }
+
+  node->children.insert(node->children.begin(), std::move(params[0]));
+  return node;
+}
+
+inline auto BuildStatementNode(TreeBuilderParams& params) {
+  auto assignment_node =
+      std::make_unique<SyntaxNode>(SyntaxNodeType::ASSIGNMENT);
+
+  // build left function node
+  auto function_node = std::move(params[2]);
+
+  if (function_node == nullptr) {
+    function_node = std::make_unique<SyntaxNode>(SyntaxNodeType::FUNCTION);
+  } else {
+    function_node->type = SyntaxNodeType::FUNCTION;
+  }
+
+  function_node->value = params[0]->value;
+
+  // connect to assignment
+  assignment_node->children.push_back(std::move(function_node));
+  assignment_node->children.push_back(std::move(params[5]));
+
+  return assignment_node;
+}
+
+inline auto BuildFunctionNode(TreeBuilderParams& params) {
+  auto function_node = std::move(params[2]);
+
+  if (function_node == nullptr) {
+    function_node = std::make_unique<SyntaxNode>(SyntaxNodeType::FUNCTION);
+  } else {
+    function_node->type = SyntaxNodeType::FUNCTION;
+  }
+
+  function_node->value = params[0]->value;
+
+  return function_node;
+}
+
+inline auto Handover(TreeBuilderParams& params) { return std::move(params[0]); }
+
+// rules for parsing and building parsing tree
 inline auto GetSyntax() {
   GrammarRulesT rules;
 
   // clang-format off
-  rules[PROGRAM] |= Branch(EatRule(STATEMENT) + EatToken(TokenType::SEMICOLON) + EatRule(PROGRAM), PrintParams);
-  rules[PROGRAM] |= Branch(EatEmpty(), PrintParams);
+  rules[PROGRAM] |= Branch(EatRule(STATEMENT) + EatToken(TokenType::SEMICOLON) + EatRule(PROGRAM), BuildProgramNode);
+  rules[PROGRAM] |= Branch(EatEmpty());
 
-  rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), PrintParams);
-  rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::CONSTANT), PrintParams);
-  rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER), PrintParams);
+  rules[STATEMENT] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), BuildStatementNode);
 
-  rules[STATEMENT] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), PrintParams);
+  rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), BuildFunctionNode);
+  rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::CONSTANT), GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT));
+  rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER), GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE));
 
-  rules[ARGUMENTS_LIST] |= Branch(EatRule(NONEMPTY_ARGUMENTS_LIST), PrintParams);
-  rules[ARGUMENTS_LIST] |= Branch( EatEmpty(), PrintParams);
+  rules[ARGUMENTS_LIST] |= Branch(EatRule(NONEMPTY_ARGUMENTS_LIST), Handover);
+  rules[ARGUMENTS_LIST] |= Branch(EatEmpty());
 
-  rules[NONEMPTY_ARGUMENTS_LIST] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_ARGUMENTS_LIST), PrintParams);
-  rules[NONEMPTY_ARGUMENTS_LIST] |= Branch(EatRule(RECURSION_PARAMETER), PrintParams);
-  rules[NONEMPTY_ARGUMENTS_LIST] |= Branch(EatToken(TokenType::IDENTIFIER), PrintParams);
+  rules[NONEMPTY_ARGUMENTS_LIST] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_ARGUMENTS_LIST), CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  rules[NONEMPTY_ARGUMENTS_LIST] |= Branch(EatRule(RECURSION_PARAMETER), Handover);
+  rules[NONEMPTY_ARGUMENTS_LIST] |= Branch(EatToken(TokenType::IDENTIFIER), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
 
-  rules[COMPOSITION_ARGUMENTS] |= Branch(EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), PrintParams);
+  rules[COMPOSITION_ARGUMENTS] |= Branch(EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), Handover);
   rules[COMPOSITION_ARGUMENTS] |= Branch(EatEmpty());
 
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), PrintParams);
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), CompactList(GetFirstParamNodeConstructor(SyntaxNodeType::VARIABLE)));
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), CompactList(GetFirstParamNodeConstructor(SyntaxNodeType::CONSTANT)));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), CompactList(BuildFunctionNode));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
   rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::ASTERISK) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_COMPOSITION_ARGUMENTS), CompactList(GetNodeConstructor(SyntaxNodeType::ASTERISK)));
 
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), ConstructFunctionNode);
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER), GetFirstParamNodeConstructor(SyntaxNodeType::VARIABLE));
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT), GetFirstParamNodeConstructor(SyntaxNodeType::CONSTANT));
-  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::ASTERISK), GetNodeConstructor(SyntaxNodeType::ASTERISK));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), GetListRootBuilder(BuildFunctionNode));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+  rules[NONEMPTY_COMPOSITION_ARGUMENTS] |= Branch(EatToken(TokenType::ASTERISK), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::ASTERISK)));
 
-  rules[RECURSION_PARAMETER] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::OPERATOR, "+") + EatToken(TokenType::CONSTANT, "1"), GetFirstParamNodeConstructor(SyntaxNodeType::RECURSION_PARAMETER));
-  rules[RECURSION_PARAMETER] |= Branch(EatToken(TokenType::CONSTANT, "0"), GetFirstParamNodeConstructor(SyntaxNodeType::CONSTANT));
+  rules[RECURSION_PARAMETER] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::OPERATOR, "+") + EatToken(TokenType::CONSTANT, "1"), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
+  rules[RECURSION_PARAMETER] |= Branch(EatToken(TokenType::CONSTANT, "0"), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
   // clang-format on
 
   return rules;
