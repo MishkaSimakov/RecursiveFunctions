@@ -29,7 +29,7 @@ struct ConsumptionNode {
   virtual ~ConsumptionNode() = default;
 };
 
-struct TokenConsumptionNode : ConsumptionNode {
+struct TokenConsumptionNode final : ConsumptionNode {
   Token token;
 
   unique_ptr<SyntaxNode> build_syntax_tree(TreeBuilderParams&) override {
@@ -37,7 +37,7 @@ struct TokenConsumptionNode : ConsumptionNode {
   }
 };
 
-struct RootConsumptionNode : ConsumptionNode {
+struct RootConsumptionNode final : ConsumptionNode {
   unique_ptr<SyntaxNode> build_syntax_tree(TreeBuilderParams& params) override {
     return std::move(params[0]);
   }
@@ -63,8 +63,7 @@ class Branch {
   }
 
  public:
-  using BuilderT =
-      std::function<unique_ptr<SyntaxNode>(TreeBuilderParams&)>;
+  using BuilderT = std::function<unique_ptr<SyntaxNode>(TreeBuilderParams&)>;
 
   unique_ptr<Consumer> consumer;
   BuilderT builder;
@@ -73,7 +72,7 @@ class Branch {
       : consumer(std::move(consumer)), builder(std::move(builder)) {}
 };
 
-struct BranchConsumptionNode : ConsumptionNode {
+struct BranchConsumptionNode final : ConsumptionNode {
   const Branch* branch;
 
   unique_ptr<SyntaxNode> build_syntax_tree(TreeBuilderParams& params) override {
@@ -81,7 +80,7 @@ struct BranchConsumptionNode : ConsumptionNode {
   }
 };
 
-class ConcatenatedConsumer : public Consumer {
+class ConcatenatedConsumer final : public Consumer {
   unique_ptr<Consumer> left_;
   unique_ptr<Consumer> right_;
 
@@ -113,7 +112,7 @@ class ConcatenatedConsumer : public Consumer {
   }
 };
 
-class TokenConsumer : public Consumer {
+class TokenConsumer final : public Consumer {
   TokenType token_;
   string value_;
 
@@ -151,7 +150,7 @@ class TokenConsumer : public Consumer {
   }
 };
 
-class EmptyConsumer : public Consumer {
+class EmptyConsumer final : public Consumer {
  public:
   bool consume(
       TokenIteratorT& iterator, const TokenIteratorT& end,
@@ -163,7 +162,7 @@ class EmptyConsumer : public Consumer {
   }
 };
 
-class BranchedConsumer : public Consumer {
+class BranchedConsumer final : public Consumer {
   vector<Branch> branches_;
 
  public:
@@ -195,7 +194,7 @@ class BranchedConsumer : public Consumer {
   }
 };
 
-class RuleConsumer : public Consumer {
+class RuleConsumer final : public Consumer {
   RuleIdentifierT rule_;
 
  public:

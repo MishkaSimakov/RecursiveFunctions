@@ -13,6 +13,7 @@ add_executable(RecursiveFunctions main.cpp
         src/syntax/buffalo/SyntaxConsumers.h
         src/syntax/RecursiveFunctionsSyntax.h
         src/syntax/buffalo/SyntaxNode.h
-        src/syntax/buffalo/SyntaxNode.h)
+        src/syntax/buffalo/SyntaxNode.h
+        src/syntax/AdditionSyntax.h)
 
 target_include_directories(RecursiveFunctions PUBLIC src)

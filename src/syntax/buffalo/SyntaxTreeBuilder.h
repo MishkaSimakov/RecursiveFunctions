@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <string>
 #include <vector>
 
 #include "SyntaxConsumers.h"
@@ -44,7 +43,8 @@ class SyntaxTreeBuilder {
       throw std::runtime_error("No rules matched your program.");
     }
 
-    unique_ptr<SyntaxNode> syntax_root = construct_syntax_tree(consumption_root);
+    unique_ptr<SyntaxNode> syntax_root =
+        construct_syntax_tree(consumption_root);
 
     cout << "Success!" << endl;
   }

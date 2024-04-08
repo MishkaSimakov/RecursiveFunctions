@@ -9,6 +9,7 @@
 
 #include "lexis/LexicalAnalyzer.h"
 #include "preprocessor/Preprocessor.h"
+#include "syntax/AdditionSyntax.h"
 #include "syntax/RecursiveFunctionsSyntax.h"
 #include "syntax/buffalo/SyntaxTreeBuilder.h"
 
@@ -435,6 +436,6 @@ int main() {
 
   Logger::disable_category(Logger::Category::SYNTAX);
 
-  SyntaxTreeBuilder::build(tokens, RecursiveFunctionsSyntax::GetSyntax(),
-                           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
+  SyntaxTreeBuilder::build(tokens, AdditionSyntax::GetSyntax(),
+                           AdditionSyntax::RuleIdentifiers::EXPRESSION);
 }

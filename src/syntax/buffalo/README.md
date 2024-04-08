@@ -1,2 +1,2 @@
 # Buffalo
-Best universal final flawless awesome lexis onalyzer
+Best universal final flawless awesome language onalyzer
