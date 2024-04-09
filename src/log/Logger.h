@@ -12,6 +12,7 @@ class Logger {
     PREPROCESSOR = 1 << 0,
     LEXIS        = 1 << 1,
     SYNTAX       = 1 << 2,
+    ALL          = PREPROCESSOR | LEXIS | SYNTAX
   };
 
  private:
