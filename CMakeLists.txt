@@ -20,6 +20,7 @@ add_executable(RecursiveFunctions main.cpp
         src/compilation/functions/successor.h
         src/compilation/functions/argmin.h
         src/execution/BytecodeExecutor.h
-        src/compilation/functions/FastAdd.h)
+        src/compilation/functions/FastAdd.h
+        src/compilation/BytecodePrinter.h)
 
 target_include_directories(RecursiveFunctions PUBLIC src)

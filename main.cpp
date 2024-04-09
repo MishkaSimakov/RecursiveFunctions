@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 
+#include "compilation/BytecodePrinter.h"
 #include "compilation/Compiler.h"
 #include "execution/BytecodeExecutor.h"
 #include "lexis/LexicalAnalyzer.h"
@@ -18,8 +19,11 @@ int main() {
 
   Preprocessor preprocessor;
   preprocessor.add_file("arithmetics", base_path / "arithmetics.rec");
-  preprocessor.set_main("arithmetics");
+  preprocessor.add_file("test", base_path / "test.rec");
+  preprocessor.set_main("test");
   string program_text = preprocessor.process();
+
+  cout << program_text << endl;
 
   auto tokens = LexicalAnalyzer::get_tokens(program_text);
 
@@ -29,6 +33,8 @@ int main() {
 
   Compilation::Compiler compiler;
   auto bytecode = compiler.compile(*syntax_tree);
+
+  BytecodePrinter::print(bytecode);
 
   BytecodeExecutor executor;
   ValueT result = executor.execute(bytecode);
