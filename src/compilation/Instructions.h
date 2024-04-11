@@ -44,6 +44,7 @@ enum class InstructionType {
   LOAD,
   LOAD_CONST,
   LOAD_CALL,
+  COPY,
   RETURN,
   POP,
   HALT

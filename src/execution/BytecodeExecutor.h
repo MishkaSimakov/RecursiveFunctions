@@ -98,6 +98,11 @@ class BytecodeExecutor {
           *calculation_stack_ptr = ValueT::construct_line_id(command.argument);
           ++calculation_stack_ptr;
           break;
+        case Compilation::InstructionType::COPY:
+          *calculation_stack_ptr =
+              *(calculation_stack_ptr - 1 - command.argument);
+          ++calculation_stack_ptr;
+          break;
         case Compilation::InstructionType::RETURN:
           --call_stack_ptr;
           call_arguments_stack_ptr -= call_stack_ptr->second;
@@ -105,11 +110,21 @@ class BytecodeExecutor {
 
           break;
         case Compilation::InstructionType::POP:
-          --calculation_stack_ptr;
+          if (command.argument == 0) {
+            --calculation_stack_ptr;
+          } else {
+            for (size_t i = 0; i < command.argument; ++i) {
+              *(calculation_stack_ptr - command.argument + i - 1) =
+                  *(calculation_stack_ptr - command.argument + i);
+            }
+            --calculation_stack_ptr;
+          }
           break;
         case Compilation::InstructionType::HALT:
           finished = true;
           break;
+        default:
+          throw std::runtime_error("Unimplemented command!");
       }
 
       if (finished) {

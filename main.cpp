@@ -1,4 +1,8 @@
+#include <fstream>
+#include <iostream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "compilation/BytecodePrinter.h"
@@ -6,8 +10,11 @@
 #include "execution/BytecodeExecutor.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "preprocessor/Preprocessor.h"
+#include "syntax/AdditionSyntax.h"
 #include "syntax/RecursiveFunctionsSyntax.h"
 #include "syntax/buffalo/SyntaxTreeBuilder.h"
+
+using namespace std;
 
 int main() {
   // setup logger
@@ -25,8 +32,6 @@ int main() {
   preprocessor.set_main("test");
   string program_text = preprocessor.process();
 
-  cout << program_text << endl;
-
   auto tokens = LexicalAnalyzer::get_tokens(program_text);
 
   auto syntax_tree = SyntaxTreeBuilder::build(
@@ -42,6 +47,4 @@ int main() {
   ValueT result = executor.execute(bytecode);
 
   std::cout << "Executed successfully, result: " << result.as_value() << endl;
-
-  return 0;
 }

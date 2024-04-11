@@ -42,10 +42,12 @@ class BytecodePrinter {
         return concatenate("LOAD_CONST", instruction.argument);
       case Compilation::InstructionType::LOAD_CALL:
         return concatenate("LOAD_CALL", instruction.argument);
+      case Compilation::InstructionType::COPY:
+        return concatenate("COPY", instruction.argument);
       case Compilation::InstructionType::RETURN:
         return "RETURN";
       case Compilation::InstructionType::POP:
-        return "POP";
+        return concatenate("POP", instruction.argument);
       case Compilation::InstructionType::HALT:
         return "HALT";
     }
