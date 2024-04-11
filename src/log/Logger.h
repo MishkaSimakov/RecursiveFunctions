@@ -10,9 +10,10 @@ class Logger {
  public:
   enum Category : int {
     PREPROCESSOR = 1 << 0,
-    LEXIS        = 1 << 1,
-    SYNTAX       = 1 << 2,
-    ALL          = PREPROCESSOR | LEXIS | SYNTAX
+    LEXIS = 1 << 1,
+    SYNTAX = 1 << 2,
+    EXECUTION = 1 << 3,
+    ALL = PREPROCESSOR | LEXIS | SYNTAX | EXECUTION
   };
 
  private:
@@ -53,6 +54,13 @@ class Logger {
     }
   }
 
+  template <typename... Args>
+  static void execution(Args&&... args) {
+    if (should_print_category(EXECUTION)) {
+      print_pack(" ", "Execution says:", std::forward<Args>(args)...);
+    }
+  }
+
   static void disable_category(Category category) {
     enabled_categories &= ~category;
   }
@@ -62,6 +70,6 @@ class Logger {
   }
 };
 
-int Logger::enabled_categories = PREPROCESSOR | LEXIS | SYNTAX;
+int Logger::enabled_categories = Logger::Category::ALL;
 
 #endif  // LOGGER_H

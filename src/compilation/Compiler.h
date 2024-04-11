@@ -14,15 +14,21 @@ using std::vector, std::map, std::unordered_map, std::string, std::unique_ptr,
     std::list;
 
 namespace Compilation {
+enum class FunctionState { COMPLETED, ONLY_ZERO_CASE, ONLY_GENERAL_CASE };
 
-enum class BlockState { COMPLETED, ONLY_ZERO_CASE, ONLY_GENERAL_CASE };
+struct FunctionInfo {
+  size_t id;
+  size_t variables_count;
+  FunctionState state;
 
-struct Block {
-  list<Instruction> instructions;
-  BlockState state;
+  bool is_recursive;
+};
 
-  Block(list<Instruction> instructions, BlockState state)
-      : instructions(std::move(instructions)), state(state) {}
+enum class VariableType { VARIABLE, RECURSION_PARAMETER, RECURSION_CALL };
+
+struct VariableInfo {
+  size_t id;
+  VariableType type;
 };
 
 /*
@@ -46,12 +52,12 @@ struct Block {
  * 8. Absence of asterisk inside argmin function.
  * 9. Call of argmin directly into another argmin (because of asterisk conflict)
  */
-class Compiler {
-  unordered_map<string, size_t> functions_indices_;
+class BytecodeCompiler {
+  unordered_map<string, FunctionInfo> functions_info_;
   vector<Block> functions_;
   list<Instruction> function_call_;
 
-  static ValueT get_value_type(const SyntaxNode& node) {
+  static size_t get_value_type(const SyntaxNode& node) {
     return std::stoi(node.value);
   }
 
@@ -65,7 +71,7 @@ class Compiler {
   }
 
   void compile_assignment(const SyntaxNode& node) {
-    unordered_map<string, size_t> variables;
+    unordered_map<string, VariableInfo> variables;
 
     const auto& info_node = *node.children[0];
     const auto& value_node = *node.children[1];
@@ -73,10 +79,11 @@ class Compiler {
     size_t variables_count = info_node.children.size();
     const string& function_name = info_node.value;
 
-    auto function_index_itr = functions_indices_.find(function_name);
+    auto function_info = functions_info_.find(function_name);
+    bool function_was_found = function_info != functions_info_.end();
     bool is_recursive = is_function_signature_recursive(info_node);
 
-    if (!is_recursive && function_index_itr != functions_indices_.end()) {
+    if (!is_recursive && function_was_found) {
       throw new std::runtime_error("Redefinition of function.");
     }
 
@@ -94,55 +101,68 @@ class Compiler {
       }
 
       // we store variables in reversed order
-      variables.emplace(std::move(varname), variables_count - i - 1);
+      variables.emplace(
+          std::move(varname),
+          VariableInfo{variables_count - i - 1, VariableType::VARIABLE});
     }
 
-    auto instructions = compile_function(value_node, false, false, variables);
+    if (is_recursive) {
+      auto& last_varname = info_node.children.back()->value;
+      variables[last_varname].type = VariableType::RECURSION_PARAMETER;
+      variables.emplace(function_name,
+                        VariableInfo{0, VariableType::RECURSION_CALL});
+    }
+
+    auto instructions = compile_function(value_node, false, false, variables,
+                                         function_info->second);
     instructions.emplace_back(InstructionType::RETURN);
 
-    if (is_recursive && function_index_itr != functions_indices_.end()) {
+    if (is_recursive && function_was_found) {
+      if (function_info->second.variables_count != variables_count) {
+        throw std::runtime_error(
+            "Declaration of recursive function case with wrong number of "
+            "arguments");
+      }
+
       bool is_zero_case = is_recursive_zero_case(info_node);
-      complete_recursive_function(function_index_itr->second,
+      complete_recursive_function(function_info->second,
                                   std::move(instructions), is_zero_case);
       return;
     }
 
-    auto state = BlockState::COMPLETED;
+    auto state = FunctionState::COMPLETED;
     if (is_recursive) {
-      state = is_recursive_zero_case(info_node) ? BlockState::ONLY_ZERO_CASE
-                                                : BlockState::ONLY_GENERAL_CASE;
+      state = is_recursive_zero_case(info_node)
+                  ? FunctionState::ONLY_ZERO_CASE
+                  : FunctionState::ONLY_GENERAL_CASE;
     }
 
-    Block block(std::move(instructions), state);
-
-    functions_indices_[function_name] = functions_.size();
-    functions_.push_back(std::move(block));
+    functions_info_[function_name] = {functions_.size(), variables_count, state,
+                                      is_recursive};
+    functions_.emplace_back(std::move(instructions));
   }
 
-  void complete_recursive_function(size_t index, list<Instruction> instructions,
+  void complete_recursive_function(FunctionInfo& info,
+                                   list<Instruction> instructions,
                                    bool is_zero_case) {
-    list<Instruction> zero_case_instructions;
-    list<Instruction> general_case_instructions;
-    auto& block = functions_[index];
+    auto& block = functions_[info.id];
+    list<Instruction> zero_case_instructions = std::move(instructions);
+    list<Instruction> general_case_instructions = std::move(block.instructions);
 
     if (is_zero_case) {
-      if (block.state != BlockState::ONLY_GENERAL_CASE) {
+      if (info.state != FunctionState::ONLY_GENERAL_CASE) {
         throw std::runtime_error(
             "Recursive function definition must contain only one zero case and "
             "only one general case.");
       }
-
-      zero_case_instructions = std::move(instructions);
-      general_case_instructions = std::move(block.instructions);
     } else {
-      if (block.state != BlockState::ONLY_ZERO_CASE) {
+      if (info.state != FunctionState::ONLY_ZERO_CASE) {
         throw std::runtime_error(
             "Recursive function definition must contain only one zero case and "
             "only one general case.");
       }
 
-      zero_case_instructions = std::move(block.instructions);
-      general_case_instructions = std::move(instructions);
+      std::swap(zero_case_instructions, general_case_instructions);
     }
 
     block.instructions = {
@@ -153,12 +173,13 @@ class Compiler {
                               general_case_instructions);
     block.instructions.splice(block.instructions.end(), zero_case_instructions);
 
-    block.state = BlockState::COMPLETED;
+    info.state = FunctionState::COMPLETED;
   }
 
   list<Instruction> compile_function(
       const SyntaxNode& node, bool only_constant_params, bool is_inside_argmin,
-      const unordered_map<string, size_t>& variables_map) {
+      const unordered_map<string, VariableInfo>& variables_map,
+      std::optional<FunctionInfo> defined_function_info) {
     if (node.type == SyntaxNodeType::CONSTANT) {
       return {{InstructionType::LOAD_CONST, get_value_type(node)}};
     }
@@ -175,9 +196,35 @@ class Compiler {
             "Unknown variable inside function definition.");
       }
 
-      return {{InstructionType::LOAD, itr->second}};
+      auto& variable_info = itr->second;
+      if (variable_info.type == VariableType::RECURSION_PARAMETER) {
+        return {{InstructionType::LOAD, variable_info.id},
+                {InstructionType::DECREMENT, 0}};
+      }
+
+      if (variable_info.type == VariableType::RECURSION_CALL) {
+        size_t variables_count = defined_function_info->variables_count;
+        size_t function_id = defined_function_info->id;
+
+        list<Instruction> result;
+
+        for (size_t i = 0; i < variables_count; ++i) {
+          result.emplace_back(InstructionType::LOAD, i);
+        }
+
+        result.emplace_back(InstructionType::CALL_FUNCTION, function_id);
+
+        return result;
+      }
+
+      return {{InstructionType::LOAD, variable_info.id}};
     }
     if (node.type == SyntaxNodeType::ASTERISK) {
+      if (!is_inside_argmin) {
+        throw std::runtime_error(
+            "Asterisk may only be used inside argmin function call.");
+      }
+
       throw std::runtime_error("Not implemented yet!");
     }
 
@@ -186,22 +233,29 @@ class Compiler {
     auto& children = node.children;
 
     for (auto itr = children.rbegin(); itr != children.rend(); ++itr) {
-      auto instructions = compile_function(**itr, only_constant_params,
-                                           is_inside_argmin, variables_map);
+      auto instructions =
+          compile_function(**itr, only_constant_params, is_inside_argmin,
+                           variables_map, defined_function_info);
 
       result.splice(result.end(), instructions);
     }
 
     const string& function_name = node.value;
 
-    auto itr = functions_indices_.find(function_name);
+    auto function_info = functions_info_.find(function_name);
 
-    if (itr == functions_indices_.end()) {
+    if (function_info == functions_info_.end()) {
       throw std::runtime_error("Usage of function before definition.");
     }
 
-    result.emplace_back(InstructionType::CALL_FUNCTION, itr->second,
-                        children.size());
+    auto variables_count = function_info->second.variables_count;
+    if (variables_count != children.size()) {
+      throw std::runtime_error(
+          "Call of function with wrong number of arguments");
+    }
+
+    result.emplace_back(InstructionType::CALL_FUNCTION,
+                        function_info->second.id);
 
     return result;
   }
@@ -212,14 +266,15 @@ class Compiler {
           "There must be only one function call in program.");
     }
 
-    function_call_ = compile_function(node, true, false, {});
+    function_call_ = compile_function(node, true, false, {}, std::nullopt);
     function_call_.emplace_back(InstructionType::HALT);
   }
 
   void load_system_functions() {
     // successor
-    functions_indices_["successor"] = functions_.size();
-    functions_.emplace_back(successor_instructions, BlockState::COMPLETED);
+    functions_info_["successor"] = {functions_.size(), 1,
+                                    FunctionState::COMPLETED};
+    functions_.emplace_back(successor_instructions);
   }
 
   vector<Instruction> get_combined_instructions() {
@@ -236,7 +291,7 @@ class Compiler {
       for (auto instruction : functions_[func_index].instructions) {
         if (instruction.type == InstructionType::JUMP_IF_ZERO ||
             instruction.type == InstructionType::JUMP_IF_NONZERO) {
-          instruction.first_argument += offset;
+          instruction.argument += offset;
         }
 
         result.push_back(instruction);
@@ -252,7 +307,7 @@ class Compiler {
                            const vector<size_t>& offsets) {
     for (auto& instruction : instructions) {
       if (instruction.type == InstructionType::CALL_FUNCTION) {
-        instruction.first_argument = offsets[instruction.first_argument];
+        instruction.argument = offsets[instruction.argument];
       }
     }
   }

@@ -21,28 +21,27 @@ class BytecodePrinter {
     return std::to_string(head) + " " + concatenate(tail...);
   }
 
-  static string concatenate() {
-    return "";
-  }
+  static string concatenate() { return ""; }
 
   static string get_instruction_representation(
       const Compilation::Instruction& instruction) {
     switch (instruction.type) {
       case Compilation::InstructionType::INCREMENT:
-        return concatenate("INCREMENT", instruction.first_argument);
+        return concatenate("INCREMENT", instruction.argument);
       case Compilation::InstructionType::DECREMENT:
-        return concatenate("DECREMENT", instruction.first_argument);
+        return concatenate("DECREMENT", instruction.argument);
       case Compilation::InstructionType::JUMP_IF_ZERO:
-        return concatenate("JUMP_IF_ZERO", instruction.first_argument);
+        return concatenate("JUMP_IF_ZERO", instruction.argument);
       case Compilation::InstructionType::JUMP_IF_NONZERO:
-        return concatenate("JUMP_IF_NONZERO", instruction.first_argument);
+        return concatenate("JUMP_IF_NONZERO", instruction.argument);
       case Compilation::InstructionType::CALL_FUNCTION:
-        return concatenate("CALL_FUNCTION", instruction.first_argument,
-                           instruction.second_argument);
+        return "CALL_FUNCTION";
       case Compilation::InstructionType::LOAD:
-        return concatenate("LOAD", instruction.first_argument);
+        return concatenate("LOAD", instruction.argument);
       case Compilation::InstructionType::LOAD_CONST:
-        return concatenate("LOAD_CONST", instruction.first_argument);
+        return concatenate("LOAD_CONST", instruction.argument);
+      case Compilation::InstructionType::LOAD_CALL:
+        return concatenate("LOAD_CALL", instruction.argument);
       case Compilation::InstructionType::RETURN:
         return "RETURN";
       case Compilation::InstructionType::POP:

@@ -1,5 +1,2 @@
-succ(z) = successor(z);
-add(x, y) = succ(successor(x));
-f(x) = add(1, x);
-
-f(1000);
+add(x, 0) = x;
+add(x, y + 1) = successor(add);
