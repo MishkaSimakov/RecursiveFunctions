@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Instructions.h"
+#include "functions/FastAdd.h"
 #include "functions/Successor.h"
 #include "syntax/buffalo/SyntaxNode.h"
 
@@ -109,12 +110,15 @@ class BytecodeCompiler {
     if (is_recursive) {
       auto& last_varname = info_node.children.back()->value;
       variables[last_varname].type = VariableType::RECURSION_PARAMETER;
+
       variables.emplace(function_name,
                         VariableInfo{0, VariableType::RECURSION_CALL});
     }
 
-    auto instructions = compile_function(value_node, false, false, variables,
-                                         function_info->second);
+    size_t self_id =
+        function_was_found ? function_info->second.id : functions_.size();
+    auto instructions =
+        compile_function(value_node, false, false, variables, self_id);
     instructions.emplace_back(InstructionType::RETURN);
 
     if (is_recursive && function_was_found) {
@@ -167,10 +171,13 @@ class BytecodeCompiler {
 
     block.instructions = {
         {InstructionType::LOAD, 0},
-        {InstructionType::JUMP_IF_ZERO, 2 + general_case_instructions.size()}};
+        {InstructionType::JUMP_IF_ZERO, 3 + general_case_instructions.size()}};
 
+    block.instructions.emplace_back(InstructionType::POP);
     block.instructions.splice(block.instructions.end(),
                               general_case_instructions);
+
+    block.instructions.emplace_back(InstructionType::POP);
     block.instructions.splice(block.instructions.end(), zero_case_instructions);
 
     info.state = FunctionState::COMPLETED;
@@ -179,7 +186,7 @@ class BytecodeCompiler {
   list<Instruction> compile_function(
       const SyntaxNode& node, bool only_constant_params, bool is_inside_argmin,
       const unordered_map<string, VariableInfo>& variables_map,
-      std::optional<FunctionInfo> defined_function_info) {
+      size_t self_id) {
     if (node.type == SyntaxNodeType::CONSTANT) {
       return {{InstructionType::LOAD_CONST, get_value_type(node)}};
     }
@@ -203,16 +210,21 @@ class BytecodeCompiler {
       }
 
       if (variable_info.type == VariableType::RECURSION_CALL) {
-        size_t variables_count = defined_function_info->variables_count;
-        size_t function_id = defined_function_info->id;
+        size_t variables_count = variables_map.size() - 1;
+        size_t function_id = self_id;
 
         list<Instruction> result;
 
+        result.emplace_back(InstructionType::LOAD_CALL, function_id);
         for (size_t i = 0; i < variables_count; ++i) {
           result.emplace_back(InstructionType::LOAD, i);
+
+          if (i == 0) {
+            result.emplace_back(InstructionType::DECREMENT);
+          }
         }
 
-        result.emplace_back(InstructionType::CALL_FUNCTION, function_id);
+        result.emplace_back(InstructionType::CALL_FUNCTION);
 
         return result;
       }
@@ -230,32 +242,33 @@ class BytecodeCompiler {
 
     // if node type is function
     list<Instruction> result;
-    auto& children = node.children;
-
-    for (auto itr = children.rbegin(); itr != children.rend(); ++itr) {
-      auto instructions =
-          compile_function(**itr, only_constant_params, is_inside_argmin,
-                           variables_map, defined_function_info);
-
-      result.splice(result.end(), instructions);
-    }
 
     const string& function_name = node.value;
-
     auto function_info = functions_info_.find(function_name);
 
     if (function_info == functions_info_.end()) {
       throw std::runtime_error("Usage of function before definition.");
     }
 
+    auto& children = node.children;
     auto variables_count = function_info->second.variables_count;
+
     if (variables_count != children.size()) {
       throw std::runtime_error(
           "Call of function with wrong number of arguments");
     }
 
-    result.emplace_back(InstructionType::CALL_FUNCTION,
-                        function_info->second.id);
+    result.emplace_back(InstructionType::LOAD_CALL, function_info->second.id);
+
+    for (auto itr = children.rbegin(); itr != children.rend(); ++itr) {
+      auto instructions =
+          compile_function(**itr, only_constant_params, is_inside_argmin,
+                           variables_map, self_id);
+
+      result.splice(result.end(), instructions);
+    }
+
+    result.emplace_back(InstructionType::CALL_FUNCTION);
 
     return result;
   }
@@ -266,7 +279,7 @@ class BytecodeCompiler {
           "There must be only one function call in program.");
     }
 
-    function_call_ = compile_function(node, true, false, {}, std::nullopt);
+    function_call_ = compile_function(node, true, false, {}, 0);
     function_call_.emplace_back(InstructionType::HALT);
   }
 
@@ -275,6 +288,10 @@ class BytecodeCompiler {
     functions_info_["successor"] = {functions_.size(), 1,
                                     FunctionState::COMPLETED};
     functions_.emplace_back(successor_instructions);
+
+    // fast add
+    functions_info_["__add"] = {functions_.size(), 2, FunctionState::COMPLETED};
+    functions_.emplace_back(fast_add_instructions);
   }
 
   vector<Instruction> get_combined_instructions() {
@@ -306,7 +323,7 @@ class BytecodeCompiler {
   static void offset_calls(vector<Instruction>& instructions,
                            const vector<size_t>& offsets) {
     for (auto& instruction : instructions) {
-      if (instruction.type == InstructionType::CALL_FUNCTION) {
+      if (instruction.type == InstructionType::LOAD_CALL) {
         instruction.argument = offsets[instruction.argument];
       }
     }

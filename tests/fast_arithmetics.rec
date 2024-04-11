@@ -1,5 +1,4 @@
-add(x, 0) = x;
-add(x, y + 1) = successor(add);
+add(x, y) = __add(x, y);
 
 multiply(x, 0) = 0;
 multiply(x, y + 1) = add(multiply, x);

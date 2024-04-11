@@ -23,9 +23,9 @@ struct ValueT {
 
   bool is_line_id() const { return (value & kFunctionCallOffset) != 0; }
 
-  size_t get_value() const { return value; }
+  size_t as_value() const { return value; }
 
-  size_t get_line_id() const { return value & ~kFunctionCallOffset; }
+  size_t as_line_id() const { return value & ~kFunctionCallOffset; }
 
   void increment() { ++value; }
 

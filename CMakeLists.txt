@@ -3,7 +3,8 @@ project(RecursiveFunctions)
 
 set(CMAKE_CXX_STANDARD 23)
 
-set(CMAKE_CXX_FLAGS "-fsanitize=address")
+#set(CMAKE_CXX_FLAGS "-fsanitize=address")
+#set(CMAKE_CXX_FLAGS "-O3")
 
 add_executable(RecursiveFunctions main.cpp
         src/preprocessor/Preprocessor.h

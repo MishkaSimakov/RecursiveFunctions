@@ -55,8 +55,10 @@ class BytecodePrinter {
 
  public:
   static void print(const vector<Compilation::Instruction>& instructions) {
-    for (auto& instruction : instructions) {
-      std::cout << get_instruction_representation(instruction) << std::endl;
+    for (size_t line_id = 0; line_id < instructions.size(); ++line_id) {
+      std::cout << line_id << ":\t"
+                << get_instruction_representation(instructions[line_id])
+                << std::endl;
     }
   }
 };

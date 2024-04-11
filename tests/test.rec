@@ -1,2 +1,3 @@
-add(x, 0) = x;
-add(x, y + 1) = successor(add);
+#include "is_prime"
+
+is_prime(15);
