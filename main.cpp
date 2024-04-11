@@ -18,7 +18,7 @@ int main() {
       "RecursiveFunctions/tests";
 
   Preprocessor preprocessor;
-  preprocessor.add_file("arithmetics", base_path / "fast_arithmetics.rec");
+  preprocessor.add_file("arithmetics", base_path / "arithmetics.rec");
   preprocessor.add_file("is_prime", base_path / "is_prime.rec");
 
   preprocessor.add_file("test", base_path / "test.rec");

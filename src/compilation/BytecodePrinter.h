@@ -30,8 +30,8 @@ class BytecodePrinter {
         return concatenate("INCREMENT", instruction.argument);
       case Compilation::InstructionType::DECREMENT:
         return concatenate("DECREMENT", instruction.argument);
-      case Compilation::InstructionType::JUMP_IF_ZERO:
-        return concatenate("JUMP_IF_ZERO", instruction.argument);
+      case Compilation::InstructionType::POP_JUMP_IF_ZERO:
+        return concatenate("POP_JUMP_IF_ZERO", instruction.argument);
       case Compilation::InstructionType::JUMP_IF_NONZERO:
         return concatenate("JUMP_IF_NONZERO", instruction.argument);
       case Compilation::InstructionType::CALL_FUNCTION:

@@ -23,6 +23,6 @@ add_executable(RecursiveFunctions main.cpp
         src/execution/BytecodeExecutor.h
         src/compilation/functions/FastAdd.h
         src/compilation/BytecodePrinter.h
-        src/compilation/CompileTreeBuilder.h)
+)
 
 target_include_directories(RecursiveFunctions PUBLIC src)

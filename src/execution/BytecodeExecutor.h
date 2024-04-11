@@ -55,8 +55,9 @@ class BytecodeExecutor {
         case Compilation::InstructionType::DECREMENT:
           (calculation_stack_ptr - command.argument - 1)->decrement();
           break;
-        case Compilation::InstructionType::JUMP_IF_ZERO:
-          if (*(calculation_stack_ptr - 1) == 0) {
+        case Compilation::InstructionType::POP_JUMP_IF_ZERO:
+          --calculation_stack_ptr;
+          if (*calculation_stack_ptr == 0) {
             command_ptr = command.argument;
             --command_ptr;
           }

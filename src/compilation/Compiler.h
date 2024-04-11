@@ -169,15 +169,13 @@ class BytecodeCompiler {
       std::swap(zero_case_instructions, general_case_instructions);
     }
 
-    block.instructions = {
-        {InstructionType::LOAD, 0},
-        {InstructionType::JUMP_IF_ZERO, 3 + general_case_instructions.size()}};
+    block.instructions = {{InstructionType::LOAD, 0},
+                          {InstructionType::POP_JUMP_IF_ZERO,
+                           2 + general_case_instructions.size()}};
 
-    block.instructions.emplace_back(InstructionType::POP);
     block.instructions.splice(block.instructions.end(),
                               general_case_instructions);
 
-    block.instructions.emplace_back(InstructionType::POP);
     block.instructions.splice(block.instructions.end(), zero_case_instructions);
 
     info.state = FunctionState::COMPLETED;
@@ -244,21 +242,23 @@ class BytecodeCompiler {
     list<Instruction> result;
 
     const string& function_name = node.value;
-    auto function_info = functions_info_.find(function_name);
-
-    if (function_info == functions_info_.end()) {
-      throw std::runtime_error("Usage of function before definition.");
-    }
-
     auto& children = node.children;
-    auto variables_count = function_info->second.variables_count;
 
-    if (variables_count != children.size()) {
-      throw std::runtime_error(
-          "Call of function with wrong number of arguments");
+    if (function_name != "successor") {
+      auto function_info = functions_info_.find(function_name);
+      if (function_info == functions_info_.end()) {
+        throw std::runtime_error("Usage of function before definition.");
+      }
+
+      auto variables_count = function_info->second.variables_count;
+
+      if (variables_count != children.size()) {
+        throw std::runtime_error(
+            "Call of function with wrong number of arguments");
+      }
+
+      result.emplace_back(InstructionType::LOAD_CALL, function_info->second.id);
     }
-
-    result.emplace_back(InstructionType::LOAD_CALL, function_info->second.id);
 
     for (auto itr = children.rbegin(); itr != children.rend(); ++itr) {
       auto instructions =
@@ -268,7 +268,11 @@ class BytecodeCompiler {
       result.splice(result.end(), instructions);
     }
 
-    result.emplace_back(InstructionType::CALL_FUNCTION);
+    if (function_name == "successor") {
+      result.emplace_back(InstructionType::INCREMENT);
+    } else {
+      result.emplace_back(InstructionType::CALL_FUNCTION);
+    }
 
     return result;
   }
@@ -284,14 +288,10 @@ class BytecodeCompiler {
   }
 
   void load_system_functions() {
-    // successor
-    functions_info_["successor"] = {functions_.size(), 1,
-                                    FunctionState::COMPLETED};
-    functions_.emplace_back(successor_instructions);
-
     // fast add
-    functions_info_["__add"] = {functions_.size(), 2, FunctionState::COMPLETED};
-    functions_.emplace_back(fast_add_instructions);
+    // functions_info_["__add"] = {functions_.size(), 2,
+    // FunctionState::COMPLETED};
+    // functions_.emplace_back(fast_add_instructions);
   }
 
   vector<Instruction> get_combined_instructions() {
@@ -306,7 +306,7 @@ class BytecodeCompiler {
       functions_offsets[func_index] = offset;
 
       for (auto instruction : functions_[func_index].instructions) {
-        if (instruction.type == InstructionType::JUMP_IF_ZERO ||
+        if (instruction.type == InstructionType::POP_JUMP_IF_ZERO ||
             instruction.type == InstructionType::JUMP_IF_NONZERO) {
           instruction.argument += offset;
         }

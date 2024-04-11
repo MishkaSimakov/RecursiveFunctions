@@ -11,16 +11,14 @@ namespace Compilation {
 // clang-format off
 inline list<Instruction> fast_add_instructions = {
   {InstructionType::LOAD, 0},
-  {InstructionType::JUMP_IF_ZERO, 10},
-  {InstructionType::POP},
+  {InstructionType::POP_JUMP_IF_ZERO, 9},
   {InstructionType::LOAD, 1},
   {InstructionType::LOAD, 0},
   {InstructionType::INCREMENT, 1},
   {InstructionType::DECREMENT, 0},
-  {InstructionType::JUMP_IF_NONZERO, 5},
+  {InstructionType::JUMP_IF_NONZERO, 4},
   {InstructionType::POP},
   {InstructionType::RETURN},
-  {InstructionType::POP},
   {InstructionType::LOAD, 1},
   {InstructionType::RETURN}
 };

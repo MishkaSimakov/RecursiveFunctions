@@ -38,7 +38,7 @@ namespace Compilation {
 enum class InstructionType {
   INCREMENT,
   DECREMENT,
-  JUMP_IF_ZERO,
+  POP_JUMP_IF_ZERO,
   JUMP_IF_NONZERO,
   CALL_FUNCTION,
   LOAD,
