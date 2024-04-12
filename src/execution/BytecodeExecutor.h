@@ -14,7 +14,7 @@ class BytecodeExecutor {
 
   constexpr static size_t kCallStackSize = 1e5;
   constexpr static size_t kValuesStackSize = 1e5;
-  constexpr static size_t kMaxIterations = 1e11;
+  constexpr static size_t kMaxIterations = 1e9;
 
   array<pair<size_t, size_t>, kCallStackSize> call_stack_;
   array<ValueT, kValuesStackSize> call_arguments_stack_{};
@@ -132,11 +132,7 @@ class BytecodeExecutor {
         return *(calculation_stack_ptr - 1);
       }
 
-      // std::cout << "Call arguments stack: ";
-      // echo_stack(call_arguments_stack_.begin(), call_arguments_stack_ptr,
-      // 20);
-      //
-      // std::cout << "Calculations stack:   ";
+      // std::cout << command_ptr << " ";
       // echo_stack(calculation_stack_.begin(), calculation_stack_ptr, 20);
 
       ++command_ptr;
@@ -147,25 +143,3 @@ class BytecodeExecutor {
 };
 
 #endif  // BYTECODEEXECUTOR_H
-
-// 0:	LOAD_CALL 8
-// 1:	LOAD_CONST 20
-// 2:	LOAD_CONST 10
-// 3:	CALL_FUNCTION
-// 4:	HALT
-// 5:	LOAD 0
-// 6:	INCREMENT 0
-// 7:	RETURN
-// 8:	LOAD 0
-// 9:	JUMP_IF_ZERO 18
-// 10:	POP
-// 11:	LOAD_CALL 5
-// 12:	LOAD_CALL 8
-// 13:	LOAD 0
-// 14:	LOAD 1
-// 15:	CALL_FUNCTION
-// 16:	CALL_FUNCTION
-// 17:	RETURN
-// 18:	POP
-// 19:	LOAD 1
-// 20:	RETURN

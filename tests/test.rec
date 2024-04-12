@@ -1,3 +1,13 @@
 #include "is_prime"
 
-is_prime(203);
+# is_prime(501);
+
+# records for is_prime(501) iterations count:
+# 1919051458 - without optimizations
+# 1646502947 - fast addition
+#  218804004 - fast addition + fast abs_diff
+#  213325303 - fast addition + fast abs_diff + logic tweaks
+
+next_prime(x) = argmin(not(is_prime(add(x, *))));
+
+next_prime(100);

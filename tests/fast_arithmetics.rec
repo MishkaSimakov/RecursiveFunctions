@@ -11,16 +11,18 @@ predecessor(x + 1) = x;
 monus(x, 0) = x;
 monus(x, y + 1) = predecessor(monus);
 
-absolute_difference(x, y) = add(monus(x, y), monus(y, x));
+absolute_difference(x, y) = __abs_diff(x, y);
 
 is_positive(0) = 0;
 is_positive(x + 1) = 1;
 
-# "logic part, 1 is true, 0 is false, other values causes UB"
-not(x) = monus(1, x);
+# "logic part, 0 is false, otherwise is true, other values causes UB"
+not(0) = 1;
+not(x + 1) = 0;
 
-or(x, y) = is_positive(add(x, y));
-and(x, y) = not(or(not(x), not(y)));
+or(x, y) = add(x, y);
+and(x, 0) = 0;
+and(x, y + 1) = x;
 xor(x, y) = and(or(x, y), not(and(x, y)));
 
 is_equal(x, y) = not(is_positive(absolute_difference(x, y)));

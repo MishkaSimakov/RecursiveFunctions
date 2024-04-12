@@ -4,7 +4,7 @@ project(RecursiveFunctions)
 set(CMAKE_CXX_STANDARD 23)
 
 #set(CMAKE_CXX_FLAGS "-fsanitize=address")
-#set(CMAKE_CXX_FLAGS "-O3")
+set(CMAKE_CXX_FLAGS "-O3")
 
 add_executable(RecursiveFunctions main.cpp
         src/preprocessor/Preprocessor.h
@@ -19,10 +19,10 @@ add_executable(RecursiveFunctions main.cpp
         src/compilation/instructions.h
         src/compilation/Compiler.h
         src/compilation/functions/successor.h
-        src/compilation/functions/argmin.h
         src/execution/BytecodeExecutor.h
         src/compilation/functions/FastAdd.h
         src/compilation/BytecodePrinter.h
+        src/compilation/functions/FastAbsoluteDifference.h
 )
 
 target_include_directories(RecursiveFunctions PUBLIC src)
