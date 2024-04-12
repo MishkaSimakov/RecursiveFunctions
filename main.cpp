@@ -13,6 +13,13 @@
 
 using namespace std;
 
+template <class result_t = std::chrono::milliseconds,
+          class clock_t = std::chrono::steady_clock,
+          class duration_t = std::chrono::milliseconds>
+auto since(std::chrono::time_point<clock_t, duration_t> const& start) {
+  return std::chrono::duration_cast<result_t>(clock_t::now() - start);
+}
+
 int main() {
   // setup logger
   Logger::disable_category(Logger::Category::ALL);
@@ -38,10 +45,13 @@ int main() {
   Compilation::BytecodeCompiler compiler;
   auto bytecode = compiler.compile(*syntax_tree);
 
-  BytecodePrinter::print(bytecode);
+  // BytecodePrinter::print(bytecode);
 
   BytecodeExecutor executor;
+
+  auto start = std::chrono::steady_clock::now();
   ValueT result = executor.execute(bytecode);
+  std::cout << "Elapsed(ms)=" << since(start).count() << std::endl;
 
   std::cout << "Executed successfully, result: " << result.as_value() << endl;
 }

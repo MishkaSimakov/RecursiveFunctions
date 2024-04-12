@@ -14,7 +14,7 @@ class BytecodeExecutor {
 
   constexpr static size_t kCallStackSize = 1e5;
   constexpr static size_t kValuesStackSize = 1e5;
-  constexpr static size_t kMaxIterations = 1e9;
+  constexpr static size_t kMaxIterations = 1e11;
 
   array<pair<size_t, size_t>, kCallStackSize> call_stack_;
   array<ValueT, kValuesStackSize> call_arguments_stack_{};
