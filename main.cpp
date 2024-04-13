@@ -45,13 +45,18 @@ int main() {
   Compilation::BytecodeCompiler compiler;
   auto bytecode = compiler.compile(*syntax_tree);
 
-  // BytecodePrinter::print(bytecode);
+  BytecodePrinter::print(bytecode);
 
   BytecodeExecutor executor;
 
-  auto start = std::chrono::steady_clock::now();
   ValueT result = executor.execute(bytecode);
-  std::cout << "Elapsed(ms)=" << since(start).count() << std::endl;
 
-  std::cout << "Executed successfully, result: " << result.as_value() << endl;
+  cout << "Result: " << result.as_value() << endl;
+
+  cout << "In overall execution took: "
+       << executor.get_execution_duration().count() << "ms" << endl;
+
+#if COLLECT_STATISTICS
+  executor.print_statistics(cout);
+#endif
 }

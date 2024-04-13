@@ -194,7 +194,7 @@ class BytecodeCompiler {
         }
       }
 
-      block.instructions.emplace_back(InstructionType::CALL_FUNCTION);
+      block.instructions.emplace_back(InstructionType::CALL_RECURSIVE);
 
       block.instructions.splice(block.instructions.end(),
                                 general_case_instructions);

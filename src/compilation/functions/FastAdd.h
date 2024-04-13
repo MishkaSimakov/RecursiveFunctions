@@ -17,10 +17,10 @@ inline list<Instruction> fast_add_instructions = {
   {InstructionType::INCREMENT, 1},
   {InstructionType::DECREMENT, 0},
   {InstructionType::JUMP_IF_NONZERO, 4},
-  {InstructionType::POP},
-  {InstructionType::RETURN},
+  {InstructionType::POP, 0},
+  {InstructionType::RETURN, 0},
   {InstructionType::LOAD, 1},
-  {InstructionType::RETURN}
+  {InstructionType::RETURN, 0}
 };
 // clang-format on
 }  // namespace Compilation

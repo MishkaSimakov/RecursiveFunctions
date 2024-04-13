@@ -18,11 +18,11 @@ add_executable(RecursiveFunctions main.cpp
         src/syntax/AdditionSyntax.h
         src/compilation/instructions.h
         src/compilation/Compiler.h
-        src/compilation/functions/successor.h
         src/execution/BytecodeExecutor.h
         src/compilation/functions/FastAdd.h
         src/compilation/BytecodePrinter.h
         src/compilation/functions/FastAbsoluteDifference.h
+        src/concatenate.h
 )
 
 target_include_directories(RecursiveFunctions PUBLIC src)
