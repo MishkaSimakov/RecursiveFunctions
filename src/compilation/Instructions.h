@@ -3,8 +3,6 @@
 
 #include <list>
 
-#include "concatenate.h"
-
 using std::list;
 
 struct ValueT {
@@ -43,7 +41,6 @@ enum class InstructionType {
   POP_JUMP_IF_ZERO,
   JUMP_IF_NONZERO,
   CALL_FUNCTION,
-  CALL_RECURSIVE,
   LOAD,
   LOAD_CONST,
   LOAD_CALL,
@@ -86,8 +83,6 @@ inline std::ostream& operator<<(
       return os << "JUMP_IF_NONZERO";
     case Compilation::InstructionType::CALL_FUNCTION:
       return os << "CALL_FUNCTION";
-    case Compilation::InstructionType::CALL_RECURSIVE:
-      return os << "CALL_RECURSIVE";
     case Compilation::InstructionType::LOAD:
       return os << "LOAD";
     case Compilation::InstructionType::LOAD_CONST:

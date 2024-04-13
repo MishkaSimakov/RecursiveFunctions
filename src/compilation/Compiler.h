@@ -179,29 +179,75 @@ class BytecodeCompiler {
     block.instructions.clear();
 
     if (info.use_previous_value) {
-      block.instructions.emplace_back(InstructionType::LOAD, 0);
-      block.instructions.emplace_back(
-          InstructionType::POP_JUMP_IF_ZERO,
-          4 + general_case_instructions.size());
+      size_t offset =
+          zero_case_instructions.size() + general_case_instructions.size() - 2;
 
-      // if nonzero we calculating previous function value
-      block.instructions.emplace_back(InstructionType::CALL_RECURSIVE, info.id);
+      block.instructions.splice(block.instructions.end(),
+                                zero_case_instructions);
+      block.instructions.pop_back();
+
+      /* 1 */ block.instructions.emplace_back(InstructionType::LOAD, 0);
+
+      // jump to the end
+      /* 2 */ block.instructions.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
+                                              offset + 16);
+
+      // load variables for recursion cycle
+      /* 3 */ block.instructions.emplace_back(InstructionType::LOAD, 0);
+      /* 4 */ block.instructions.emplace_back(InstructionType::DECREMENT);
+      /* 5 */ block.instructions.emplace_back(InstructionType::LOAD_CONST, 0);
+      /* 6 */ block.instructions.emplace_back(InstructionType::COPY, 2);
 
       block.instructions.splice(block.instructions.end(),
                                 general_case_instructions);
+      // remove RETURN (here we assume that all functions has only one return in
+      // the end)
+      block.instructions.pop_back();
 
-      block.instructions.emplace(std::prev(block.instructions.end()),
-                                 InstructionType::POP, 1);
+      // leave cycle if we calculated last value
+      /* 7 */ block.instructions.emplace_back(InstructionType::POP, 1);
+      /* 8 */ block.instructions.emplace_back(InstructionType::COPY, 2);
+      /* 9 */ block.instructions.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
+                                              offset + 13);
+
+      // increment loop counter
+      /* 10 */ block.instructions.emplace_back(InstructionType::INCREMENT, 1);
+      /* 11 */ block.instructions.emplace_back(InstructionType::DECREMENT, 2);
+
+      // jump back to cycle start
+      /* 12 */ block.instructions.emplace_back(InstructionType::LOAD_CONST, 0);
+      /* 13 */ block.instructions.emplace_back(
+          InstructionType::POP_JUMP_IF_ZERO, zero_case_instructions.size() + 7);
+
+      /* 14 */ block.instructions.emplace_back(InstructionType::POP, 1);
+      /* 15 */ block.instructions.emplace_back(InstructionType::POP, 1);
+      /* 16 */ block.instructions.emplace_back(InstructionType::POP, 1);
+
+      /* 17 */ block.instructions.emplace_back(InstructionType::RETURN);
     } else {
       block.instructions.emplace_back(InstructionType::LOAD, 0);
-      block.instructions.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                                      2 + general_case_instructions.size());
+      block.instructions.emplace_back(InstructionType::JUMP_IF_NONZERO,
+                                      zero_case_instructions.size() + 3);
 
       block.instructions.splice(block.instructions.end(),
-                                general_case_instructions);
-    }
+                                zero_case_instructions);
+      block.instructions.pop_back();
 
-    block.instructions.splice(block.instructions.end(), zero_case_instructions);
+      block.instructions.emplace_back(InstructionType::LOAD_CONST, 0);
+      block.instructions.emplace_back(
+          InstructionType::POP_JUMP_IF_ZERO,
+          general_case_instructions.size() + zero_case_instructions.size() + 7);
+
+      block.instructions.emplace_back(InstructionType::DECREMENT, 0);
+      block.instructions.emplace_back(InstructionType::LOAD_CONST, 0);
+      block.instructions.splice(block.instructions.end(),
+                                general_case_instructions);
+      block.instructions.pop_back();
+
+      block.instructions.emplace_back(InstructionType::POP, 1);
+      block.instructions.emplace_back(InstructionType::POP, 1);
+      block.instructions.emplace_back(InstructionType::RETURN);
+    }
 
     info.state = FunctionState::COMPLETED;
   }
@@ -229,8 +275,7 @@ class BytecodeCompiler {
 
       auto& variable_info = itr->second;
       if (variable_info.type == VariableType::RECURSION_PARAMETER) {
-        return {{InstructionType::LOAD, variable_info.id},
-                {InstructionType::DECREMENT, 0}};
+        return {{InstructionType::COPY, offset + 1}};
       }
 
       if (variable_info.type == VariableType::RECURSION_CALL) {
@@ -310,7 +355,8 @@ class BytecodeCompiler {
 
   void load_system_functions() {
     // fast add
-    functions_info_["__add"] = {functions_.size(), 2, FunctionState::COMPLETED};
+    functions_info_["__add"] = {functions_.size(), 2,
+    FunctionState::COMPLETED};
     functions_.emplace_back(fast_add_instructions);
 
     functions_info_["__abs_diff"] = {functions_.size(), 2,
@@ -374,8 +420,7 @@ class BytecodeCompiler {
   static void offset_calls(vector<Instruction>& instructions,
                            const vector<size_t>& offsets) {
     for (auto& instruction : instructions) {
-      if (instruction.type == InstructionType::LOAD_CALL ||
-          instruction.type == InstructionType::CALL_RECURSIVE) {
+      if (instruction.type == InstructionType::LOAD_CALL) {
         instruction.argument = offsets[instruction.argument];
       }
     }
@@ -391,6 +436,10 @@ class BytecodeCompiler {
       } else {
         compile_function_call(*expression);
       }
+    }
+
+    if (function_call_.empty()) {
+      throw std::runtime_error("Program must contain function call.");
     }
 
     auto result = get_combined_instructions();

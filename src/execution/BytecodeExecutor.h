@@ -9,7 +9,7 @@
 #include "compilation/Instructions.h"
 
 // enables collection of time-consuming statistics
-#define COLLECT_STATISTICS true
+#define COLLECT_STATISTICS false
 
 using std::array, std::vector, std::pair;
 using namespace std::chrono_literals;
@@ -98,23 +98,17 @@ class BytecodeExecutor {
 #endif
 
       switch (command.type) {
-        case Compilation::InstructionType::DECREMENT:
-          (calculation_stack_ptr - command.argument - 1)->decrement();
-          break;
         case Compilation::InstructionType::POP_JUMP_IF_ZERO:
           --calculation_stack_ptr;
           if (*calculation_stack_ptr == 0) {
-            command_ptr = command.argument;
-            --command_ptr;
+            command_ptr = command.argument - 1;
           }
+          break;
+        case Compilation::InstructionType::DECREMENT:
+          (calculation_stack_ptr - command.argument - 1)->decrement();
           break;
         case Compilation::InstructionType::LOAD_CONST:
           *calculation_stack_ptr = ValueT::construct_value(command.argument);
-          ++calculation_stack_ptr;
-          break;
-        case Compilation::InstructionType::COPY:
-          *calculation_stack_ptr =
-              *(calculation_stack_ptr - 1 - command.argument);
           ++calculation_stack_ptr;
           break;
         case Compilation::InstructionType::JUMP_IF_NONZERO:
@@ -122,6 +116,11 @@ class BytecodeExecutor {
             command_ptr = command.argument;
             --command_ptr;
           }
+          break;
+        case Compilation::InstructionType::COPY:
+          *calculation_stack_ptr =
+              *(calculation_stack_ptr - 1 - command.argument);
+          ++calculation_stack_ptr;
           break;
         case Compilation::InstructionType::LOAD:
           *calculation_stack_ptr =
@@ -156,11 +155,6 @@ class BytecodeExecutor {
           call_arguments_stack_ptr -= call_stack_ptr->second;
           command_ptr = call_stack_ptr->first;
 
-          if (instructions[command_ptr].type ==
-              Compilation::InstructionType::CALL_RECURSIVE) {
-            (call_arguments_stack_ptr - 1)->increment();
-          }
-
           break;
         case Compilation::InstructionType::INCREMENT:
           (calculation_stack_ptr - command.argument - 1)->increment();
@@ -175,13 +169,6 @@ class BytecodeExecutor {
             }
             --calculation_stack_ptr;
           }
-          break;
-        case Compilation::InstructionType::CALL_RECURSIVE:
-          call_stack_ptr->first = command_ptr;
-          call_stack_ptr->second = 0;
-          (call_arguments_stack_ptr - 1)->decrement();
-          ++call_stack_ptr;
-          command_ptr = command.argument - 1;
           break;
         case Compilation::InstructionType::HALT:
           finished = true;

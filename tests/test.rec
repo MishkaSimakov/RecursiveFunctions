@@ -1,6 +1,6 @@
 #include "is_prime"
 
-is_prime(501);
+is_prime(1000);
 
 # records for is_prime(501) iterations count:
 # 1919051458 - without optimizations
