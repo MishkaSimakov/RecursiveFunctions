@@ -80,12 +80,13 @@ class BytecodeExecutor {
     auto start_time = std::chrono::steady_clock::now();
 
     int command_ptr = 0;
-    auto call_stack_ptr = call_stack_.begin();
-    auto call_arguments_stack_ptr = call_arguments_stack_.begin();
-    auto calculation_stack_ptr = calculation_stack_.begin();
+    size_t call_stack_ptr = 0;
+    size_t call_arguments_stack_ptr = 0;
+    size_t calculation_stack_ptr = 0;
     bool finished = false;
 
     for (size_t iteration = 0; iteration < kMaxIterations; ++iteration) {
+    start:
       auto command = instructions[command_ptr];
 
 #if COLLECT_STATISTICS
@@ -99,76 +100,80 @@ class BytecodeExecutor {
 
       switch (command.type) {
         case Compilation::InstructionType::POP_JUMP_IF_ZERO:
-          --calculation_stack_ptr;
-          if (*calculation_stack_ptr == 0) {
-            command_ptr = command.argument - 1;
+          if (calculation_stack_[--calculation_stack_ptr] == 0) {
+            command_ptr = command.argument;
+            goto start;
           }
+
           break;
         case Compilation::InstructionType::DECREMENT:
-          (calculation_stack_ptr - command.argument - 1)->decrement();
+          calculation_stack_[calculation_stack_ptr - command.argument - 1]
+              .decrement();
           break;
         case Compilation::InstructionType::LOAD_CONST:
-          *calculation_stack_ptr = ValueT::construct_value(command.argument);
+          calculation_stack_[calculation_stack_ptr] =
+              ValueT::construct_value(command.argument);
           ++calculation_stack_ptr;
           break;
         case Compilation::InstructionType::JUMP_IF_NONZERO:
-          if (*(calculation_stack_ptr - 1) != 0) {
+          if (calculation_stack_[calculation_stack_ptr - 1] != 0) {
             command_ptr = command.argument;
-            --command_ptr;
+            goto start;
           }
           break;
         case Compilation::InstructionType::COPY:
-          *calculation_stack_ptr =
-              *(calculation_stack_ptr - 1 - command.argument);
+          calculation_stack_[calculation_stack_ptr] =
+              calculation_stack_[calculation_stack_ptr - 1 - command.argument];
           ++calculation_stack_ptr;
           break;
         case Compilation::InstructionType::LOAD:
-          *calculation_stack_ptr =
-              *(call_arguments_stack_ptr - command.argument - 1);
+          calculation_stack_[calculation_stack_ptr] =
+              call_arguments_stack_[call_arguments_stack_ptr -
+                                    command.argument - 1];
           ++calculation_stack_ptr;
           break;
         case Compilation::InstructionType::CALL_FUNCTION:
-          call_stack_ptr->second = 0;
+          call_stack_[call_stack_ptr].second = 0;
 
           // copy arguments to call arguments stack
           --calculation_stack_ptr;
-          while (!calculation_stack_ptr->is_line_id()) {
-            *call_arguments_stack_ptr = *calculation_stack_ptr;
+          while (!calculation_stack_[calculation_stack_ptr].is_line_id()) {
+            call_arguments_stack_[call_arguments_stack_ptr] =
+                calculation_stack_[calculation_stack_ptr];
             ++call_arguments_stack_ptr;
             --calculation_stack_ptr;
 
-            ++call_stack_ptr->second;  // calculate arguments count
+            ++call_stack_[call_stack_ptr].second;  // calculate arguments count
           }
 
-          call_stack_ptr->first = command_ptr;
+          call_stack_[call_stack_ptr].first = command_ptr;
           ++call_stack_ptr;
-          command_ptr = calculation_stack_ptr->as_line_id() - 1;
+          command_ptr =
+              calculation_stack_[calculation_stack_ptr].as_line_id() - 1;
           break;
 
         case Compilation::InstructionType::LOAD_CALL:
-          *calculation_stack_ptr = ValueT::construct_line_id(command.argument);
+          calculation_stack_[calculation_stack_ptr] =
+              ValueT::construct_line_id(command.argument);
           ++calculation_stack_ptr;
           break;
 
         case Compilation::InstructionType::RETURN:
           --call_stack_ptr;
-          call_arguments_stack_ptr -= call_stack_ptr->second;
-          command_ptr = call_stack_ptr->first;
+          call_arguments_stack_ptr -= call_stack_[call_stack_ptr].second;
+          command_ptr = call_stack_[call_stack_ptr].first;
 
           break;
         case Compilation::InstructionType::INCREMENT:
-          (calculation_stack_ptr - command.argument - 1)->increment();
+          calculation_stack_[calculation_stack_ptr - command.argument - 1]
+              .increment();
           break;
         case Compilation::InstructionType::POP:
-          if (command.argument == 0) {
-            --calculation_stack_ptr;
-          } else {
-            for (size_t i = 0; i < command.argument; ++i) {
-              *(calculation_stack_ptr - command.argument + i - 1) =
-                  *(calculation_stack_ptr - command.argument + i);
-            }
-            --calculation_stack_ptr;
+          for (size_t i = command.argument; i != 0; --i) {
+            calculation_stack_[calculation_stack_ptr - i - 1] =
+                calculation_stack_[calculation_stack_ptr - i];
           }
+          --calculation_stack_ptr;
           break;
         case Compilation::InstructionType::HALT:
           finished = true;
@@ -177,14 +182,14 @@ class BytecodeExecutor {
           throw std::runtime_error("Unimplemented command!");
       }
 
-      if (finished) {
+      if (finished) [[unlikely]] {
         statistics_.iterations_count = iteration;
         statistics_.execution_time =
             std::chrono::steady_clock::now() - start_time;
         statistics_.is_ready = true;
 
         std::cout << iteration << std::endl;
-        return *(calculation_stack_ptr - 1);
+        return calculation_stack_[calculation_stack_ptr - 1];
       }
 
       ++command_ptr;

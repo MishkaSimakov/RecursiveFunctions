@@ -8,3 +8,4 @@ is_prime(1000);
 #  218804004 - fast addition + fast abs_diff
 #  213325303 - fast addition + fast abs_diff + logic tweaks
 #  212321303 - call recursive command
+#  157403782
