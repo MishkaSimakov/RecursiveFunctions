@@ -156,6 +156,11 @@ class BytecodeExecutor {
           call_arguments_stack_ptr -= call_stack_ptr->second;
           command_ptr = call_stack_ptr->first;
 
+          if (instructions[command_ptr].type ==
+              Compilation::InstructionType::CALL_RECURSIVE) {
+            (call_arguments_stack_ptr - 1)->increment();
+          }
+
           break;
         case Compilation::InstructionType::INCREMENT:
           (calculation_stack_ptr - command.argument - 1)->increment();
@@ -172,10 +177,11 @@ class BytecodeExecutor {
           }
           break;
         case Compilation::InstructionType::CALL_RECURSIVE:
-          call_stack_ptr->second = command.argument;
           call_stack_ptr->first = command_ptr;
+          call_stack_ptr->second = 0;
+          (call_arguments_stack_ptr - 1)->decrement();
           ++call_stack_ptr;
-          command_ptr = calculation_stack_ptr->as_line_id() - 1;
+          command_ptr = command.argument - 1;
           break;
         case Compilation::InstructionType::HALT:
           finished = true;

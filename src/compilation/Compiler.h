@@ -182,19 +182,10 @@ class BytecodeCompiler {
       block.instructions.emplace_back(InstructionType::LOAD, 0);
       block.instructions.emplace_back(
           InstructionType::POP_JUMP_IF_ZERO,
-          6 + info.variables_count + general_case_instructions.size());
+          4 + general_case_instructions.size());
 
       // if nonzero we calculating previous function value
-      block.instructions.emplace_back(InstructionType::LOAD_CALL, info.id);
-      for (size_t i = 0; i < info.variables_count; ++i) {
-        block.instructions.emplace_back(InstructionType::LOAD, i);
-
-        if (i == 0) {
-          block.instructions.emplace_back(InstructionType::DECREMENT);
-        }
-      }
-
-      block.instructions.emplace_back(InstructionType::CALL_RECURSIVE);
+      block.instructions.emplace_back(InstructionType::CALL_RECURSIVE, info.id);
 
       block.instructions.splice(block.instructions.end(),
                                 general_case_instructions);
@@ -383,7 +374,8 @@ class BytecodeCompiler {
   static void offset_calls(vector<Instruction>& instructions,
                            const vector<size_t>& offsets) {
     for (auto& instruction : instructions) {
-      if (instruction.type == InstructionType::LOAD_CALL) {
+      if (instruction.type == InstructionType::LOAD_CALL ||
+          instruction.type == InstructionType::CALL_RECURSIVE) {
         instruction.argument = offsets[instruction.argument];
       }
     }
