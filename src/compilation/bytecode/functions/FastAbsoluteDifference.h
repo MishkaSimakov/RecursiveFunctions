@@ -27,7 +27,6 @@ inline list<Instruction> fast_absolute_difference_instructions = {
 
   // 10: if second is zero
   {InstructionType::POP, 1},
-  {InstructionType::RETURN, 0},
 };
 // clang-format on
 }  // namespace Compilation

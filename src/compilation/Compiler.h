@@ -34,28 +34,7 @@ struct VariableInfo {
   bool was_used = false;
 };
 
-/*
- * This class should transform all variables and function names into numbers
- * Rules:
- * - variables in function declaration are numerated in the same order as in
- *   function arguments list: f(x, y, z) -> f(0, 1, 2).
- * - functions are numerated in top to bottom order, recursive functions
- *   have same number associated with them.
- * All errors concerning functions and variables names must occure there.
- * List of errors:
- * 1. For non-recursive function: in definition, usage of variable that
- *    wasn't in arguments list.
- * 2. For recursive: same as 2, but function name may appear in function value.
- * 3. Double usage of variable in function.
- * 4. Usage of asterisk not inside argmin function.
- * 5. Usage of function before definition.
- * 6. Usage of recursive function before full definition (consists of zero-case
- *    definition and general-case definition).
- * 7. Wrong number of arguments in function call.
- * 8. Absence of asterisk inside argmin function.
- * 9. Call of argmin directly into another argmin (because of asterisk conflict)
- */
-class BytecodeCompiler {
+class BytecodeCompilerOld {
   unordered_map<string, FunctionInfo> functions_info_;
   vector<Block> functions_;
   list<Instruction> function_call_;
@@ -355,8 +334,7 @@ class BytecodeCompiler {
 
   void load_system_functions() {
     // fast add
-    functions_info_["__add"] = {functions_.size(), 2,
-    FunctionState::COMPLETED};
+    functions_info_["__add"] = {functions_.size(), 2, FunctionState::COMPLETED};
     functions_.emplace_back(fast_add_instructions);
 
     functions_info_["__abs_diff"] = {functions_.size(), 2,

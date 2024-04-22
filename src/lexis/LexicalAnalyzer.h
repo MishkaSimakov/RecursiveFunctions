@@ -116,8 +116,8 @@ class LexicalAnalyzer {
           result.push_back(current_token);
         }
 
-        is_first            = false;
-        current_token.type  = affiliation;
+        is_first = false;
+        current_token.type = affiliation;
         current_token.value = symbol;
         continue;
       }
