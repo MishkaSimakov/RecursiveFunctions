@@ -1,14 +1,25 @@
 #include "BytecodeCompiler.h"
 
 namespace Compilation {
-void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
-  auto zero_case = compile_node(node.zero_case);
-  auto general_case = compile_node(node.general_case);
+size_t BytecodeCompiler::get_recursion_call_result_position() const {
+  return get_recursion_parameter_position() - 1;
+}
 
+size_t BytecodeCompiler::get_recursion_parameter_position() const {
+  return current_offset_ - recursion_parameter_position_;
+}
+
+void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
   list<Instruction> compiled;
 
   if (node.use_previous_value) {
-    size_t offset = zero_case.size() + general_case.size() - 2;
+    auto zero_case = compile_node(node.zero_case);
+
+    recursion_parameter_position_ = current_offset_ + 3;
+    auto general_case = compile_node(node.general_case, 4);
+
+    //
+    size_t offset = zero_case.size() + general_case.size();
 
     compiled.splice(compiled.end(), zero_case);
 
@@ -45,21 +56,25 @@ void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
     /* 15 */ compiled.emplace_back(InstructionType::POP, 1);
     /* 16 */ compiled.emplace_back(InstructionType::POP, 1);
   } else {
+    auto zero_case = compile_node(node.zero_case, 1);
+
+    recursion_parameter_position_ = current_offset_ + 1;
+    auto general_case = compile_node(node.general_case, 1);
+
+    //
     compiled.emplace_back(InstructionType::LOAD, 0);
     compiled.emplace_back(InstructionType::JUMP_IF_NONZERO,
-                          zero_case.size() + 3);
+                          zero_case.size() + 4);
 
     compiled.splice(compiled.end(), zero_case);
 
     compiled.emplace_back(InstructionType::LOAD_CONST, 0);
     compiled.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                          general_case.size() + zero_case.size() + 7);
+                          general_case.size() + zero_case.size() + 6);
 
     compiled.emplace_back(InstructionType::DECREMENT, 0);
-    compiled.emplace_back(InstructionType::LOAD_CONST, 0);
     compiled.splice(compiled.end(), general_case);
 
-    compiled.emplace_back(InstructionType::POP, 1);
     compiled.emplace_back(InstructionType::POP, 1);
   }
 

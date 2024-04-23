@@ -2,15 +2,10 @@
 
 namespace Compilation {
 void BytecodeCompiler::compile(const ProgramNode& node) {
-  vector<list<Instruction>> compiled_statements;
-
   for (auto& statement : node.functions) {
-    statement->accept(*this);
-
-    compiled_statements.push_back(std::move(result_));
-    result_.clear();
+    compiled_functions_.push_back(compile_node(statement));
   }
 
-
+  compiled_call_ = compile_node(node.call);
 }
 }  // namespace Compilation

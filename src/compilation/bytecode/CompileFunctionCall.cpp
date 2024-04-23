@@ -3,14 +3,14 @@
 namespace Compilation {
 void BytecodeCompiler::compile(const FunctionCallNode& node) {
   size_t start_offset = current_offset_;
-  ++current_offset_;
 
   list<Instruction> compiled;
   compiled.emplace_back(InstructionType::LOAD_CALL, node.index);
 
-  for (auto& argument : node.arguments) {
+  for (auto argument_itr = node.arguments.rbegin();
+       argument_itr != node.arguments.rend(); ++argument_itr) {
     ++current_offset_;
-    auto instructions = compile_node(argument);
+    auto instructions = compile_node(*argument_itr);
 
     compiled.splice(compiled.end(), instructions);
   }

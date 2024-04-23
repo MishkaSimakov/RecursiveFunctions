@@ -24,6 +24,7 @@ struct ConstantNode;
 struct VariableNode;
 struct AsteriskNode;
 struct FunctionCallNode;
+struct SelfCallNode;
 
 class Compiler {
  public:
@@ -37,6 +38,7 @@ class Compiler {
   COMPILE_NODE_TYPE(VariableNode);
   COMPILE_NODE_TYPE(AsteriskNode);
   COMPILE_NODE_TYPE(FunctionCallNode);
+  COMPILE_NODE_TYPE(SelfCallNode);
 
   virtual ~Compiler() = default;
 };

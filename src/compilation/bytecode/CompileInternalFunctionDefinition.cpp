@@ -8,7 +8,7 @@ void BytecodeCompiler::compile(const InternalFunctionDefinitionNode& node) {
     result_ = fast_add_instructions;
   } else if (node.name == "__abs_diff") {
     result_ = fast_absolute_difference_instructions;
-  } else if (node.name == "increment") {
+  } else if (node.name == "successor") {
     result_ = {{InstructionType::LOAD, 0}, {InstructionType::INCREMENT, 0}};
   }
 }

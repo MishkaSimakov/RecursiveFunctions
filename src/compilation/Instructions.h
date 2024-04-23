@@ -2,6 +2,7 @@
 #define INSTRUCTIONS_H
 
 #include <list>
+#include <iostream>
 
 using std::list;
 

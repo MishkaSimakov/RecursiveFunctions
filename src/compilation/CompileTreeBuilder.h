@@ -222,7 +222,7 @@ class CompileTreeBuilder {
     parameters.is_inside_argmin_call = false;
     parameters.is_inside_call_statement = false;
 
-    if (is_recursive) {
+    if (function_type == FunctionType::RECURSIVE_GENERAL_CASE) {
       auto& last_varname = info_node.children.back()->value;
       variables[last_varname].type = VariableType::RECURSION_PARAMETER;
       variables[function_name].type = VariableType::RECURSION_CALL;
@@ -269,7 +269,9 @@ class CompileTreeBuilder {
           "arguments");
     }
 
-    node.use_previous_value = variables.at(name).was_used;
+    if (function_type == FunctionType::RECURSIVE_GENERAL_CASE) {
+      node.use_previous_value = variables.at(name).was_used;
+    }
 
     if (function_type == FunctionType::RECURSIVE_ZERO_CASE) {
       if (node.zero_case != nullptr) {
@@ -312,9 +314,15 @@ class CompileTreeBuilder {
         continue;
       }
 
-      if (recursive_ptr->zero_case == nullptr || recursive_ptr->general_case == nullptr) {
-        throw std::runtime_error("Recursive function definition is not complete");
+      if (recursive_ptr->zero_case == nullptr ||
+          recursive_ptr->general_case == nullptr) {
+        throw std::runtime_error(
+            "Recursive function definition is not complete");
       }
+    }
+
+    if (call_ == nullptr) {
+      throw std::runtime_error("Program must have function call");
     }
 
     auto program_node = std::make_unique<ProgramNode>();

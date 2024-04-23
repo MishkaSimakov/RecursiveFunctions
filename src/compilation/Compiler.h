@@ -7,8 +7,8 @@
 #include <vector>
 
 #include "Instructions.h"
-#include "functions/FastAbsoluteDifference.h"
-#include "functions/FastAdd.h"
+#include "bytecode/functions/FastAdd.h"
+#include "bytecode/functions/FastAbsoluteDifference.h"
 #include "syntax/buffalo/SyntaxNode.h"
 
 using std::vector, std::map, std::unordered_map, std::string, std::unique_ptr,

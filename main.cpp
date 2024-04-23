@@ -52,11 +52,10 @@ int main() {
   auto bytecode = compiler.get_result();
   BytecodePrinter::print(bytecode);
 
-  //   BytecodeExecutor executor;
-  //
-  //   ValueT result = executor.execute(bytecode);
-  //
-  //   cout << "Result: " << result.as_value() << endl;
+  BytecodeExecutor executor;
+  ValueT result = executor.execute(bytecode);
+
+  cout << "Result: " << result.as_value() << endl;
   //
   //   cout << "In overall execution took: "
   //        << executor.get_execution_duration().count() << "ms" << endl;
