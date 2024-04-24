@@ -24,6 +24,15 @@ class BytecodeCompiler final : public Compiler {
     return result;
   }
 
+  static void offset_jumps(list<Instruction>& instructions, size_t offset) {
+    for (auto& instruction : instructions) {
+      if (instruction.type == InstructionType::POP_JUMP_IF_ZERO ||
+          instruction.type == InstructionType::JUMP_IF_NONZERO) {
+        instruction.argument += offset;
+      }
+    }
+  }
+
   size_t get_recursion_parameter_position() const;
   size_t get_recursion_call_result_position() const;
 

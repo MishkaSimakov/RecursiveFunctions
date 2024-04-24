@@ -8,6 +8,7 @@ size_t BytecodeCompiler::get_argmin_parameter_position() const {
 void BytecodeCompiler::compile(const ArgminCallNode& node) {
   argmin_parameter_position_ = current_offset_ + 1;
   auto wrapped = compile_node(node.wrapped_call, 1);
+  offset_jumps(wrapped, 1);
 
   result_.emplace_back(InstructionType::LOAD_CONST, 0);
 

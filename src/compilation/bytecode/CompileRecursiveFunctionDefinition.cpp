@@ -33,6 +33,7 @@ void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
     /* 5 */ result_.emplace_back(InstructionType::LOAD_CONST, 0);
     /* 6 */ result_.emplace_back(InstructionType::COPY, 2);
 
+    offset_jumps(general_case, result_.size());
     result_.splice(result_.end(), general_case);
 
     // leave cycle if we calculated last value
@@ -64,6 +65,7 @@ void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
     result_.emplace_back(InstructionType::JUMP_IF_NONZERO,
                          zero_case.size() + 4);
 
+    offset_jumps(zero_case, result_.size());
     result_.splice(result_.end(), zero_case);
 
     result_.emplace_back(InstructionType::LOAD_CONST, 0);
@@ -71,6 +73,8 @@ void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
                          general_case.size() + zero_case.size() + 6);
 
     result_.emplace_back(InstructionType::DECREMENT, 0);
+
+    offset_jumps(general_case, result_.size());
     result_.splice(result_.end(), general_case);
 
     result_.emplace_back(InstructionType::POP, 1);

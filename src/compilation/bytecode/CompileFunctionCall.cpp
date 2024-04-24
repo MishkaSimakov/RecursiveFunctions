@@ -11,6 +11,7 @@ void BytecodeCompiler::compile(const FunctionCallNode& node) {
        argument_itr != node.arguments.rend(); ++argument_itr) {
     ++current_offset_;
     auto instructions = compile_node(*argument_itr);
+    offset_jumps(instructions, compiled.size());
 
     compiled.splice(compiled.end(), instructions);
   }
