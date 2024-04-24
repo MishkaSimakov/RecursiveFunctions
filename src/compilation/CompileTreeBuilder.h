@@ -134,7 +134,8 @@ class CompileTreeBuilder {
 
     auto function_index_itr = functions_indices_.find(function_name);
     if (function_index_itr == functions_indices_.end()) {
-      throw std::runtime_error("Usage of function before definition.");
+      throw std::runtime_error(string("Usage of function \"") + function_name +
+                               "\" before definition.");
     }
     const auto& function_definition_node =
         static_cast<BaseFunctionDefinitionCompileNode&>(

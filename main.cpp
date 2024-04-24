@@ -31,9 +31,7 @@ int main() {
   preprocessor.add_source<FileSource>("arithmetics",
                                       base_path / "fast_arithmetics.rec");
   preprocessor.add_source<FileSource>("is_prime", base_path / "is_prime.rec");
-
-  preprocessor.add_source<TextSource>(
-      "test", vector<string>{"#include \"is_prime\"", "is_prime(100);"});
+  preprocessor.add_source<FileSource>("test", base_path / "test.rec");
   preprocessor.set_main_source("test");
 
   string program_text = preprocessor.process();
@@ -48,8 +46,8 @@ int main() {
 
   CompileTreeBuilder compile_tree_builder;
   compile_tree_builder.add_internal_function("successor", 1);
-  compile_tree_builder.add_internal_function("__add", 2);
-  compile_tree_builder.add_internal_function("__abs_diff", 2);
+  // compile_tree_builder.add_internal_function("__add", 2);
+  // compile_tree_builder.add_internal_function("__abs_diff", 2);
 
   auto compile_tree = compile_tree_builder.build(*syntax_tree);
   Compilation::BytecodeCompiler compiler;

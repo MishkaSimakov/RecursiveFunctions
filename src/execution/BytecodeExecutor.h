@@ -1,6 +1,8 @@
 #ifndef BYTECODEEXECUTOR_H
 #define BYTECODEEXECUTOR_H
 
+#include <log/Logger.h>
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -11,7 +13,7 @@
 // enables collection of time-consuming statistics
 #define COLLECT_STATISTICS false
 
-using std::array, std::vector, std::pair;
+using std::array, std::vector, std::pair, std::unordered_map;
 using namespace std::chrono_literals;
 
 struct ExecutorStatistics {
@@ -188,7 +190,7 @@ class BytecodeExecutor {
             std::chrono::steady_clock::now() - start_time;
         statistics_.is_ready = true;
 
-        std::cout << iteration << std::endl;
+        Logger::execution(iteration);
         return calculation_stack_[calculation_stack_ptr - 1];
       }
 

@@ -10,10 +10,11 @@ enable_testing()
 
 add_executable(
         Tests
-        testing_test.cpp
-        feature/ProgramRunTests.cpp
+        feature/ArithmeticsTests.cpp
+        feature/FastArithmeticsTests.cpp
+        feature/ProgramRunTestCase.h
+        feature/ArgminTests.cpp
 )
-target_include_directories(Tests PRIVATE feature)
 
 target_link_libraries(
         Tests
@@ -22,3 +23,10 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(Tests)
+
+add_custom_command(
+        TARGET Tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/programs
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/tests/feature/programs/*
+        ${CMAKE_CURRENT_BINARY_DIR}/programs)

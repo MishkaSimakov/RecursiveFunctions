@@ -129,9 +129,9 @@ class Preprocessor {
   }
 };
 
-const vector<char> Preprocessor::kIgnoredCharacters = {' ',  '\f', '\n',
-                                                       '\r', '\t', '\v'};
-const std::regex Preprocessor::kIncludeRegex(R"(#include\s*\"(.*)\")");
+inline const vector<char> Preprocessor::kIgnoredCharacters = {' ',  '\f', '\n',
+                                                              '\r', '\t', '\v'};
+inline const std::regex Preprocessor::kIncludeRegex(R"(#include\s*\"(.*)\")");
 }  // namespace Preprocessing
 
 #endif  // PREPROCESSOR_H

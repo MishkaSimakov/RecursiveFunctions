@@ -70,6 +70,6 @@ class Logger {
   }
 };
 
-int Logger::enabled_categories = Logger::Category::ALL;
+inline int Logger::enabled_categories = Logger::Category::ALL;
 
 #endif  // LOGGER_H
