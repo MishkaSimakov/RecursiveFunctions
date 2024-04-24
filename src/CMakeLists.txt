@@ -11,6 +11,9 @@ add_library(RecursiveFunctions
         compilation/bytecode/CompileConstant.cpp
         compilation/bytecode/CompileAsterisk.cpp
         compilation/bytecode/CompileSelfCall.cpp
+        preprocessor/Source.h
+        preprocessor/FileSource.h
+        preprocessor/TextSource.h
 )
 
 target_include_directories(RecursiveFunctions PUBLIC "${PROJECT_SOURCE_DIR}/src")

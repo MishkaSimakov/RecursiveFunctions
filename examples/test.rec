@@ -1,4 +1,4 @@
-# include "is_prime"
+#include "is_prime"
 
 # is_prime(400);
 
@@ -9,3 +9,7 @@
 #  213325303 - fast addition + fast abs_diff + logic tweaks
 #  212321303 - call recursive command
 #  157403782
+
+f(x) = argmin(is_prime(add(x, *)));
+
+f(17);

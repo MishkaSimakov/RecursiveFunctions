@@ -5,16 +5,19 @@
 
 #include "compilation/BytecodePrinter.h"
 #include "compilation/CompileTreeBuilder.h"
-#include "compilation/Compiler.h"
 #include "compilation/bytecode/BytecodeCompiler.h"
 #include "execution/BytecodeExecutor.h"
 #include "lexis/LexicalAnalyzer.h"
+#include "preprocessor/FileSource.h"
 #include "preprocessor/Preprocessor.h"
+#include "preprocessor/TextSource.h"
 #include "syntax/RecursiveFunctionsSyntax.h"
 #include "syntax/buffalo/SyntaxTreeBuilder.h"
 
 using namespace std;
 using Compilation::CompileTreeBuilder;
+using Preprocessing::Preprocessor, Preprocessing::FileSource,
+    Preprocessing::TextSource;
 
 int main() {
   // setup logger
@@ -25,11 +28,14 @@ int main() {
       "RecursiveFunctions/examples";
 
   Preprocessor preprocessor;
-  preprocessor.add_file("arithmetics", base_path / "fast_arithmetics.rec");
-  preprocessor.add_file("is_prime", base_path / "is_prime.rec");
+  preprocessor.add_source<FileSource>("arithmetics",
+                                      base_path / "fast_arithmetics.rec");
+  preprocessor.add_source<FileSource>("is_prime", base_path / "is_prime.rec");
 
-  preprocessor.add_file("test", base_path / "test.rec");
-  preprocessor.set_main("test");
+  preprocessor.add_source<TextSource>(
+      "test", vector<string>{"#include \"is_prime\"", "is_prime(100);"});
+  preprocessor.set_main_source("test");
+
   string program_text = preprocessor.process();
 
   cout << program_text << endl;

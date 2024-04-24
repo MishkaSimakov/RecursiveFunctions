@@ -104,10 +104,32 @@ class CompileTreeBuilder {
     }
   }
 
+  unique_ptr<CompileNode> build_argmin_call_compile_node(
+      const SyntaxNode& syntax_node,
+      ValueCompilationNodeBuilderParameters parameters) {
+    if (syntax_node.children.size() != 1) {
+      throw std::runtime_error("Argmin called with wrong count of arguments.");
+    }
+
+    const auto& wrapped_value = *syntax_node.children[0];
+
+    auto node = std::make_unique<ArgminCallNode>();
+    parameters.is_inside_argmin_call = true;
+
+    node->wrapped_call = build_value_compile_node(wrapped_value, parameters);
+
+    return node;
+  }
+
   unique_ptr<CompileNode> build_function_call_compile_node(
       const SyntaxNode& syntax_node,
       const ValueCompilationNodeBuilderParameters& parameters) {
     const string& function_name = syntax_node.value;
+
+    if (function_name == kArgminFunctionName) {
+      return build_argmin_call_compile_node(syntax_node, parameters);
+    }
+
     auto& children = syntax_node.children;
 
     auto function_index_itr = functions_indices_.find(function_name);
