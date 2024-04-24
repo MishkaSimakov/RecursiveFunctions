@@ -46,8 +46,8 @@ int main() {
 
   CompileTreeBuilder compile_tree_builder;
   compile_tree_builder.add_internal_function("successor", 1);
-  // compile_tree_builder.add_internal_function("__add", 2);
-  // compile_tree_builder.add_internal_function("__abs_diff", 2);
+  compile_tree_builder.add_internal_function("__add", 2);
+  compile_tree_builder.add_internal_function("__abs_diff", 2);
 
   auto compile_tree = compile_tree_builder.build(*syntax_tree);
   Compilation::BytecodeCompiler compiler;

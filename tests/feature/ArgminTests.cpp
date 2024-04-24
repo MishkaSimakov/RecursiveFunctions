@@ -27,3 +27,20 @@ TEST_F(ProgramRunTestCase, test_argmin_inside_recursive) {
   string third = base + get_function_call("f", 100);
   ASSERT_EQ(run_program(third), 99);
 }
+
+
+TEST_F(ProgramRunTestCase, test_argmin_inside_argmin) {
+  string base = "f(0) = 0;";
+  base += "f(x + 1) = argmin(absolute_difference(x, *));";
+
+  base += "g(x) = argmin(not(is_prime(f(add(*, x)))));";
+
+  string first = base + get_function_call("g", 0);
+  ASSERT_EQ(run_program(first), 3);
+
+  string second = base + get_function_call("g", 5);
+  ASSERT_EQ(run_program(second), 1);
+
+  string third = base + get_function_call("g", 100);
+  ASSERT_EQ(run_program(third), 2);
+}

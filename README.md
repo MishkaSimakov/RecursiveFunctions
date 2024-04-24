@@ -14,8 +14,14 @@
 ```
 program := statement ';' program
          | EMPTY
-statement := FUNCTION_NAME '(' arguments_list ')' '=' 
-        (FUNCTION_NAME '(' composition_arguments ')' | INTEGER | IDENTIFIER)
+statement := FUNCTION_NAME '(' arguments_list ')' '=' function_value
+           | function_call
+           
+function_value := FUNCTION_NAME '(' composition_arguments ')'
+                | CONSTANT
+                | VARIABLE_NAME
+ 
+function_call := 
 
 arguments_list = EMPTY | nonempty_arguments_list
 nonempty_arguments_list := VARIABLE_NAME ',' nonempty_arguments_list

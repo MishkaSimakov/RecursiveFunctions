@@ -1,17 +1,23 @@
 #ifndef COMPILETREEBUILDER_H
 #define COMPILETREEBUILDER_H
 
-#include <syntax/buffalo/SyntaxNode.h>
-
 #include <memory>
 #include <unordered_map>
 
+#include "syntax/buffalo/SyntaxNode.h"
 #include "CompileTreeNodes.h"
-#include "Compiler.h"
 
 using std::unique_ptr, std::unordered_map, std::string, std::optional;
 
 namespace Compilation {
+enum class VariableType { VARIABLE, RECURSION_PARAMETER, RECURSION_CALL };
+
+struct VariableInfo {
+  size_t id;
+  VariableType type;
+  bool was_used = false;
+};
+
 class CompileTreeBuilder {
   unordered_map<string, size_t> functions_indices_;
   vector<unique_ptr<CompileNode>> functions_;

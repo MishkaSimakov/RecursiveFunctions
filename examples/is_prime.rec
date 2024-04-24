@@ -1,3 +1,7 @@
+# Функция is_prime рекурсивно проверяет число на простоту
+# В этом файле также содержится функция is_prime_argmin. Она также проверяет
+# число на простоту, но делает это не рекурсивно, а с помощью argmin
+
 #include "arithmetics"
 
 is_prime_loop(number, 0) = 1;
@@ -15,4 +19,11 @@ is_prime(number) = conditional(
     or(is_equal(number, 0), is_equal(number, 1)),
     0,
     is_prime_loop(number, predecessor(number))
+);
+
+is_prime_argmin(x) = is_equal(
+    successor(successor(
+        argmin(remainder(x, successor(successor(*))))
+    )),
+    x
 );
