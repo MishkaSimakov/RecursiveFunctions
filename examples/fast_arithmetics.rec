@@ -1,0 +1,53 @@
+# С точки зрения пользователя этот файл идентичен arithmetics.rec,
+# однако функции из этого файла работают значительно быстрее, так как
+# некоторые из них используются в заранее скомпилированном в bytecode виде
+# (т.е. этот файл - аналог кода на C++ с ассемблерными вставками)
+
+add(x, y) = __add(x, y);
+
+multiply(x, 0) = 0;
+multiply(x, y + 1) = add(multiply, x);
+
+power(x, 0) = 1;
+power(x, y + 1) = multiply(power, x);
+
+predecessor(0) = 0;
+predecessor(x + 1) = x;
+monus(x, 0) = x;
+monus(x, y + 1) = predecessor(monus);
+
+absolute_difference(x, y) = __abs_diff(x, y);
+
+is_positive(0) = 0;
+is_positive(x + 1) = 1;
+
+# "logic part, 0 is false, otherwise is true, other values causes UB"
+not(0) = 1;
+not(x + 1) = 0;
+
+or(x, y) = add(x, y);
+and(x, 0) = 0;
+and(x, y + 1) = x;
+xor(x, y) = and(or(x, y), not(and(x, y)));
+
+is_equal(x, y) = not(is_positive(absolute_difference(x, y)));
+is_greater(x, y) = is_positive(monus(x, y));
+
+conditional_internal(true_value, false_value, 0) = false_value;
+conditional_internal(true_value, false_value, condition + 1) = true_value;
+
+conditional(condition, true_value, false_value) = conditional_internal(true_value, false_value, condition);
+
+remainder_internal(divisor, 0) = 0;
+remainder_internal(divisor, dividend + 1) = conditional(
+    is_equal(successor(remainder_internal), divisor),
+    0,
+    successor(remainder_internal)
+);
+
+remainder(dividend, divisor) = remainder_internal(divisor, dividend);
+
+is_divisible(dividend, divisor) = is_equal(remainder(dividend, divisor), 0);
+
+sqrt(0) = 0;
+sqrt(x + 1) = add(sqrt, is_equal(successor(x), multiply(successor(sqrt), successor(sqrt))));

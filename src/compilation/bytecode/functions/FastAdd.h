@@ -19,7 +19,6 @@ inline list<Instruction> fast_add_instructions = {
   {InstructionType::JUMP_IF_NONZERO, 4},
   {InstructionType::POP_JUMP_IF_ZERO, 9},
   {InstructionType::LOAD, 1},
-  {InstructionType::RETURN, 0}
 };
 // clang-format on
 }  // namespace Compilation

@@ -151,9 +151,11 @@ inline auto GetSyntax() {
 
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(CALL_ARGUMENTS) + EatToken(TokenType::RPAREN) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_CALL_ARGUMENTS), CompactList(BuildFunctionNode));
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_CALL_ARGUMENTS), CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+  rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::ASTERISK) + EatToken(TokenType::COMMA) + EatRule(NONEMPTY_CALL_ARGUMENTS), CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::ASTERISK)));
 
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(CALL_ARGUMENTS) + EatToken(TokenType::RPAREN), GetListRootBuilder(BuildFunctionNode));
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+  rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::ASTERISK), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::ASTERISK)));
 
   // clang-format on
 

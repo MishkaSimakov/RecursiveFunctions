@@ -1,6 +1,7 @@
 #ifndef SYNTAXNODE_H
 #define SYNTAXNODE_H
 
+#include <memory>
 #include <string>
 #include <vector>
 

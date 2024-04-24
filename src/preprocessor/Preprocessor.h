@@ -1,8 +1,5 @@
 #ifndef PREPROCESSOR_H
 #define PREPROCESSOR_H
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <list>
 #include <regex>
 #include <string>
@@ -10,9 +7,12 @@
 #include <unordered_set>
 #include <vector>
 
+#include "Source.h"
+
 using std::string, std::unordered_map, std::vector, std::unordered_set,
     std::pair, std::list;
 
+namespace Preprocessing {
 struct FileFragment {
   bool is_include;
   string value;
@@ -27,8 +27,8 @@ class Preprocessor {
   const static vector<char> kIgnoredCharacters;
   const static std::regex kIncludeRegex;
 
-  unordered_map<string, std::filesystem::path> files_;
-  string main_filename_ = "main";
+  unordered_map<string, std::unique_ptr<Source>> sources_;
+  string main_source_ = "main";
 
   static bool is_include(const string& line) {
     return std::regex_search(line, kIncludeRegex);
@@ -49,31 +49,29 @@ class Preprocessor {
     std::erase_if(line, [](char symbol) { return std::isspace(symbol) != 0; });
   }
 
-  auto compact_files() {
-    string buffer;
+  auto process_files() {
     unordered_map<string, File> result;
 
-    for (auto& [name, path] : files_) {
-      std::ifstream file_stream(path);
+    for (auto& [name, source] : sources_) {
+      auto source_text = source->get_text();
+      auto& result_text = result[name];
 
-      while (std::getline(file_stream, buffer)) {
-        auto& file = result[name];
-
-        if (is_include(buffer)) {
-          file.emplace_back(true, extract_include_name(buffer));
+      for (auto& line : source_text) {
+        if (is_include(line)) {
+          result_text.emplace_back(true, extract_include_name(line));
           continue;
         }
 
-        if (!should_preserve(buffer)) {
+        if (!should_preserve(line)) {
           continue;
         }
 
-        remove_unnecessary_symbols(buffer);
+        remove_unnecessary_symbols(line);
 
-        if (!file.empty() && !file.back().is_include) {
-          file.back().value += buffer;
+        if (!result_text.empty() && !result_text.back().is_include) {
+          result_text.back().value += line;
         } else {
-          file.emplace_back(false, std::move(buffer));
+          result_text.emplace_back(false, std::move(line));
         }
       }
     }
@@ -103,24 +101,27 @@ class Preprocessor {
   }
 
  public:
-  void add_file(const string& name, const std::filesystem::path& path) {
-    files_.emplace(name, path);
+  template <typename T>
+    requires std::is_base_of_v<Source, T>
+  void add_source(const string& name, auto&&... args) {
+    sources_.emplace(
+        name, std::make_unique<T>(std::forward<decltype(args)>(args)...));
   }
 
-  void set_main(const string& name) { main_filename_ = name; }
+  void set_main_source(const string& name) { main_source_ = name; }
 
   string process() {
-    if (!files_.contains(main_filename_)) {
-      throw std::runtime_error("Main file called " + main_filename_ +
+    if (!sources_.contains(main_source_)) {
+      throw std::runtime_error("Main source called " + main_source_ +
                                " not found");
     }
 
-    auto compacted_files = compact_files();
-    substitute_includes(main_filename_, compacted_files);
+    auto compacted_files = process_files();
+    substitute_includes(main_source_, compacted_files);
 
     string result;
 
-    for (const auto& fragment : compacted_files[main_filename_]) {
+    for (const auto& fragment : compacted_files[main_source_]) {
       result += fragment.value;
     }
 
@@ -128,8 +129,9 @@ class Preprocessor {
   }
 };
 
-const vector<char> Preprocessor::kIgnoredCharacters = {' ',  '\f', '\n',
-                                                       '\r', '\t', '\v'};
-const std::regex Preprocessor::kIncludeRegex(R"(#include\s*\"(.*)\")");
+inline const vector<char> Preprocessor::kIgnoredCharacters = {' ',  '\f', '\n',
+                                                              '\r', '\t', '\v'};
+inline const std::regex Preprocessor::kIncludeRegex(R"(#include\s*\"(.*)\")");
+}  // namespace Preprocessing
 
 #endif  // PREPROCESSOR_H

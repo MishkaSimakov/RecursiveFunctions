@@ -1,7 +1,7 @@
 # Интерпретатор для рекурсивных функций Гёделя
 
 ## Примеры
-Примеры лежат в папке `tests`. Все программы имеют расширение `.rec`.
+Примеры лежат в папке `examples`. Все программы имеют расширение `.rec`.
  - Файле `arithmetics.rec` содержит основные арифметические функции.
  - Файл `fast_arithmetics.rec` содержит в себе функции с префиксом `__`. Эти функции реализованы 
    непосредственно в компиляторе в байт-код для более быстрого выполнения программ.
@@ -14,8 +14,14 @@
 ```
 program := statement ';' program
          | EMPTY
-statement := FUNCTION_NAME '(' arguments_list ')' '=' 
-        (FUNCTION_NAME '(' composition_arguments ')' | INTEGER | IDENTIFIER)
+statement := FUNCTION_NAME '(' arguments_list ')' '=' function_value
+           | function_call
+           
+function_value := FUNCTION_NAME '(' composition_arguments ')'
+                | CONSTANT
+                | VARIABLE_NAME
+ 
+function_call := 
 
 arguments_list = EMPTY | nonempty_arguments_list
 nonempty_arguments_list := VARIABLE_NAME ',' nonempty_arguments_list
