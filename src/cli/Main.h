@@ -68,6 +68,8 @@ class Main {
     argparse::ArgumentParser parser("interpeter");
     parser.add_argument("filepath");
     parser.add_argument("-i", "--include").nargs(argparse::nargs_pattern::any);
+    parser.add_argument("-v", "--verbose");
+    // TODO: add verbose option
 
     try {
       parser.parse_args(argc, argv);
