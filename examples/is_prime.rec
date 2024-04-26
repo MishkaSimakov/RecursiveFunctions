@@ -2,7 +2,7 @@
 # В этом файле также содержится функция is_prime_argmin. Она также проверяет
 # число на простоту, но делает это не рекурсивно, а с помощью argmin
 
-#include "arithmetics"
+#include "fast_arithmetics"
 
 is_prime_loop(number, 0) = 1;
 is_prime_loop(number, i + 1) = conditional(

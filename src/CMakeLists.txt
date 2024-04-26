@@ -14,6 +14,7 @@ add_library(RecursiveFunctions
         preprocessor/Source.h
         preprocessor/FileSource.h
         preprocessor/TextSource.h
+        cli/Main.h
 )
 
 target_include_directories(RecursiveFunctions PUBLIC "${PROJECT_SOURCE_DIR}/src")
