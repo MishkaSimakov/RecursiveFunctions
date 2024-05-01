@@ -3,7 +3,19 @@
 #include <iostream>
 #include <string>
 
+#define LOGGER_CATEGORY_LOG(category_uppercase, category_lowercase)   \
+  template <typename... Args>                                         \
+  static void category_lowercase(LogLevel level, Args&&... args) {    \
+    if (should_print(level, category_uppercase)) {                    \
+      print_pack(" ", "-",                                            \
+                 format(#category_lowercase " says:", prefix_length), \
+                 std::forward<Args>(args)...);                        \
+    }                                                                 \
+  }
+
 using std::string;
+
+enum class LogLevel : size_t { DEBUG = 0, INFO, WARNING };
 
 class Logger {
  public:
@@ -15,9 +27,12 @@ class Logger {
     ALL = PREPROCESSOR | LEXIS | SYNTAX | EXECUTION
   };
 
-  enum class LogLevel { DEBUG, INFO, WARNING };
+  static size_t log_level_to_number(LogLevel level) {
+    return static_cast<size_t>(level);
+  }
 
  private:
+  static constexpr auto prefix_length = 20;
   static Logger* instance;
   static int enabled_categories;
   static LogLevel log_level;
@@ -28,40 +43,27 @@ class Logger {
     std::cout << std::endl;
   }
 
-  static bool should_print_category(Category category) {
-    return (enabled_categories & category) != 0;
+  static bool should_print(LogLevel level, Category category) {
+    return log_level_to_number(level) >= log_level_to_number(log_level) &&
+           (enabled_categories & category) != 0;
+  }
+
+  static string format(string value, size_t desired_length) {
+    value.resize(desired_length, ' ');
+    if (!value.empty()) {
+      value[0] = std::toupper(value[0]);
+    }
+
+    return value;
   }
 
  public:
   Logger() = delete;
 
-  template <typename... Args>
-  static void preprocessor(Args&&... args) {
-    if (should_print_category(PREPROCESSOR)) {
-      print_pack(" ", "Preprocessor says:", std::forward<Args>(args)...);
-    }
-  }
-
-  template <typename... Args>
-  static void lexis(Args&&... args) {
-    if (should_print_category(LEXIS)) {
-      print_pack(" ", "Lexis says:", std::forward<Args>(args)...);
-    }
-  }
-
-  template <typename... Args>
-  static void syntax(Args&&... args) {
-    if (should_print_category(SYNTAX)) {
-      print_pack(" ", "Syntax says:", std::forward<Args>(args)...);
-    }
-  }
-
-  template <typename... Args>
-  static void execution(Args&&... args) {
-    if (should_print_category(EXECUTION)) {
-      print_pack(" ", "Execution says:", std::forward<Args>(args)...);
-    }
-  }
+  LOGGER_CATEGORY_LOG(PREPROCESSOR, preprocessor);
+  LOGGER_CATEGORY_LOG(LEXIS, lexis);
+  LOGGER_CATEGORY_LOG(SYNTAX, syntax);
+  LOGGER_CATEGORY_LOG(EXECUTION, execution);
 
   static void disable_category(Category category) {
     enabled_categories &= ~category;
@@ -87,3 +89,4 @@ class Logger {
 };
 
 inline int Logger::enabled_categories = Logger::Category::ALL;
+inline LogLevel Logger::log_level = LogLevel::INFO;

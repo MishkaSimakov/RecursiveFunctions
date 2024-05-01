@@ -79,6 +79,8 @@ class BytecodeExecutor {
 
  public:
   ValueT execute(const vector<Compilation::Instruction>& instructions) {
+    Logger::execution(LogLevel::INFO, "start executing bytecode");
+
     auto start_time = std::chrono::steady_clock::now();
 
     int command_ptr = 0;
@@ -190,7 +192,15 @@ class BytecodeExecutor {
             std::chrono::steady_clock::now() - start_time;
         statistics_.is_ready = true;
 
-        Logger::execution(iteration);
+        size_t seconds_cnt = std::chrono::duration_cast<std::chrono::seconds>(
+                                 statistics_.execution_time)
+                                 .count();
+
+        Logger::execution(LogLevel::INFO, "successfully executed bytecode");
+        Logger::execution(LogLevel::INFO, "execution took", seconds_cnt,
+                          "seconds", "and", statistics_.iterations_count,
+                          "iterations");
+
         return calculation_stack_[calculation_stack_ptr - 1];
       }
 

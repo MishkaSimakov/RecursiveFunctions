@@ -75,6 +75,9 @@ class SyntaxTreeBuilder {
       const SyntaxConsumers::RuleIdentifierT& start) {
     using namespace SyntaxConsumers;
 
+    Logger::syntax(LogLevel::INFO,
+                   "start parsing tokens using context-free grammar");
+
     auto position = program.begin();
     auto end = program.end();
     auto starting_consumer = RuleConsumer(start);
@@ -91,6 +94,8 @@ class SyntaxTreeBuilder {
 
     // PrintSyntaxTree(*construct_syntax_tree(consumption_root));
 
+    Logger::syntax(LogLevel::INFO, "tokens successfully parsed");
+    Logger::syntax(LogLevel::INFO, "start building abstract syntax tree");
     return construct_syntax_tree(consumption_root);
   }
 };

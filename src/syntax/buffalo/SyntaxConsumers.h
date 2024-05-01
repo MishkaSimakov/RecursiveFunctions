@@ -92,7 +92,7 @@ class ConcatenatedConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax("Consuming concatenated 1");
+    Logger::syntax(LogLevel::DEBUG, "Consuming concatenated 1");
 
     auto copy = iterator;
     size_t start_children_count = consumption_node->children.size();
@@ -124,14 +124,14 @@ class TokenConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax("Consuming token:", GetTokenDescription({token_, value_}));
+    Logger::syntax(LogLevel::DEBUG, "Consuming token:", GetTokenDescription({token_, value_}));
 
     if (iterator == end) {
-      Logger::syntax("Met in reality: end of tokens");
+      Logger::syntax(LogLevel::DEBUG, "Met in reality: end of tokens");
       return false;
     }
 
-    Logger::syntax("Met in reality:", GetTokenDescription(*iterator));
+    Logger::syntax(LogLevel::DEBUG, "Met in reality:", GetTokenDescription(*iterator));
 
     if (iterator->type != token_) {
       return false;
@@ -156,7 +156,7 @@ class EmptyConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax("Consuming empty");
+    Logger::syntax(LogLevel::DEBUG, "Consuming empty");
 
     return true;
   }
@@ -174,7 +174,7 @@ class BranchedConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax("Consuming branched");
+    Logger::syntax(LogLevel::DEBUG, "Consuming branched");
 
     unique_ptr<ConsumptionNode> node =
         std::make_unique<BranchConsumptionNode>();
@@ -205,7 +205,7 @@ class RuleConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax("Consuming rule:", rule_);
+    Logger::syntax(LogLevel::DEBUG, "Consuming rule:", rule_);
 
     return rules.at(rule_).consume(iterator, end, rules, consumption_node);
   }

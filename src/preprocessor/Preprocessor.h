@@ -109,13 +109,22 @@ class Preprocessor {
   template <typename T>
     requires std::is_base_of_v<Source, T>
   void add_source(const string& name, auto&&... args) {
+    Logger::preprocessor(LogLevel::DEBUG, "added source of type",
+                         typeid(T).name(), "with name:", name);
+
     sources_.emplace(
         name, std::make_unique<T>(std::forward<decltype(args)>(args)...));
   }
 
-  void set_main_source(const string& name) { main_source_ = name; }
+  void set_main_source(const string& name) {
+    Logger::preprocessor(LogLevel::DEBUG, "set main source name to:", name);
+
+    main_source_ = name;
+  }
 
   string process() {
+    Logger::preprocessor(LogLevel::INFO, "start preprocessing files");
+
     if (!sources_.contains(main_source_)) {
       throw MainSourceNotFoundException(main_source_);
     }
@@ -128,6 +137,10 @@ class Preprocessor {
     for (const auto& fragment : compacted_files[main_source_]) {
       result += fragment.value;
     }
+
+    Logger::preprocessor(LogLevel::INFO, "successfully preprocessed all files");
+    Logger::preprocessor(LogLevel::DEBUG, "resulting program:");
+    Logger::preprocessor(LogLevel::DEBUG, result);
 
     return result;
   }

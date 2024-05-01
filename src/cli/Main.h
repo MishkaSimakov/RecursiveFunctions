@@ -68,25 +68,38 @@ class Main {
   static int main(int argc, char* argv[]) {
     return ExceptionsHandler::execute([argc, &argv] {
       argparse::ArgumentParser parser("interpeter");
-      parser.add_argument("filepath");
+      parser.add_description(
+          "Interpreter for general recursive functions "
+          "(https://en.wikipedia.org/wiki/General_recursive_function).");
+
+      parser.add_argument("filepath").help("Path to main file.");
       parser.add_argument("-i", "--include")
-          .nargs(argparse::nargs_pattern::any);
+          .nargs(argparse::nargs_pattern::any)
+          .help(
+              "adds include paths. You can write <name>:<filepath> to create "
+              "implicitly named include, <filepath> to deduce include name "
+              "automatically or <directory path> to include all files in "
+              "directory recursively.");
 
       size_t verbosity = 0;
-      parser.add_argument("-v", "--verbose")
+      parser.add_argument("-v")
           .action([&](const auto&) { ++verbosity; })
           .append()
           .default_value(false)
           .implicit_value(true)
-          .nargs(0);
-
-      Logger::set_level(verbosity);
+          .nargs(0)
+          .help(
+              "increase program verbosity. -v - show only warnings, -vv - show "
+              "info and "
+              "warnings, -vvv - show all log messages.");
 
       try {
         parser.parse_args(argc, argv);
       } catch (const std::exception& err) {
         throw ArgumentsParseException(err.what());
       }
+
+      Logger::set_level(verbosity);
 
       auto preprocessor = prepare_preprocessor(parser);
       string program_text = preprocessor.process();
