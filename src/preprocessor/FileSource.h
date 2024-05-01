@@ -6,6 +6,7 @@
 #include <optional>
 #include <vector>
 
+#include "Exceptions.h"
 #include "Source.h"
 
 using std::optional, std::vector;
@@ -21,8 +22,12 @@ class FileSource final : public Source {
   vector<string> get_text() const override {
     if (!cached_) {
       std::ifstream file_stream(path_);
-      cached_ = vector<string>();
 
+      if (!file_stream) {
+        throw FileSourceNotFoundException(path_.string());
+      }
+
+      cached_ = vector<string>();
       while (cached_->emplace_back(),
              std::getline(file_stream, cached_->back())) {
       }

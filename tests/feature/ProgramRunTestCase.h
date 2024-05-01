@@ -24,7 +24,7 @@ class ProgramRunTestCase : public ::testing::Test {
     program_with_includes.push_back("#include \"is_prime\"");
     program_with_includes.push_back(std::move(program));
 
-    Preprocessor preprocessor;
+    Preprocessing preprocessor;
     preprocessor.add_source<FileSource>(
         "arithmetics",
         use_fast_arithmetics ? fast_arithmetics_path_ : arithmetics_path_);

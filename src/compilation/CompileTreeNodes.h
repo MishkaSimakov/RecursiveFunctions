@@ -1,6 +1,7 @@
 #ifndef COMPILETREENODES_H
 #define COMPILETREENODES_H
 
+#include <memory>
 #include <string>
 #include <vector>
 

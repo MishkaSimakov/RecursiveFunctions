@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "Exceptions.h"
 #include "Source.h"
 
 using std::string, std::unordered_map, std::vector, std::unordered_set,
@@ -91,6 +92,10 @@ class Preprocessor {
 
       string& include_filename = position->value;
 
+      if (!compacted_files.contains(include_filename)) {
+        throw IncludeSourceNotFoundException(filename, include_filename);
+      }
+
       if (!compacted_files[include_filename].empty()) {
         substitute_includes(include_filename, compacted_files);
         file.splice(position, compacted_files[include_filename]);
@@ -112,8 +117,7 @@ class Preprocessor {
 
   string process() {
     if (!sources_.contains(main_source_)) {
-      throw std::runtime_error("Main source called " + main_source_ +
-                               " not found");
+      throw MainSourceNotFoundException(main_source_);
     }
 
     auto compacted_files = process_files();

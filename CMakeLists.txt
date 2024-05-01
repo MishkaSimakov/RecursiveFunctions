@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.22)
 project(RecursiveFunctions)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -6,10 +6,12 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_FLAGS "-fsanitize=address")
 #set(CMAKE_CXX_FLAGS "-O3")
 
-# argparse library
+# libraries
 add_subdirectory(lib/argparse)
+add_subdirectory(lib/fmt)
 
 add_subdirectory(src)
+target_link_libraries(RecursiveFunctions fmt::fmt)
 
 add_executable(Example main.cpp)
 target_link_libraries(Example argparse::argparse)
