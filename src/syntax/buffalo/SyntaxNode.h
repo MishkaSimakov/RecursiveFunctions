@@ -13,7 +13,7 @@ enum class SyntaxNodeType {
   ASTERISK,
   FUNCTION,
   ASSIGNMENT,
-  RECURSION_PARAMETER
+  RECURSION_PARAMETER,
 };
 
 struct SyntaxNode {

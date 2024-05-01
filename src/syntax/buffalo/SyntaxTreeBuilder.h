@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "Exceptions.h"
 #include "SyntaxConsumers.h"
 #include "lexis/LexicalAnalyzer.h"
 
@@ -85,7 +86,7 @@ class SyntaxTreeBuilder {
         starting_consumer.consume(position, end, rules, consumption_root);
 
     if (!has_consumed || position != end) {
-      throw std::runtime_error("No rules matched your program.");
+      throw Syntax::NoRulesMatchedException();
     }
 
     // PrintSyntaxTree(*construct_syntax_tree(consumption_root));

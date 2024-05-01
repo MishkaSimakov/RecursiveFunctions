@@ -14,6 +14,7 @@ add_executable(
         feature/FastArithmeticsTests.cpp
         feature/ProgramRunTestCase.h
         feature/ArgminTests.cpp
+        unit/lexis/LexisTests.cpp
 )
 
 target_link_libraries(Tests RecursiveFunctions)

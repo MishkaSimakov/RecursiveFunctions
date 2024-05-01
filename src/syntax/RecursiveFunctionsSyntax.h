@@ -18,7 +18,7 @@ enum RuleIdentifiers {
 
   FUNCTION_CALL,
   CALL_ARGUMENTS,
-  NONEMPTY_CALL_ARGUMENTS
+  NONEMPTY_CALL_ARGUMENTS,
 };
 
 // rules for building syntax tree
@@ -155,7 +155,6 @@ inline auto GetSyntax() {
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(CALL_ARGUMENTS) + EatToken(TokenType::RPAREN), GetListRootBuilder(BuildFunctionNode));
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::CONSTANT), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
   rules[NONEMPTY_CALL_ARGUMENTS] |= Branch(EatToken(TokenType::ASTERISK), GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::ASTERISK)));
-
   // clang-format on
 
   return rules;

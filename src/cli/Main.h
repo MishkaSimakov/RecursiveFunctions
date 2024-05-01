@@ -3,6 +3,7 @@
 
 #include <argparse/argparse.hpp>
 
+#include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
 
 using Compilation::CompileTreeBuilder;
@@ -65,48 +66,53 @@ class Main {
 
  public:
   static int main(int argc, char* argv[]) {
-    argparse::ArgumentParser parser("interpeter");
-    parser.add_argument("filepath");
-    parser.add_argument("-i", "--include").nargs(argparse::nargs_pattern::any);
-    parser.add_argument("-v", "--verbose");
-    // TODO: add verbose option
+    return ExceptionsHandler::execute([argc, &argv] {
+      argparse::ArgumentParser parser("interpeter");
+      parser.add_argument("filepath");
+      parser.add_argument("-i", "--include")
+          .nargs(argparse::nargs_pattern::any);
 
-    try {
-      parser.parse_args(argc, argv);
-    } catch (const std::exception& err) {
-      std::cerr << err.what() << std::endl;
-      std::cerr << parser;
-      return 1;
-    }
+      size_t verbosity = 0;
+      parser.add_argument("-v", "--verbose")
+          .action([&](const auto&) { ++verbosity; })
+          .append()
+          .default_value(false)
+          .implicit_value(true)
+          .nargs(0);
 
-    Logger::disable_category(Logger::Category::ALL);
+      Logger::set_level(verbosity);
 
-    auto preprocessor = prepare_preprocessor(parser);
-    string program_text = preprocessor.process();
+      try {
+        parser.parse_args(argc, argv);
+      } catch (const std::exception& err) {
+        throw ArgumentsParseException(err.what());
+      }
 
-    auto tokens = LexicalAnalyzer::get_tokens(program_text);
+      auto preprocessor = prepare_preprocessor(parser);
+      string program_text = preprocessor.process();
 
-    auto syntax_tree = SyntaxTreeBuilder::build(
-        tokens, RecursiveFunctionsSyntax::GetSyntax(),
-        RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
+      auto tokens = LexicalAnalyzer::get_tokens(program_text);
 
-    CompileTreeBuilder compile_tree_builder;
-    compile_tree_builder.add_internal_function("successor", 1);
-    compile_tree_builder.add_internal_function("__add", 2);
-    compile_tree_builder.add_internal_function("__abs_diff", 2);
+      auto syntax_tree = SyntaxTreeBuilder::build(
+          tokens, RecursiveFunctionsSyntax::GetSyntax(),
+          RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 
-    auto compile_tree = compile_tree_builder.build(*syntax_tree);
-    Compilation::BytecodeCompiler compiler;
-    compiler.compile(*compile_tree);
+      CompileTreeBuilder compile_tree_builder;
+      compile_tree_builder.add_internal_function("successor", 1);
+      compile_tree_builder.add_internal_function("__add", 2);
+      compile_tree_builder.add_internal_function("__abs_diff", 2);
 
-    auto bytecode = compiler.get_result();
+      auto compile_tree = compile_tree_builder.build(*syntax_tree);
+      Compilation::BytecodeCompiler compiler;
+      compiler.compile(*compile_tree);
 
-    BytecodeExecutor executor;
-    ValueT result = executor.execute(bytecode);
+      auto bytecode = compiler.get_result();
 
-    cout << "Result: " << result.as_value() << endl;
+      BytecodeExecutor executor;
+      ValueT result = executor.execute(bytecode);
 
-    return 0;
+      cout << result.as_value() << endl;
+    });
   }
 };
 }  // namespace Cli

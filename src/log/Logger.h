@@ -15,9 +15,12 @@ class Logger {
     ALL = PREPROCESSOR | LEXIS | SYNTAX | EXECUTION
   };
 
+  enum class LogLevel { DEBUG, INFO, WARNING };
+
  private:
   static Logger* instance;
   static int enabled_categories;
+  static LogLevel log_level;
 
   template <typename... Args>
   static void print_pack(const string& separator, Args&&... args) {
@@ -66,6 +69,20 @@ class Logger {
 
   static void enable_category(Category category) {
     enabled_categories |= category;
+  }
+
+  static void set_level(LogLevel level) { log_level = level; }
+
+  static void set_level(size_t level) {
+    if (level == 0) {
+      disable_category(ALL);
+    } else if (level == 1) {
+      set_level(LogLevel::WARNING);
+    } else if (level == 2) {
+      set_level(LogLevel::INFO);
+    } else {
+      set_level(LogLevel::DEBUG);
+    }
   }
 };
 

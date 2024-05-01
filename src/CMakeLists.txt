@@ -17,6 +17,9 @@ add_library(RecursiveFunctions
         cli/Main.h
         preprocessor/Exceptions.h
         lexis/Exceptions.h
+        syntax/buffalo/Exceptions.h
+        cli/ExceptionsHandler.h
+        cli/Exceptions.h
 )
 
 target_include_directories(RecursiveFunctions PUBLIC "${PROJECT_SOURCE_DIR}/src")
