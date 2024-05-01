@@ -1,4 +1,10 @@
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 include(FetchContent)
+
 FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
@@ -28,4 +34,6 @@ add_custom_command(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/programs
         COMMAND ${CMAKE_COMMAND} -E copy
         ${CMAKE_SOURCE_DIR}/tests/feature/programs/*
-        ${CMAKE_CURRENT_BINARY_DIR}/programs)
+        ${CMAKE_CURRENT_BINARY_DIR}/programs
+        COMMENT "Cloning test programs files from: ${CMAKE_SOURCE_DIR}/tests/feature/programs/* to ${CMAKE_CURRENT_BINARY_DIR}/programs"
+)

@@ -14,7 +14,7 @@ add_subdirectory(src)
 target_link_libraries(RecursiveFunctions fmt::fmt)
 
 add_executable(Cli main.cpp)
-target_include_directories(Cli PUBLIC src/cli)
+target_include_directories(Cli PUBLIC src)
 target_link_libraries(Cli argparse::argparse)
 target_link_libraries(Cli RecursiveFunctions)
 

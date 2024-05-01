@@ -1,22 +1,15 @@
-add_library(RecursiveFunctions
-        compilation/bytecode/CompileFunctionDefinition.cpp
-        compilation/bytecode/CompileProgram.cpp
-        compilation/bytecode/CompileFunctionCall.cpp
-        compilation/bytecode/CompileVariable.cpp
-        compilation/bytecode/CompileRecursiveFunctionDefinition.cpp
-        compilation/bytecode/CompileInternalFunctionDefinition.cpp
-        compilation/bytecode/AssembleInstructions.cpp
-        compilation/bytecode/CompileRecursionParameter.cpp
-        compilation/bytecode/CompileArgminCall.cpp
-        compilation/bytecode/CompileConstant.cpp
-        compilation/bytecode/CompileAsterisk.cpp
-        compilation/bytecode/CompileSelfCall.cpp
-        preprocessor/Source.h
-        preprocessor/FileSource.h
-        preprocessor/TextSource.h
-        preprocessor/Exceptions.h
-        lexis/Exceptions.h
-        syntax/buffalo/Exceptions.h
+set(CoreModuleDirectories
+    log preprocessor lexis syntax compilation execution
 )
 
-target_include_directories(RecursiveFunctions PUBLIC "${PROJECT_SOURCE_DIR}/src")
+foreach(directory IN LISTS CoreModuleDirectories)
+    file(GLOB_RECURSE Files
+            "${directory}/*.cpp"
+            "${directory}/*.h"
+    )
+
+    list(APPEND CoreFiles ${Files})
+endforeach()
+
+add_library(RecursiveFunctions ${CoreFiles})
+target_include_directories(RecursiveFunctions PUBLIC ${PROJECT_SOURCE_DIR}/src)
