@@ -21,4 +21,4 @@ jobs:
     - name: make
       run: cd build && cmake --build . -t Tests
     - name: Run Test
-      run: cd tests && ./Tests
+      run: cd build/tests && ./Tests
