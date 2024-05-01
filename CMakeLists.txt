@@ -3,8 +3,8 @@ project(RecursiveFunctions)
 
 set(CMAKE_CXX_STANDARD 23)
 
-#set(CMAKE_CXX_FLAGS "-fsanitize=address")
-set(CMAKE_CXX_FLAGS "-O3")
+set(CMAKE_CXX_FLAGS "-fsanitize=address")
+#set(CMAKE_CXX_FLAGS "-O3")
 
 # libraries
 add_subdirectory(lib/argparse)

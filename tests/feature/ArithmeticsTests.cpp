@@ -162,7 +162,7 @@ TEST_F(ProgramRunTestCase, test_remainder) {
 
 TEST_F(ProgramRunTestCase, test_is_divisible) {
   for (int i = 0; i < 10; ++i) {
-    for (int j = 0; j < 10; ++j) {
+    for (int j = 1; j < 10; ++j) {
       string program = get_function_call("is_divisible", i, j);
 
       ASSERT_EQ(run_program(program), i % j == 0 ? 1 : 0);
@@ -174,12 +174,10 @@ TEST_F(ProgramRunTestCase, test_is_divisible) {
   ASSERT_EQ(run_program(get_function_call("is_divisible", 100, 500)), 0);
 }
 
-
 TEST_F(ProgramRunTestCase, test_sqrt) {
   for (int i = 0; i < 100; ++i) {
-      string program = get_function_call("sqrt", i);
+    string program = get_function_call("sqrt", i);
 
-      ASSERT_EQ(run_program(program), std::floor(std::sqrt(i)));
+    ASSERT_EQ(run_program(program), std::floor(std::sqrt(i)));
   }
 }
-
