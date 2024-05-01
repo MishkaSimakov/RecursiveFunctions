@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install gtest manually
-      run: apt-get install libgtest-dev && \
-           apt-get install cmake && \
-           cd /usr/src/gtest && \
-           cmake CMakeLists.txt && \
-           make && \
-           cp *.a /usr/lib && \
-           ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a && \
-           ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
+      run: sudo apt-get install libgtest-dev && \
+           sudo apt-get install cmake && \
+           sudo cd /usr/src/gtest && \
+           sudo cmake CMakeLists.txt && \
+           sudo make && \
+           sudo cp *.a /usr/lib && \
+           sudo ln -s /usr/lib/libgtest.a /usr/local/lib/gtest/libgtest.a && \
+           sudo ln -s /usr/lib/libgtest_main.a /usr/local/lib/gtest/libgtest_main.a
     - uses: actions/checkout@v1
     - name: configure
       run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-Werror" ..
