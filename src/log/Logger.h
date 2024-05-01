@@ -1,5 +1,4 @@
-#ifndef LOGGER_H
-#define LOGGER_H
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -71,5 +70,3 @@ class Logger {
 };
 
 inline int Logger::enabled_categories = Logger::Category::ALL;
-
-#endif  // LOGGER_H

@@ -1,11 +1,13 @@
-#ifndef LEXICALANALYZER_H
-#define LEXICALANALYZER_H
+#pragma once
 
 #include <array>
 #include <functional>
 #include <string>
 #include <vector>
 
+#include "Exceptions.h"
+
+namespace Lexing {
 using std::string, std::array, std::function, std::vector;
 
 enum class TokenType : size_t {
@@ -100,12 +102,12 @@ class LexicalAnalyzer {
     bool is_first = true;
     Token current_token;
 
-    for (char symbol : program) {
+    for (size_t i = 0; i < program.size(); ++i) {
+      char symbol = program[i];
       TokenType affiliation = get_symbol_affiliation(symbol);
 
       if (affiliation == TokenType::ERROR) {
-        throw std::runtime_error(string("Unexpected symbol \"") + symbol +
-                                 "\" occured while parsing program");
+        throw UnexpectedSymbolException(program, i);
       }
 
       auto solitary_mode = get_solitary_mode(affiliation);
@@ -123,7 +125,8 @@ class LexicalAnalyzer {
       }
 
       if (solitary_mode == TokenSolitaryMode::EXPLODE) {
-        throw std::runtime_error("Current token type must not repeat.");
+        // TODO: maybe make separate exception for this case
+        throw UnexpectedSymbolException(program, i);
       }
 
       current_token.value += symbol;
@@ -134,5 +137,4 @@ class LexicalAnalyzer {
     return result;
   }
 };
-
-#endif  // LEXICALANALYZER_H
+}  // namespace Lexing

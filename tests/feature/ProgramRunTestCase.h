@@ -1,5 +1,4 @@
-#ifndef PROGRAMRUNTESTCASE_H
-#define PROGRAMRUNTESTCASE_H
+#pragma once
 
 #include <gtest/gtest.h>
 #include <filesystem>
@@ -88,5 +87,3 @@ inline std::filesystem::path ProgramRunTestCase::fast_arithmetics_path_ =
     "programs/fast_arithmetics.rec";
 inline std::filesystem::path ProgramRunTestCase::is_prime_path_ =
     "programs/is_prime.rec";
-
-#endif  // PROGRAMRUNTESTCASE_H

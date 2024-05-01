@@ -1,5 +1,4 @@
-#ifndef SYNTAXNODE_H
-#define SYNTAXNODE_H
+#pragma once
 
 #include <memory>
 #include <string>
@@ -25,5 +24,3 @@ struct SyntaxNode {
   explicit SyntaxNode(SyntaxNodeType type, string value = "")
       : type(type), value(std::move(value)) {}
 };
-
-#endif  // SYNTAXNODE_H

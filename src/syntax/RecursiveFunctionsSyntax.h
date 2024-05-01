@@ -1,5 +1,4 @@
-#ifndef RECURSIVEFUNCTIONSYNTAX_H
-#define RECURSIVEFUNCTIONSYNTAX_H
+#pragma once
 
 #include "syntax/buffalo/SyntaxConsumers.h"
 
@@ -162,5 +161,3 @@ inline auto GetSyntax() {
   return rules;
 }
 }  // namespace RecursiveFunctionsSyntax
-
-#endif  // RECURSIVEFUNCTIONSYNTAX_H

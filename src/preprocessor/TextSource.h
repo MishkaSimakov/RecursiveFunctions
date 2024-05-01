@@ -1,5 +1,5 @@
-#ifndef TEXTSOURCE_H
-#define TEXTSOURCE_H
+#pragma once
+
 #include <string>
 #include <vector>
 
@@ -17,5 +17,3 @@ class TextSource final : public Source {
   vector<string> get_text() const override { return text_; }
 };
 }  // namespace Preprocessing
-
-#endif  // TEXTSOURCE_H

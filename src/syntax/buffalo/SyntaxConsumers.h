@@ -1,5 +1,4 @@
-#ifndef SYNTAXCONSUMERS_H
-#define SYNTAXCONSUMERS_H
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -10,6 +9,7 @@
 #include "log/Logger.h"
 #include "syntax/buffalo/SyntaxNode.h"
 
+using namespace Lexing;
 using std::string, std::vector, std::cout, std::endl, std::unique_ptr;
 
 namespace SyntaxConsumers {
@@ -231,5 +231,3 @@ inline auto EatToken(TokenType token, string value = "") {
 
 inline auto EatEmpty() { return std::make_unique<EmptyConsumer>(); }
 }  // namespace SyntaxConsumers
-
-#endif  // SYNTAXCONSUMERS_H

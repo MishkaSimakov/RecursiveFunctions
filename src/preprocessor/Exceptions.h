@@ -1,5 +1,5 @@
-#ifndef EXCEPTIONS_H
-#define EXCEPTIONS_H
+#pragma once
+
 #include <fmt/core.h>
 
 #include <exception>
@@ -39,5 +39,3 @@ struct IncludeSourceNotFoundException : std::exception {
   const char* what() const noexcept override { return message.c_str(); }
 };
 }  // namespace Preprocessing
-
-#endif  // EXCEPTIONS_H

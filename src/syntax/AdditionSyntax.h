@@ -1,5 +1,4 @@
-#ifndef ADDITIONSYNTAX_H
-#define ADDITIONSYNTAX_H
+#pragma once
 
 #include "buffalo/SyntaxConsumers.h"
 #include "buffalo/SyntaxNode.h"
@@ -47,5 +46,3 @@ inline auto GetSyntax() {
   return rules;
 }
 }  // namespace AdditionSyntax
-
-#endif  // ADDITIONSYNTAX_H

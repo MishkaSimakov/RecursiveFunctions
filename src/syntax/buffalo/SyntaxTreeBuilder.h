@@ -1,5 +1,4 @@
-#ifndef SYNTAXTREEBUILDER_H
-#define SYNTAXTREEBUILDER_H
+#pragma once
 
 #include <algorithm>
 #include <iostream>
@@ -94,5 +93,3 @@ class SyntaxTreeBuilder {
     return construct_syntax_tree(consumption_root);
   }
 };
-
-#endif  // SYNTAXTREEBUILDER_H
