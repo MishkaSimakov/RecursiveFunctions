@@ -147,8 +147,8 @@ TEST_F(ProgramRunTestCase, test_conditional) {
 }
 
 TEST_F(ProgramRunTestCase, test_remainder) {
-  for (int i = 0; i < 10; ++i) {
-    for (int j = 0; j < 10; ++j) {
+  for (int i = 1; i < 10; ++i) {
+    for (int j = 1; j < 10; ++j) {
       string program = get_function_call("remainder", i, j);
 
       ASSERT_EQ(run_program(program), i % j);

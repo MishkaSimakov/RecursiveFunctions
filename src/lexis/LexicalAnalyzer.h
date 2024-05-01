@@ -27,6 +27,8 @@ enum class TokenSolitaryMode { CONCATENATE, SEPARATE, EXPLODE };
 struct Token {
   TokenType type = TokenType::ERROR;
   string value;
+
+  bool operator==(const Token&) const = default;
 };
 
 inline string GetTokenDescription(const Token& token) {
