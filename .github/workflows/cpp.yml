@@ -21,4 +21,4 @@ jobs:
     - name: make
       run: cd build && make Tests
     - name: Run Test
-      run: tests/Tests
+      run: build/tests/Tests
