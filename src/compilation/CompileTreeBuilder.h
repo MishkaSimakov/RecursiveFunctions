@@ -4,8 +4,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include "syntax/buffalo/SyntaxNode.h"
 #include "CompileTreeNodes.h"
+#include "syntax/buffalo/SyntaxNode.h"
 
 using std::unique_ptr, std::unordered_map, std::string, std::optional;
 
@@ -154,6 +154,7 @@ class CompileTreeBuilder {
     }
 
     auto call_node = std::make_unique<FunctionCallNode>();
+    call_node->name = function_definition_node.name;
     call_node->index = function_index_itr->second;
     call_node->arguments.reserve(arguments_count);
 
@@ -200,7 +201,10 @@ class CompileTreeBuilder {
     requires std::is_base_of_v<BaseFunctionDefinitionCompileNode, T>
   T& construct_definition_node(auto&&... args) {
     auto node_ptr = std::make_unique<T>(std::forward<decltype(args)>(args)...);
-    functions_indices_[node_ptr->name] = functions_.size();
+    size_t index = functions_.size();
+
+    functions_indices_[node_ptr->name] = index;
+    node_ptr->index = index;
 
     auto& result = *node_ptr;
     functions_.push_back(std::move(node_ptr));
@@ -274,7 +278,7 @@ class CompileTreeBuilder {
       const string& name, size_t arguments_count) {
     if (!functions_indices_.contains(name)) {
       return construct_definition_node<RecursiveFunctionDefinitionNode>(
-          name, arguments_count);
+          name, 0, arguments_count);
     }
 
     try {

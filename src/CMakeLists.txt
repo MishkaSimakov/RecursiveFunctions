@@ -11,10 +11,22 @@ add_library(RecursiveFunctions
         compilation/bytecode/CompileConstant.cpp
         compilation/bytecode/CompileAsterisk.cpp
         compilation/bytecode/CompileSelfCall.cpp
+        compilation/cpp/CompileFunctionDefinition.cpp
+        compilation/cpp/CompileProgram.cpp
+        compilation/cpp/CompileFunctionCall.cpp
+        compilation/cpp/CompileVariable.cpp
+        compilation/cpp/CompileRecursiveFunctionDefinition.cpp
+        compilation/cpp/CompileInternalFunctionDefinition.cpp
+        compilation/cpp/CompileRecursionParameter.cpp
+        compilation/cpp/CompileArgminCall.cpp
+        compilation/cpp/CompileConstant.cpp
+        compilation/cpp/CompileAsterisk.cpp
+        compilation/cpp/CompileSelfCall.cpp
         preprocessor/Source.h
         preprocessor/FileSource.h
         preprocessor/TextSource.h
         cli/Main.h
+        compilation/cpp/CppCompiler.h
 )
 
 target_include_directories(RecursiveFunctions PUBLIC "${PROJECT_SOURCE_DIR}/src")

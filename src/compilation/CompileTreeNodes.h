@@ -51,10 +51,12 @@ struct CompileNode {
 
 struct BaseFunctionDefinitionCompileNode : CompileNode {
   string name;
+  size_t index;
   size_t arguments_count;
 
-  BaseFunctionDefinitionCompileNode(string name, size_t arguments_count)
-      : name(std::move(name)), arguments_count(arguments_count) {}
+  BaseFunctionDefinitionCompileNode(string name, size_t index,
+                                    size_t arguments_count)
+      : name(std::move(name)), index(index), arguments_count(arguments_count) {}
 };
 
 struct ProgramNode final : CompileNode {
@@ -67,15 +69,17 @@ struct ProgramNode final : CompileNode {
 struct FunctionDefinitionNode final : BaseFunctionDefinitionCompileNode {
   unique_ptr<CompileNode> body;
 
-  FunctionDefinitionNode(string name, size_t arguments_count,
+  FunctionDefinitionNode(string name, size_t index, size_t arguments_count,
                          unique_ptr<CompileNode> body)
-      : BaseFunctionDefinitionCompileNode(std::move(name), arguments_count),
+      : BaseFunctionDefinitionCompileNode(std::move(name), index,
+                                          arguments_count),
         body(std::move(body)) {}
 
   ACCEPT_COMPILER();
 };
 
 struct ConstantNode final : CompileNode {
+  // TODO: replace with built-in type
   ValueT value;
 
   explicit ConstantNode(ValueT value) : value(value) {}
@@ -118,6 +122,7 @@ struct RecursiveFunctionDefinitionNode final
 };
 
 struct FunctionCallNode final : CompileNode {
+  string name;
   size_t index;
   vector<unique_ptr<CompileNode>> arguments;
 

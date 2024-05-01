@@ -4,8 +4,9 @@
 #include <argparse/argparse.hpp>
 
 #include "RecursiveFunctions.h"
+#include "compilation/cpp/CppCompiler.h"
 
-using Compilation::CompileTreeBuilder;
+using Compilation::CompileTreeBuilder, Compilation::CppCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
 
 namespace Cli {
@@ -96,15 +97,31 @@ class Main {
     compile_tree_builder.add_internal_function("__abs_diff", 2);
 
     auto compile_tree = compile_tree_builder.build(*syntax_tree);
-    Compilation::BytecodeCompiler compiler;
+    // Compilation::BytecodeCompiler compiler;
+    // compiler.compile(*compile_tree);
+    //
+    // auto bytecode = compiler.get_result();
+    //
+    // BytecodeExecutor executor;
+    // ValueT result = executor.execute(bytecode);
+    //
+    // cout << "Result: " << result.as_value() << endl;
+
+    CppCompiler compiler;
     compiler.compile(*compile_tree);
 
-    auto bytecode = compiler.get_result();
+    auto result = compiler.get_result();
 
-    BytecodeExecutor executor;
-    ValueT result = executor.execute(bytecode);
+    cout << result << endl;
 
-    cout << "Result: " << result.as_value() << endl;
+    // auto temp_path = fs::temp_directory_path();
+    // temp_path /= "program.cpp";
+    //
+    // std::ofstream temp_file(temp_path);
+    // temp_file << result;
+    // temp_file.close();
+    //
+    // std::system("g++ program.cpp -o program -O3");
 
     return 0;
   }
