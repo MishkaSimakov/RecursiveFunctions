@@ -1,8 +1,11 @@
 #pragma once
 
+#include <string>
 #include <fmt/core.h>
 
 namespace Lexing {
+using std::string;
+
 struct UnexpectedSymbolException : std::exception {
   string message;
 
