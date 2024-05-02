@@ -11,5 +11,8 @@ foreach(directory IN LISTS CoreModuleDirectories)
     list(APPEND CoreFiles ${Files})
 endforeach()
 
-add_library(RecursiveFunctions ${CoreFiles})
+add_library(RecursiveFunctions ${CoreFiles}
+        execution/debug/DebugBytecodeExecutor.h
+        execution/debug/Exceptions.h
+        execution/debug/CommandParser.h)
 target_include_directories(RecursiveFunctions PUBLIC ${PROJECT_SOURCE_DIR}/src)

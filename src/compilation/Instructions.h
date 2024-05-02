@@ -1,8 +1,6 @@
-#ifndef INSTRUCTIONS_H
-#define INSTRUCTIONS_H
+#pragma once
 
 #include <list>
-#include <iostream>
 
 using std::list;
 
@@ -117,5 +115,3 @@ inline std::ostream& operator<<(std::ostream& os,
 
   return os;
 }
-
-#endif  // INSTRUCTIONS_H

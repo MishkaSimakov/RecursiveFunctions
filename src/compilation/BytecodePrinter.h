@@ -1,6 +1,5 @@
-#ifndef BYTECODEPRINTER_H
-#define BYTECODEPRINTER_H
-#include <concepts>
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -17,5 +16,3 @@ class BytecodePrinter {
     }
   }
 };
-
-#endif  // BYTECODEPRINTER_H

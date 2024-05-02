@@ -1,5 +1,4 @@
-#ifndef COMPILETREEBUILDER_H
-#define COMPILETREEBUILDER_H
+#pragma once
 
 #include <memory>
 #include <unordered_map>
@@ -362,5 +361,3 @@ class CompileTreeBuilder {
   }
 };
 }  // namespace Compilation
-
-#endif  // COMPILETREEBUILDER_H

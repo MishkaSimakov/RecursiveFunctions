@@ -1,5 +1,4 @@
-#ifndef RECURSIVEFUNCTIONS_H
-#define RECURSIVEFUNCTIONS_H
+#pragma once
 
 #include "compilation/BytecodePrinter.h"
 #include "compilation/CompileTreeBuilder.h"
@@ -15,5 +14,3 @@
 #include "syntax/buffalo/SyntaxConsumers.h"
 #include "syntax/buffalo/SyntaxNode.h"
 #include "syntax/buffalo/SyntaxTreeBuilder.h"
-
-#endif  // RECURSIVEFUNCTIONS_H

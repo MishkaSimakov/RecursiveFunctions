@@ -3,6 +3,11 @@ project(RecursiveFunctions)
 
 set(CMAKE_CXX_STANDARD 23)
 
+find_program(CCACHE_FOUND "ccache")
+if(CCACHE_FOUND)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+endif()
+
 set(CMAKE_CXX_FLAGS "-fsanitize=address")
 #set(CMAKE_CXX_FLAGS "-O3")
 

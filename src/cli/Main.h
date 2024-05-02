@@ -5,6 +5,7 @@
 
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
+#include "execution/debug/DebugBytecodeExecutor.h"
 
 using Compilation::CompileTreeBuilder;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -93,6 +94,11 @@ class Main {
               "info and "
               "warnings, -vvv - show all log messages.");
 
+      parser.add_argument("-d", "--debug")
+          .default_value(false)
+          .implicit_value(true)
+          .help("turn on debug mode");
+
       try {
         parser.parse_args(argc, argv);
       } catch (const std::exception& err) {
@@ -121,10 +127,17 @@ class Main {
 
       auto bytecode = compiler.get_result();
 
-      BytecodeExecutor executor;
-      ValueT result = executor.execute(bytecode);
+      bool is_debug_enabled = parser.get<bool>("debug");
+      if (is_debug_enabled) {
+        DebugBytecodeExecutor executor;
+        executor.execute(bytecode);
 
-      cout << result.as_value() << endl;
+      } else {
+        BytecodeExecutor executor;
+        ValueT result = executor.execute(bytecode);
+
+        cout << result.as_value() << endl;
+      }
     });
   }
 };
