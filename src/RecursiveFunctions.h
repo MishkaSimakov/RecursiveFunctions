@@ -1,6 +1,5 @@
 #pragma once
 
-#include "compilation/BytecodePrinter.h"
 #include "compilation/CompileTreeBuilder.h"
 #include "compilation/Instructions.h"
 #include "compilation/bytecode/BytecodeCompiler.h"

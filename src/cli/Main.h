@@ -129,8 +129,8 @@ class Main {
 
       bool is_debug_enabled = parser.get<bool>("debug");
       if (is_debug_enabled) {
-        DebugBytecodeExecutor executor;
-        executor.execute(bytecode);
+        DebugBytecodeExecutor executor(std::move(bytecode));
+        executor.execute();
 
       } else {
         BytecodeExecutor executor;
