@@ -17,6 +17,10 @@ TEST_F(SyntaxTestCase, test_it_throws_when_unmatched_paren) {
   ASSERT_SYNTAX_INCORRECT("f(x, y)=successor(1));");
   ASSERT_SYNTAX_INCORRECT("f(x, y)=successor(1));");
   ASSERT_SYNTAX_INCORRECT("(f(x, y)=successor(1));");
+  ASSERT_SYNTAX_INCORRECT("f(x, y)=successor1);");
+  ASSERT_SYNTAX_INCORRECT("f(x, y)=successor(1;");
+  ASSERT_SYNTAX_INCORRECT("f(x, y = successor(1);");
+  ASSERT_SYNTAX_INCORRECT("fx, y) = successor(1);");
 }
 
 TEST_F(SyntaxTestCase, test_it_throws_when_redundant_comma) {
@@ -64,4 +68,13 @@ TEST_F(SyntaxTestCase, test_it_throws_when_missing_semicolon) {
   ASSERT_THROW({ get_tree("f(x) = x f(x);"); }, Lexing::UnexpectedSymbolException);
   ASSERT_SYNTAX_INCORRECT("f(x) = x; f(x)");
   ASSERT_SYNTAX_INCORRECT("f(123)");
+}
+
+TEST_F(SyntaxTestCase, test_it_throws_when_missing_comma) {
+  ASSERT_THROW({ get_tree("f(x y) = f(x, y, z);"); }, Lexing::UnexpectedSymbolException);
+  ASSERT_THROW({ get_tree("f(1 2) = f(x, y, z);"); }, Lexing::UnexpectedSymbolException);
+  ASSERT_THROW({ get_tree("f(x 2) = f(x, y, z);"); }, Lexing::UnexpectedSymbolException);
+  ASSERT_THROW({ get_tree("f(2 x) = f(x, y, z);"); }, Lexing::UnexpectedSymbolException);
+  ASSERT_THROW({ get_tree("f(x y , z) = f(x, y, z);"); }, Lexing::UnexpectedSymbolException);
+  ASSERT_THROW({ get_tree("f(x, y) = f(x y, z);"); }, Lexing::UnexpectedSymbolException);
 }

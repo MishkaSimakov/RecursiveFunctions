@@ -46,8 +46,7 @@ class SyntaxTestCase : public ::testing::Test {
 
   template <typename... Args>
     requires(std::is_same_v<Args, std::unique_ptr<SyntaxNode>> && ...)
-  static constexpr auto make_tree(SyntaxNodeType type, string value,
-                                  Args&&... children) {
+  static auto make_tree(SyntaxNodeType type, string value, Args&&... children) {
     auto node = std::make_unique<SyntaxNode>(type, std::move(value));
     (node->children.emplace_back(std::move(children)), ...);
 
