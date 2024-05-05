@@ -60,10 +60,11 @@ class Preprocessor {
     for (auto itr = line.begin(); itr != line.end();) {
       bool is_space = std::isspace(*itr) != 0;
       bool not_on_edge = itr != line.begin() && std::next(itr) != line.end();
+      bool skip_condition = not_on_edge &&
+                            is_symbol_space_preserving(*std::prev(itr)) &&
+                            is_symbol_space_preserving(*std::next(itr));
 
-      if (is_space && not_on_edge &&
-          (!is_symbol_space_preserving(*std::prev(itr)) ||
-           !is_symbol_space_preserving(*std::next(itr)))) {
+      if (is_space && !skip_condition) {
         itr = line.erase(itr);
       } else {
         ++itr;
