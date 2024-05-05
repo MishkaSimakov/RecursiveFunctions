@@ -10,7 +10,7 @@
 - [Примеры](#examples)
 - [Детали работы интерпретатора](#details)
 - [Формальное описание грамматики](#grammar)
-- [Байт-код](#https://github.com/MishkaSimakov/RecursiveFunctions/blob/e97ce05f71ea062df9c577d3468f94674ffa6adc/src/compilation/README.md)
+- [Байт-код](https://github.com/MishkaSimakov/RecursiveFunctions/blob/e97ce05f71ea062df9c577d3468f94674ffa6adc/src/compilation/README.md)
 - [Отладчик](#debugger)
 
 <a name="functions">
