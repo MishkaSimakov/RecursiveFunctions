@@ -21,6 +21,10 @@ add_executable(
         feature/ProgramRunTestCase.h
         feature/ArgminTests.cpp
         unit/lexis/LexisTests.cpp
+        unit/syntax/CorrectSyntaxTests.cpp
+        unit/syntax/SyntaxTestCase.h
+        unit/syntax/SyntaxNodeTests.cpp
+        unit/syntax/SyntaxExceptionsTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)

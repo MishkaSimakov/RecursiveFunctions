@@ -4,16 +4,19 @@ project(RecursiveFunctions)
 set(CMAKE_CXX_STANDARD 23)
 
 find_program(CCACHE_FOUND "ccache")
-if(CCACHE_FOUND)
+if (CCACHE_FOUND)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-endif()
+endif ()
 
 set(CMAKE_CXX_FLAGS "-fsanitize=address")
 #set(CMAKE_CXX_FLAGS "-O3")
 
 # libraries
-add_subdirectory(lib/argparse)
-add_subdirectory(lib/fmt)
+add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)
+
+# compile fmt as static library
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 
 add_subdirectory(src)
 target_link_libraries(RecursiveFunctions fmt::fmt)
@@ -23,10 +26,15 @@ target_include_directories(Cli PUBLIC src)
 target_link_libraries(Cli argparse::argparse)
 target_link_libraries(Cli RecursiveFunctions)
 
-set_target_properties(Cli
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-        OUTPUT_NAME recursive
-)
+add_subdirectory(tests EXCLUDE_FROM_ALL)
 
-add_subdirectory(tests)
+if (COMMAND install)
+    install(TARGETS Cli
+            RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/bin
+    )
+else ()
+    set_target_properties(Cli
+            PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
+    )
+endif ()

@@ -200,7 +200,7 @@ void DebugBytecodeExecutor::print_program_vicinity(size_t center) const {
     string line_prefix;
     line_prefix += breakpoints_.contains(line) ? "•" : " ";
     if (line == command_ptr) {
-      line_prefix += ">";
+      line_prefix += "→";
     }
 
     fmt::println("{:4}. {:2} {}", line, line_prefix, instructions_[line]);
