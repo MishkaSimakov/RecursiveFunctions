@@ -173,7 +173,7 @@ get_answer();
 Тогда, чтобы запустить эту программу, вы должны написать:
 
 ```shell
-recursive thequestion.rec --include deep_thought:deep_thought.rec
+recurator thequestion.rec --include deep_thought:deep_thought.rec
 ```
 
 Сначала мы указали главный файл, а после `--include` все зависимости. Зависимость можно указать тремя разными способами:
@@ -348,7 +348,10 @@ mkdir build
 cd build
 cmake ..
 cmake --build .
+cmake --install .
 ```
+
+После этого вам станет доступна команда `recurator`.
 
 <a name="future">
 <h2>

@@ -28,10 +28,10 @@ target_link_libraries(Cli RecursiveFunctions)
 
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 
+set_target_properties(Cli PROPERTIES OUTPUT_NAME "recurator")
+
 if (COMMAND install)
-    install(TARGETS Cli
-            RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/bin
-    )
+    install(TARGETS Cli)
 else ()
     set_target_properties(Cli
             PROPERTIES
