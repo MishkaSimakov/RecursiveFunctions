@@ -95,8 +95,8 @@ ValueT BytecodeExecutor::execute(
 
     if (finished) [[unlikely]] {
       Logger::execution(LogLevel::INFO, "successfully executed bytecode");
-      Logger::execution(LogLevel::INFO, "execution took", iteration,
-                        "iterations");
+      Logger::execution(LogLevel::INFO, "execution took {} iterations",
+                        iteration);
 
       return calculation_stack_[calculation_stack_ptr - 1];
     }

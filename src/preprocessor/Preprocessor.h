@@ -131,15 +131,16 @@ class Preprocessor {
   template <typename T>
     requires std::is_base_of_v<Source, T>
   void add_source(const string& name, auto&&... args) {
-    Logger::preprocessor(LogLevel::DEBUG, "added source of type",
-                         typeid(T).name(), "with name:", name);
+    Logger::preprocessor(LogLevel::DEBUG,
+                         "added source of type {:?} with name {:?}",
+                         typeid(T).name(), name);
 
     sources_.emplace(
         name, std::make_unique<T>(std::forward<decltype(args)>(args)...));
   }
 
   void set_main_source(const string& name) {
-    Logger::preprocessor(LogLevel::DEBUG, "set main source name to:", name);
+    Logger::preprocessor(LogLevel::DEBUG, "set main source name to {:?}", name);
 
     main_source_ = name;
   }

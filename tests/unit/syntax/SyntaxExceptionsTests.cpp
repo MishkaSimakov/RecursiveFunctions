@@ -78,3 +78,9 @@ TEST_F(SyntaxTestCase, test_it_throws_when_missing_comma) {
   ASSERT_THROW({ get_tree("f(x y , z) = f(x, y, z);"); }, Lexing::UnexpectedSymbolException);
   ASSERT_THROW({ get_tree("f(x, y) = f(x y, z);"); }, Lexing::UnexpectedSymbolException);
 }
+
+TEST_F(SyntaxTestCase, test_it_throws_when_wrong_call) {
+  ASSERT_SYNTAX_INCORRECT("123;");
+  ASSERT_SYNTAX_INCORRECT("hello;");
+  ASSERT_SYNTAX_INCORRECT(";");
+}
