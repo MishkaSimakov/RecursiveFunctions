@@ -1,5 +1,5 @@
-#ifndef PREPROCESSOR_H
-#define PREPROCESSOR_H
+#pragma once
+
 #include <list>
 #include <regex>
 #include <string>
@@ -172,5 +172,3 @@ inline const vector<char> Preprocessor::kIgnoredCharacters = {' ',  '\f', '\n',
                                                               '\r', '\t', '\v'};
 inline const std::regex Preprocessor::kIncludeRegex(R"(#include\s*\"(.*)\")");
 }  // namespace Preprocessing
-
-#endif  // PREPROCESSOR_H

@@ -66,8 +66,6 @@ class DebugBytecodeExecutor {
 
   enum class ExecutionStatus { EXECUTING, PAUSED, FINISHED };
 
-  constexpr static bool kAssertions = true;
-
   constexpr static size_t kProgramPrintRadius = 5;
   constexpr static size_t kStackPrintRadius = 10;
 
@@ -82,7 +80,6 @@ class DebugBytecodeExecutor {
   int call_stack_ptr = 0;
   int call_arguments_stack_ptr = 0;
   int calculation_stack_ptr = 0;
-  bool finished = false;
 
   // information for debug
   CommandParser<DebugBytecodeExecutor> parser_;

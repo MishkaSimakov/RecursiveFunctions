@@ -1,5 +1,4 @@
-#ifndef MAIN_H
-#define MAIN_H
+#pragma once
 
 #include <argparse/argparse.hpp>
 
@@ -7,7 +6,7 @@
 #include "RecursiveFunctions.h"
 #include "execution/debug/DebugBytecodeExecutor.h"
 
-using Compilation::CompileTreeBuilder;
+using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
 
 namespace Cli {
@@ -133,30 +132,29 @@ class Main {
           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 
       CompileTreeBuilder compile_tree_builder;
-      compile_tree_builder.add_internal_function("successor", 1);
-      compile_tree_builder.add_internal_function("__add", 2);
-      compile_tree_builder.add_internal_function("__abs_diff", 2);
+      for (auto& [name, args_count] : BytecodeCompiler::internal_functions) {
+        compile_tree_builder.add_internal_function(name, args_count);
+      }
 
+      BytecodeCompiler compiler;
       auto compile_tree = compile_tree_builder.build(*syntax_tree);
-      Compilation::BytecodeCompiler compiler;
       compiler.compile(*compile_tree);
 
       auto bytecode = compiler.get_result();
 
       bool is_debug_enabled = parser.get<bool>("debug");
+
+      ValueT result;
       if (is_debug_enabled) {
         DebugBytecodeExecutor executor(std::move(bytecode));
-        executor.execute();
-
+        result = executor.execute();
       } else {
         BytecodeExecutor executor;
-        ValueT result = executor.execute(bytecode);
-
-        cout << result.as_value() << endl;
+        result = executor.execute(bytecode);
       }
+
+      cout << result.as_value() << endl;
     });
   }
 };
 }  // namespace Cli
-
-#endif  // MAIN_H

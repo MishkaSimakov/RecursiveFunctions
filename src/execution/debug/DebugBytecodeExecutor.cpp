@@ -76,7 +76,7 @@ void DebugBytecodeExecutor::execute_instruction(Instruction instruction) {
       --calculation_stack_ptr;
       break;
     case Compilation::InstructionType::HALT:
-      finished = true;
+      execution_status_ = ExecutionStatus::FINISHED;
       break;
   }
 }
@@ -230,12 +230,8 @@ ValueT DebugBytecodeExecutor::execute() {
         // TODO: write about problem
       }
 
-      if (finished) {
-        Logger::execution(LogLevel::INFO, "successfully executed bytecode");
-        Logger::execution(LogLevel::INFO, "execution took", iteration_,
-                          "iterations");
-
-        return calculation_stack_[calculation_stack_ptr - 1];
+      if (execution_status_ == ExecutionStatus::FINISHED) {
+        break;
       }
 
       ++iteration_;
@@ -256,4 +252,9 @@ ValueT DebugBytecodeExecutor::execute() {
       }
     }
   }
+
+  Logger::execution(LogLevel::INFO, "successfully executed bytecode");
+  Logger::execution(LogLevel::INFO, "execution took {} iterations", iteration_);
+
+  return calculation_stack_[calculation_stack_ptr - 1];
 }

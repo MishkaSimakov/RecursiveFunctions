@@ -1,5 +1,4 @@
-#ifndef FASTADD_H
-#define FASTADD_H
+#pragma once
 
 #include <list>
 
@@ -22,5 +21,3 @@ inline list<Instruction> fast_add_instructions = {
 };
 // clang-format on
 }  // namespace Compilation
-
-#endif  // FASTADD_H
