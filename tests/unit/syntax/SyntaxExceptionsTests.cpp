@@ -57,7 +57,11 @@ TEST_F(SyntaxTestCase, test_it_throws_when_recursive_parameter_incorrect) {
 
 TEST_F(SyntaxTestCase, test_it_throws_when_missing_semicolon) {
   ASSERT_SYNTAX_INCORRECT("f(x) = x");
-  ASSERT_SYNTAX_INCORRECT("f(x) = x f(x);");
+
+  // this is quite subtle:
+  // preprocessor will not remove whitespaces that would concatenate identifiers
+  // or constants => lexer will fail when meet whitespace
+  ASSERT_THROW({ get_tree("f(x) = x f(x);"); }, Lexing::UnexpectedSymbolException);
   ASSERT_SYNTAX_INCORRECT("f(x) = x; f(x)");
   ASSERT_SYNTAX_INCORRECT("f(123)");
 }

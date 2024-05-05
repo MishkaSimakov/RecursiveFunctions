@@ -46,8 +46,29 @@ class Preprocessor {
     return !line.starts_with("#");
   }
 
+  static bool is_symbol_space_preserving(char symbol) {
+    return std::isdigit(symbol) != 0 || std::isalpha(symbol) != 0 ||
+           symbol == '_';
+  }
+
   static void remove_unnecessary_symbols(string& line) {
-    std::erase_if(line, [](char symbol) { return std::isspace(symbol) != 0; });
+    // remove all space symbols
+    // with one exception:
+    // space cannot (and would not) be removed if two separate identifiers or
+    // numbers will become one
+
+    for (auto itr = line.begin(); itr != line.end();) {
+      bool is_space = std::isspace(*itr) != 0;
+      bool not_on_edge = itr != line.begin() && std::next(itr) != line.end();
+
+      if (is_space && not_on_edge &&
+          (!is_symbol_space_preserving(*std::prev(itr)) ||
+           !is_symbol_space_preserving(*std::next(itr)))) {
+        itr = line.erase(itr);
+      } else {
+        ++itr;
+      }
+    }
   }
 
   auto process_files() {
