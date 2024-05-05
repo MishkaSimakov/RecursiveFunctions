@@ -26,13 +26,19 @@ class Main {
     preprocessor.add_source<FileSource>("main", main_filepath);
     preprocessor.set_main_source("main");
 
+    string separator{fs::path::preferred_separator};
+
     for (auto& include : includes) {
       if (include.contains(kIncludeNamePathDelimiter)) {
         // named include
         size_t index = include.find(kIncludeNamePathDelimiter);
         string name = include.substr(0, index);
 
-        fs::path path = include.substr(index, include.size() - index);
+        if (name.empty()) {
+          throw std::runtime_error("Include name must be non-empty.");
+        }
+
+        fs::path path = include.substr(index + 1, include.size() - index);
 
         if (is_directory(path)) {
           throw std::runtime_error("Directory import can not be named.");
@@ -48,7 +54,17 @@ class Main {
         // foo/baz/prog.rec will be available with #include "foo.baz.prog"
 
         fs::path path = include;
-        string separator{fs::path::preferred_separator};
+
+        if (is_regular_file(path)) {
+          fs::path path_copy = path;
+          path_copy.replace_extension();
+
+          auto include_name =
+              std::regex_replace(string{path_copy}, std::regex(separator), ".");
+
+          preprocessor.add_source<FileSource>(include_name, path);
+          continue;
+        }
 
         for (auto subfile : fs::recursive_directory_iterator(path)) {
           if (subfile.is_regular_file()) {
