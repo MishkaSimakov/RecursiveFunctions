@@ -1,8 +1,10 @@
-#ifndef BYTECODECOMPILER_H
-#define BYTECODECOMPILER_H
+#pragma once
+
 #include "compilation/CompileTreeNodes.h"
 
 namespace Compilation {
+using std::vector, std::string, std::pair;
+
 class BytecodeCompiler final : public Compiler {
   vector<list<Instruction>> compiled_functions_;
   list<Instruction> compiled_call_;
@@ -39,6 +41,8 @@ class BytecodeCompiler final : public Compiler {
   size_t get_argmin_parameter_position() const;
 
  public:
+  static const vector<pair<string, size_t>> internal_functions;
+
   vector<Instruction> get_result() const;
 
   void compile(const ProgramNode&) override;
@@ -53,6 +57,7 @@ class BytecodeCompiler final : public Compiler {
   void compile(const FunctionCallNode&) override;
   void compile(const SelfCallNode&) override;
 };
-}  // namespace Compilation
 
-#endif  // BYTECODECOMPILER_H
+inline const vector<pair<string, size_t>> BytecodeCompiler::internal_functions{
+    {"successor", 1}, {"__add", 2}, {"__abs_diff", 2}};
+}  // namespace Compilation

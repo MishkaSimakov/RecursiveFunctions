@@ -1,8 +1,9 @@
-#ifndef INSTRUCTIONS_H
-#define INSTRUCTIONS_H
+#pragma once
 
-#include <list>
+#include <fmt/core.h>
+
 #include <iostream>
+#include <list>
 
 using std::list;
 
@@ -27,6 +28,14 @@ struct ValueT {
   size_t as_value() const { return value; }
 
   size_t as_line_id() const { return value & ~kFunctionCallOffset; }
+
+  std::string as_string() const {
+    if (is_line_id()) {
+      return std::to_string(as_line_id()) + "()";
+    }
+
+    return std::to_string(as_value());
+  }
 
   void increment() { ++value; }
 
@@ -71,51 +80,62 @@ struct Block {
 };
 }  // namespace Compilation
 
-inline std::ostream& operator<<(
-    std::ostream& os, const Compilation::InstructionType instruction_type) {
-  switch (instruction_type) {
-    case Compilation::InstructionType::INCREMENT:
-      return os << "INCREMENT";
-    case Compilation::InstructionType::DECREMENT:
-      return os << "DECREMENT";
-    case Compilation::InstructionType::POP_JUMP_IF_ZERO:
-      return os << "POP_JUMP_IF_ZERO";
-    case Compilation::InstructionType::JUMP_IF_NONZERO:
-      return os << "JUMP_IF_NONZERO";
-    case Compilation::InstructionType::CALL_FUNCTION:
-      return os << "CALL_FUNCTION";
-    case Compilation::InstructionType::LOAD:
-      return os << "LOAD";
-    case Compilation::InstructionType::LOAD_CONST:
-      return os << "LOAD_CONST";
-    case Compilation::InstructionType::LOAD_CALL:
-      return os << "LOAD_CALL";
-    case Compilation::InstructionType::COPY:
-      return os << "COPY";
-    case Compilation::InstructionType::RETURN:
-      return os << "RETURN";
-    case Compilation::InstructionType::POP:
-      return os << "POP";
-    case Compilation::InstructionType::HALT:
-      return os << "HALT";
-    default:
-      return os << "UNKNOWN";
+template <>
+struct fmt::formatter<Compilation::Instruction> {
+ private:
+  static auto stringify_instruction_type(Compilation::InstructionType type) {
+    switch (type) {
+      case Compilation::InstructionType::INCREMENT:
+        return "INCREMENT";
+      case Compilation::InstructionType::DECREMENT:
+        return "DECREMENT";
+      case Compilation::InstructionType::POP_JUMP_IF_ZERO:
+        return "POP_JUMP_IF_ZERO";
+      case Compilation::InstructionType::JUMP_IF_NONZERO:
+        return "JUMP_IF_NONZERO";
+      case Compilation::InstructionType::CALL_FUNCTION:
+        return "CALL_FUNCTION";
+      case Compilation::InstructionType::LOAD:
+        return "LOAD";
+      case Compilation::InstructionType::LOAD_CONST:
+        return "LOAD_CONST";
+      case Compilation::InstructionType::LOAD_CALL:
+        return "LOAD_CALL";
+      case Compilation::InstructionType::COPY:
+        return "COPY";
+      case Compilation::InstructionType::RETURN:
+        return "RETURN";
+      case Compilation::InstructionType::POP:
+        return "POP";
+      case Compilation::InstructionType::HALT:
+        return "HALT";
+      default:
+        return "UNKNOWN";
+    }
   }
-}
+
+ public:
+  constexpr auto parse(auto& ctx) { return ctx.begin(); }
+
+  auto format(const Compilation::Instruction& instruction, auto& ctx) const {
+    using Compilation::InstructionType;
+
+    InstructionType type = instruction.type;
+    bool without_argument = type == InstructionType::RETURN ||
+                            type == InstructionType::HALT ||
+                            type == InstructionType::CALL_FUNCTION;
+
+    if (without_argument) {
+      return fmt::format_to(ctx.out(), "{}", stringify_instruction_type(type));
+    }
+
+    return fmt::format_to(ctx.out(), "{} {}", stringify_instruction_type(type),
+                          instruction.argument);
+  }
+};
 
 inline std::ostream& operator<<(std::ostream& os,
                                 const Compilation::Instruction instruction) {
-  using Compilation::InstructionType;
-
-  os << instruction.type;
-
-  if (instruction.type != InstructionType::RETURN &&
-      instruction.type != InstructionType::HALT &&
-      instruction.type != InstructionType::CALL_FUNCTION) {
-    os << " " << instruction.argument;
-  }
-
+  fmt::print("{}", instruction);
   return os;
 }
-
-#endif  // INSTRUCTIONS_H

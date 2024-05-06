@@ -1,12 +1,12 @@
-#ifndef MAIN_H
-#define MAIN_H
+#pragma once
 
 #include <argparse/argparse.hpp>
 
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
+#include "execution/debug/DebugBytecodeExecutor.h"
 
-using Compilation::CompileTreeBuilder;
+using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
 
 namespace Cli {
@@ -22,8 +22,14 @@ class Main {
     auto includes = parser.get<vector<string>>("include");
     auto main_filepath = parser.get<string>("filepath");
 
+    if (!fs::is_regular_file(main_filepath)) {
+      throw std::runtime_error(fmt::format("No such file {}", main_filepath));
+    }
+
     preprocessor.add_source<FileSource>("main", main_filepath);
     preprocessor.set_main_source("main");
+
+    string separator{fs::path::preferred_separator};
 
     for (auto& include : includes) {
       if (include.contains(kIncludeNamePathDelimiter)) {
@@ -31,7 +37,11 @@ class Main {
         size_t index = include.find(kIncludeNamePathDelimiter);
         string name = include.substr(0, index);
 
-        fs::path path = include.substr(index, include.size() - index);
+        if (name.empty()) {
+          throw std::runtime_error("Include name must be non-empty.");
+        }
+
+        fs::path path = include.substr(index + 1, include.size() - index);
 
         if (is_directory(path)) {
           throw std::runtime_error("Directory import can not be named.");
@@ -47,7 +57,17 @@ class Main {
         // foo/baz/prog.rec will be available with #include "foo.baz.prog"
 
         fs::path path = include;
-        string separator{fs::path::preferred_separator};
+
+        if (is_regular_file(path)) {
+          fs::path path_copy = path;
+          path_copy.replace_extension();
+
+          auto include_name =
+              std::regex_replace(string{path_copy}, std::regex(separator), ".");
+
+          preprocessor.add_source<FileSource>(include_name, path);
+          continue;
+        }
 
         for (auto subfile : fs::recursive_directory_iterator(path)) {
           if (subfile.is_regular_file()) {
@@ -93,6 +113,11 @@ class Main {
               "info and "
               "warnings, -vvv - show all log messages.");
 
+      parser.add_argument("-d", "--debug")
+          .default_value(false)
+          .implicit_value(true)
+          .help("turn on debug mode");
+
       try {
         parser.parse_args(argc, argv);
       } catch (const std::exception& err) {
@@ -111,23 +136,29 @@ class Main {
           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 
       CompileTreeBuilder compile_tree_builder;
-      compile_tree_builder.add_internal_function("successor", 1);
-      compile_tree_builder.add_internal_function("__add", 2);
-      compile_tree_builder.add_internal_function("__abs_diff", 2);
+      for (auto& [name, args_count] : BytecodeCompiler::internal_functions) {
+        compile_tree_builder.add_internal_function(name, args_count);
+      }
 
+      BytecodeCompiler compiler;
       auto compile_tree = compile_tree_builder.build(*syntax_tree);
-      Compilation::BytecodeCompiler compiler;
       compiler.compile(*compile_tree);
 
       auto bytecode = compiler.get_result();
 
-      BytecodeExecutor executor;
-      ValueT result = executor.execute(bytecode);
+      bool is_debug_enabled = parser.get<bool>("debug");
+
+      ValueT result;
+      if (is_debug_enabled) {
+        DebugBytecodeExecutor executor(std::move(bytecode));
+        result = executor.execute();
+      } else {
+        BytecodeExecutor executor;
+        result = executor.execute(bytecode);
+      }
 
       cout << result.as_value() << endl;
     });
   }
 };
 }  // namespace Cli
-
-#endif  // MAIN_H

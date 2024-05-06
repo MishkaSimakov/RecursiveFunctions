@@ -1,5 +1,5 @@
-#ifndef PREPROCESSOR_H
-#define PREPROCESSOR_H
+#pragma once
+
 #include <list>
 #include <regex>
 #include <string>
@@ -29,7 +29,7 @@ class Preprocessor {
   const static std::regex kIncludeRegex;
 
   unordered_map<string, std::unique_ptr<Source>> sources_;
-  string main_source_ = "main";
+  string main_source_ = kDefaultMainSource;
 
   static bool is_include(const string& line) {
     return std::regex_search(line, kIncludeRegex);
@@ -46,8 +46,30 @@ class Preprocessor {
     return !line.starts_with("#");
   }
 
+  static bool is_symbol_space_preserving(char symbol) {
+    return std::isdigit(symbol) != 0 || std::isalpha(symbol) != 0 ||
+           symbol == '_';
+  }
+
   static void remove_unnecessary_symbols(string& line) {
-    std::erase_if(line, [](char symbol) { return std::isspace(symbol) != 0; });
+    // remove all space symbols
+    // with one exception:
+    // space cannot (and would not) be removed if two separate identifiers or
+    // numbers will become one
+
+    for (auto itr = line.begin(); itr != line.end();) {
+      bool is_space = std::isspace(*itr) != 0;
+      bool not_on_edge = itr != line.begin() && std::next(itr) != line.end();
+      bool skip_condition = not_on_edge &&
+                            is_symbol_space_preserving(*std::prev(itr)) &&
+                            is_symbol_space_preserving(*std::next(itr));
+
+      if (is_space && !skip_condition) {
+        itr = line.erase(itr);
+      } else {
+        ++itr;
+      }
+    }
   }
 
   auto process_files() {
@@ -69,11 +91,20 @@ class Preprocessor {
 
         remove_unnecessary_symbols(line);
 
-        if (!result_text.empty() && !result_text.back().is_include) {
-          result_text.back().value += line;
-        } else {
+        if (result_text.empty() || result_text.back().is_include) {
           result_text.emplace_back(false, std::move(line));
+          continue;
         }
+
+        char last_symbol = result_text.back().value.back();
+        char first_symbol = line.front();
+
+        if (is_symbol_space_preserving(last_symbol) &&
+            is_symbol_space_preserving(first_symbol)) {
+          line = " " + line;
+        }
+
+        result_text.back().value += line;
       }
     }
 
@@ -106,24 +137,32 @@ class Preprocessor {
   }
 
  public:
+  constexpr static auto kDefaultMainSource = "main";
+
   template <typename T>
     requires std::is_base_of_v<Source, T>
   void add_source(const string& name, auto&&... args) {
-    Logger::preprocessor(LogLevel::DEBUG, "added source of type",
-                         typeid(T).name(), "with name:", name);
+    if (sources_.contains(name)) {
+      throw std::runtime_error(
+          fmt::format("Source with name {:?} already exists.", name));
+    }
+
+    Logger::preprocessor(LogLevel::DEBUG,
+                         "added source of type {:?} with name {:?}",
+                         typeid(T).name(), name);
 
     sources_.emplace(
         name, std::make_unique<T>(std::forward<decltype(args)>(args)...));
   }
 
   void set_main_source(const string& name) {
-    Logger::preprocessor(LogLevel::DEBUG, "set main source name to:", name);
+    Logger::preprocessor(LogLevel::DEBUG, "set main source name to {:?}", name);
 
     main_source_ = name;
   }
 
   string process() {
-    Logger::preprocessor(LogLevel::INFO, "start preprocessing files");
+    Logger::preprocessor(LogLevel::INFO, "start preprocessor files");
 
     if (!sources_.contains(main_source_)) {
       throw MainSourceNotFoundException(main_source_);
@@ -150,5 +189,3 @@ inline const vector<char> Preprocessor::kIgnoredCharacters = {' ',  '\f', '\n',
                                                               '\r', '\t', '\v'};
 inline const std::regex Preprocessor::kIncludeRegex(R"(#include\s*\"(.*)\")");
 }  // namespace Preprocessing
-
-#endif  // PREPROCESSOR_H

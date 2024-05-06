@@ -1,7 +1,7 @@
 # Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
 if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
-endif()
+endif ()
 
 include(FetchContent)
 
@@ -21,6 +21,15 @@ add_executable(
         feature/ProgramRunTestCase.h
         feature/ArgminTests.cpp
         unit/lexis/LexisTests.cpp
+        unit/syntax/CorrectSyntaxTests.cpp
+        unit/syntax/SyntaxTestCase.h
+        unit/syntax/SyntaxNodeTests.cpp
+        unit/syntax/SyntaxExceptionsTests.cpp
+        unit/compilation/CompileTreeTestCase.h
+        unit/compilation/CorrectCompileTreeTests.cpp
+        unit/preprocessor/PreprocessorTestCase.h
+        unit/preprocessor/PreprocessorTests.cpp
+        unit/execution/BytecodeExecutorTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)

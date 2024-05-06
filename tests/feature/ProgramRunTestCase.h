@@ -16,7 +16,7 @@ class ProgramRunTestCase : public ::testing::Test {
   static std::filesystem::path fast_arithmetics_path_;
   static std::filesystem::path is_prime_path_;
 
-  ProgramRunTestCase() { Logger::disable_category(Logger::ALL); };
+  ProgramRunTestCase() { Logger::disable_category(Logger::ALL); }
 
   static size_t run_program(string program, bool use_fast_arithmetics = false) {
     vector<string> program_with_includes = {};

@@ -1,5 +1,4 @@
-#ifndef FILESOURCE_H
-#define FILESOURCE_H
+#pragma once
 
 #include <filesystem>
 #include <fstream>
@@ -37,5 +36,3 @@ class FileSource final : public Source {
   }
 };
 }  // namespace Preprocessing
-
-#endif  // FILESOURCE_H

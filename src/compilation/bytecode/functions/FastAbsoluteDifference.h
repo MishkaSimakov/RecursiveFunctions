@@ -1,5 +1,4 @@
-#ifndef FASTABSOLUTEDIFFERENCE_H
-#define FASTABSOLUTEDIFFERENCE_H
+#pragma once
 
 #include <list>
 
@@ -30,5 +29,3 @@ inline list<Instruction> fast_absolute_difference_instructions = {
 };
 // clang-format on
 }  // namespace Compilation
-
-#endif  // FASTABSOLUTEDIFFERENCE_H
