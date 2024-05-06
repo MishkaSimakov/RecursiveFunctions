@@ -10,7 +10,7 @@ ValueT BytecodeExecutor::execute(
   size_t calculation_stack_ptr = 0;
   bool finished = false;
 
-  for (size_t iteration = 0; iteration < kMaxIterations; ++iteration) {
+  for (size_t iteration = 0; iteration < max_iterations; ++iteration) {
     auto command = instructions[command_ptr];
 
     switch (command.type) {

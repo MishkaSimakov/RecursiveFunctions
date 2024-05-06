@@ -1,63 +1,84 @@
 #pragma once
 
+#include <fmt/core.h>
+
 #include <algorithm>
 #include <array>
 #include <functional>
 #include <set>
 #include <vector>
-#include <fmt/core.h>
 
 #include "CommandParser.h"
+#include "SafeArray.h"
 #include "compilation/Instructions.h"
 #include "log/Logger.h"
 
 using Compilation::Instruction;
 using std::array, std::vector, std::pair, std::set;
 
-namespace ph = std::placeholders;
+enum class ContainerType { CALL, CALL_ARGUMENTS, CALCULATION, INSTRUCTIONS };
 
-template <typename T, size_t Size, std::invocable<int> ExceptionThrower>
-class SafeArray {
-  [[no_unique_address]] ExceptionThrower thrower_;
-  std::array<T, Size> storage_;
+struct ContainerOutOfBoundsException final : std::exception {
+  string message;
 
- public:
-  SafeArray() = default;
-
-#ifdef __cpp_explicit_this_parameter
-  auto& operator[](this auto&& self, int index) {
-    if (index < 0 || index >= Size) {
-      throw self.thrower_(index);
+  static string get_container_name(ContainerType type) {
+    switch (type) {
+      case ContainerType::CALL:
+        return "call stack";
+      case ContainerType::CALL_ARGUMENTS:
+        return "call arguments stack";
+      case ContainerType::CALCULATION:
+        return "calculations stack";
+      case ContainerType::INSTRUCTIONS:
+        return "instructions storage";
     }
 
-    return self.storage_[index];
+    return "unknown stack type";
   }
-#else
-  auto& operator[](int index) {
-    if (index < 0 || index >= Size) {
-      throw thrower_(index);
+
+  static string get_violation_name(ArrayBordersViolationType violation) {
+    switch (violation) {
+      case ArrayBordersViolationType::BORDERS_OVERFLOW:
+        return "overflow";
+      case ArrayBordersViolationType::BORDERS_UNDERFLOW:
+        return "underflow";
     }
 
-    return storage_[index];
+    return "unknown violation type";
   }
 
-  const auto& operator[](int index) const {
-    return const_cast<SafeArray&>(*this)[index];
-  }
-#endif
+  ContainerOutOfBoundsException(ContainerType stack, int index,
+                                ArrayBordersViolationType violation)
+      : message(fmt::format(
+            "Container {} happened during program execution. Program "
+            "attempted "
+            "to use element of {} with index {} which is out of bounds",
+            get_violation_name(violation), get_container_name(stack), index)) {}
+
+  const char* what() const noexcept override { return message.c_str(); }
 };
 
-struct StackOutOfBoundsException {
-  size_t stack_id;
-  int index;
-};
-
-template <size_t I>
+template <ContainerType S>
 struct OutOfBoundsThrower {
-  StackOutOfBoundsException operator()(int index) const { return {I, index}; }
+  ContainerOutOfBoundsException operator()(
+      int index, ArrayBordersViolationType violation) const {
+    return {S, index, violation};
+  }
 };
 
 class DebugBytecodeExecutor {
+  // constants
+  constexpr static size_t kProgramPrintRadius = 5;
+  constexpr static size_t kStackPrintRadius = 10;
+
+  constexpr static size_t kCallStackSize = 1e5;
+  constexpr static size_t kValuesStackSize = 1e5;
+  constexpr static size_t kMaxIterations = 1e11;
+
+  const static map<StackSlice::StackType, std::function<string(size_t)>>
+      kStackPrinters;
+
+  // types
   enum class ExecutionMode {
     EXECUTE_UNTIL_BREAKPOINT,
     EXECUTE_STEP_BY_STEP,
@@ -66,14 +87,22 @@ class DebugBytecodeExecutor {
 
   enum class ExecutionStatus { EXECUTING, PAUSED, FINISHED };
 
-  constexpr static size_t kProgramPrintRadius = 5;
-  constexpr static size_t kStackPrintRadius = 10;
+  using CallStackT = SafeWrapper<array<pair<size_t, size_t>, kCallStackSize>,
+                                 OutOfBoundsThrower<ContainerType::CALL>>;
+  using ArgumentsStackT =
+      SafeWrapper<array<ValueT, kValuesStackSize>,
+                  OutOfBoundsThrower<ContainerType::CALL_ARGUMENTS>>;
+  using CalculationsStackT =
+      SafeWrapper<array<ValueT, kValuesStackSize>,
+                  OutOfBoundsThrower<ContainerType::CALCULATION>>;
 
-  constexpr static size_t kCallStackSize = 1e5;
-  constexpr static size_t kValuesStackSize = 1e5;
-  constexpr static size_t kMaxIterations = 1e11;
+  using InstructionsContainerT =
+      SafeWrapper<vector<Instruction>,
+                  OutOfBoundsThrower<ContainerType::INSTRUCTIONS>>;
 
-  vector<Instruction> instructions_;
+  // variables
+
+  InstructionsContainerT instructions_;
 
   size_t iteration_ = 0;
   int command_ptr = 0;
@@ -88,12 +117,9 @@ class DebugBytecodeExecutor {
   ExecutionMode execution_mode_ = ExecutionMode::EXECUTE_UNTIL_BREAKPOINT;
   set<size_t> breakpoints_;
 
-  SafeArray<pair<size_t, size_t>, kCallStackSize, OutOfBoundsThrower<0>>
-      call_stack_;
-  SafeArray<ValueT, kValuesStackSize, OutOfBoundsThrower<1>>
-      call_arguments_stack_{};
-  SafeArray<ValueT, kValuesStackSize, OutOfBoundsThrower<2>>
-      calculation_stack_{};
+  CallStackT call_stack_{};
+  ArgumentsStackT call_arguments_stack_{};
+  CalculationsStackT calculation_stack_{};
 
   void execute_instruction(Instruction instruction);
 
@@ -109,7 +135,7 @@ class DebugBytecodeExecutor {
   void print_program_vicinity(size_t center) const;
 
  public:
-  DebugBytecodeExecutor(vector<Instruction> instructions)
+  explicit DebugBytecodeExecutor(vector<Instruction> instructions)
       : instructions_(std::move(instructions)), parser_(this) {
     setup_parser();
   }

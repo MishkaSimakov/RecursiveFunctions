@@ -102,10 +102,6 @@ void DebugBytecodeExecutor::list_command(size_t line) const {
   print_program_vicinity(line);
 }
 
-void DebugBytecodeExecutor::help_command() {
-  std::cout << "this is help." << std::endl;
-}
-
 void DebugBytecodeExecutor::print_stack_command(StackSlice slice) const {
   using StackType = StackSlice::StackType;
 
@@ -131,47 +127,53 @@ void DebugBytecodeExecutor::print_stack_command(StackSlice slice) const {
       pair{stack_ptr > kStackPrintRadius ? stack_ptr - kStackPrintRadius : 0,
            std::min(stack_size, stack_ptr + kStackPrintRadius)});
 
-  if (slice.stack != StackType::CALL_STACK) {
-    constexpr size_t kValueWidth = 6;
-    int ptr_position = -1;
+  int ptr_position = -1;
 
-    string result = "  [ ";
-    if (from != 0) {
-      result += "... ";
-    }
+  string result = "  [ ";
+  if (from != 0) {
+    result += "... ";
+  }
 
-    for (size_t i = from; i <= to; ++i) {
+  for (size_t i = from; i <= to; ++i) {
+    string string_value;
+    size_t pad_width;
+
+    if (slice.stack == StackType::CALL_STACK) {
+      pad_width = 10;
+
+      auto [call, arguments] = call_stack_[i];
+
+      string_value =
+          "(" + std::to_string(call) + ", " + std::to_string(arguments) + ")";
+    } else {
+      pad_width = 6;
+
       ValueT value = slice.stack == StackType::CALCULATIONS_STACK
                          ? calculation_stack_[i]
                          : call_arguments_stack_[i];
 
-      string string_value;
-      if (value.is_line_id()) {
-        string_value += std::to_string(value.as_line_id()) + "()";
-      } else {
-        string_value += std::to_string(value.as_value());
-      }
-
-      string_value.resize(kValueWidth, ' ');
-      result += string_value;
-
-      if (i == stack_ptr) {
-        ptr_position = result.size() - kValueWidth;
-      }
+      string_value = value.as_string();
     }
 
-    if (to != stack_size - 1) {
-      result += "... ";
+    string_value.resize(pad_width, ' ');
+    result += string_value;
+
+    if (i == stack_ptr) {
+      ptr_position = result.size() - pad_width;
     }
-
-    result += "]\n";
-
-    if (ptr_position != -1) {
-      result += string(ptr_position, ' ') + "↑\n";
-    }
-
-    std::cout << result << std::flush;
   }
+
+  if (to != stack_size - 1) {
+    result += "... ";
+  }
+
+  result += "]\n";
+
+  if (ptr_position != -1) {
+    result += string(ptr_position, ' ') + "↑\n";
+  }
+
+  std::cout << result << std::flush;
 }
 
 void DebugBytecodeExecutor::step_command() {
@@ -218,17 +220,20 @@ ValueT DebugBytecodeExecutor::execute() {
     string command;
     std::getline(cin, command);
 
-    parser_.parse(command);
+    try {
+      parser_.parse(command);
+    } catch (std::runtime_error exception) {
+      std::cout << "Parse error: " << exception.what() << "\n";
+      std::cout << "For help, type \"help\"" << std::endl;
+    }
 
     while (execution_status_ == ExecutionStatus::EXECUTING) {
+      // this may throw container overflow/underflow exception
       auto instruction = instructions_[command_ptr];
 
-      try {
-        execute_instruction(instruction);
-        ++command_ptr;
-      } catch (const StackOutOfBoundsException& exception) {
-        // TODO: write about problem
-      }
+      // this also may throw
+      execute_instruction(instruction);
+      ++command_ptr;
 
       if (execution_status_ == ExecutionStatus::FINISHED) {
         break;

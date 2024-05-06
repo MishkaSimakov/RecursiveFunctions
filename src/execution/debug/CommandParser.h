@@ -14,16 +14,26 @@
 
 using std::string, std::map, std::vector, std::cout, std::cin, std::endl;
 
+static int stoi_with_custom_exceptions(const string& value) {
+  try {
+    return std::stoi(value);
+  } catch (std::invalid_argument) {
+    throw std::runtime_error("Could not parse argument.");
+  } catch (std::out_of_range) {
+    throw std::runtime_error("Given value is too big.");
+  }
+}
+
 template <typename T>
 struct ArgumentParser;
 
 template <>
 struct ArgumentParser<size_t> {
   size_t operator()(const string& argument) const {
-    int value = std::stoi(argument);
+    int value = stoi_with_custom_exceptions(argument);
 
     if (value < 0) {
-      throw std::invalid_argument("Could not parse argument.");
+      throw std::runtime_error("Value must be non-negative.");
     }
 
     return static_cast<size_t>(value);
@@ -65,12 +75,16 @@ struct ArgumentParser<StackSlice> {
     std::optional<std::pair<size_t, size_t>> range;
 
     if (std::regex_match(argument, matches, kRangefullStackSliceRegex)) {
-      int from = std::stoi(matches[2]);
-      int to = std::stoi(matches[3]);
+      int from = stoi_with_custom_exceptions(matches[2]);
+      int to = stoi_with_custom_exceptions(matches[3]);
 
       if (from < 0 || to < 0) {
         throw std::runtime_error(
             "Range boundaries in stack slice must be non-negative");
+      }
+      if (to < from) {
+        throw std::runtime_error(
+            "Left border of range must precede right border");
       }
 
       range = {from, to};
@@ -90,7 +104,7 @@ struct ArgumentParser<StackSlice> {
 };
 
 inline const std::regex ArgumentParser<StackSlice>::kRangefullStackSliceRegex{
-    R"((.*)\[(\d*):(\d*)\])"};
+    R"((.*)\[(-?\d+):(-?\d+)\])"};
 inline const std::regex ArgumentParser<StackSlice>::kRanglessStackSliceRegex{
     R"((.*))"};
 

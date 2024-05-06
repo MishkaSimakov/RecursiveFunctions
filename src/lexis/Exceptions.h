@@ -1,28 +1,36 @@
 #pragma once
 
-#include <string>
 #include <fmt/core.h>
+
+#include <string>
 
 namespace Lexing {
 using std::string;
 
 struct UnexpectedSymbolException : std::exception {
+  constexpr static size_t kPrintRadius = 20;
+
   string message;
 
-  static string get_symbol_vicinity(const string& program, size_t position) {
-    size_t radius = 20;
-    size_t begin = position >= radius ? position - radius : 0;
+  static auto get_symbol_vicinity(const string& program, size_t position) {
+    size_t begin = position >= kPrintRadius ? position - kPrintRadius : 0;
+    size_t end = std::min(program.size(), begin + kPrintRadius * 2 + 1);
 
-    auto left_vicinity = program.substr(begin, position - begin);
-    auto right_vicinity = program.substr(position + 1, radius);
-
-    return left_vicinity + " >>>" + program[position] + "<<< " + right_vicinity;
+    return std::pair{program.substr(begin, kPrintRadius * 2 + 1),
+                     end - position};
   }
 
   explicit UnexpectedSymbolException(const string& program, size_t position)
-      : message(fmt::format("Unexpected symbol {:?} occured in program: {:?}.",
-                            program[position],
-                            get_symbol_vicinity(program, position))) {}
+      : message([&program, position] {
+          auto [vicinity, offset] = get_symbol_vicinity(program, position);
+          auto message =
+              fmt::format("Unexpected symbol {:?} occured in program: {}",
+                          program[position], vicinity);
+
+          message += "\n" + string(message.size() - offset, ' ') + "↑\n";
+
+          return message;
+        }()) {}
 
   const char* what() const noexcept override { return message.c_str(); }
 };

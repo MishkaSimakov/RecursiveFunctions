@@ -29,6 +29,7 @@ add_executable(
         unit/compilation/CorrectCompileTreeTests.cpp
         unit/preprocessor/PreprocessorTestCase.h
         unit/preprocessor/PreprocessorTests.cpp
+        unit/execution/BytecodeExecutorTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)

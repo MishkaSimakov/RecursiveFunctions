@@ -22,6 +22,10 @@ class Main {
     auto includes = parser.get<vector<string>>("include");
     auto main_filepath = parser.get<string>("filepath");
 
+    if (!fs::is_regular_file(main_filepath)) {
+      throw std::runtime_error(fmt::format("No such file {}", main_filepath));
+    }
+
     preprocessor.add_source<FileSource>("main", main_filepath);
     preprocessor.set_main_source("main");
 

@@ -29,6 +29,14 @@ struct ValueT {
 
   size_t as_line_id() const { return value & ~kFunctionCallOffset; }
 
+  std::string as_string() const {
+    if (is_line_id()) {
+      return std::to_string(as_line_id()) + "()";
+    }
+
+    return std::to_string(as_value());
+  }
+
   void increment() { ++value; }
 
   void decrement() { --value; }
