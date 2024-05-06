@@ -43,7 +43,6 @@ struct RootConsumptionNode final : ConsumptionNode {
   }
 };
 
-// consumers for program
 class Consumer {
  protected:
   using TokenIteratorT = vector<Token>::const_iterator;

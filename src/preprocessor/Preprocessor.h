@@ -29,7 +29,7 @@ class Preprocessor {
   const static std::regex kIncludeRegex;
 
   unordered_map<string, std::unique_ptr<Source>> sources_;
-  string main_source_ = "main";
+  string main_source_ = kDefaultMainSource;
 
   static bool is_include(const string& line) {
     return std::regex_search(line, kIncludeRegex);
@@ -91,11 +91,20 @@ class Preprocessor {
 
         remove_unnecessary_symbols(line);
 
-        if (!result_text.empty() && !result_text.back().is_include) {
-          result_text.back().value += line;
-        } else {
+        if (result_text.empty() || result_text.back().is_include) {
           result_text.emplace_back(false, std::move(line));
+          continue;
         }
+
+        char last_symbol = result_text.back().value.back();
+        char first_symbol = line.front();
+
+        if (is_symbol_space_preserving(last_symbol) &&
+            is_symbol_space_preserving(first_symbol)) {
+          line = " " + line;
+        }
+
+        result_text.back().value += line;
       }
     }
 
@@ -128,9 +137,16 @@ class Preprocessor {
   }
 
  public:
+  constexpr static auto kDefaultMainSource = "main";
+
   template <typename T>
     requires std::is_base_of_v<Source, T>
   void add_source(const string& name, auto&&... args) {
+    if (sources_.contains(name)) {
+      throw std::runtime_error(
+          fmt::format("Source with name {:?} already exists.", name));
+    }
+
     Logger::preprocessor(LogLevel::DEBUG,
                          "added source of type {:?} with name {:?}",
                          typeid(T).name(), name);
@@ -146,7 +162,7 @@ class Preprocessor {
   }
 
   string process() {
-    Logger::preprocessor(LogLevel::INFO, "start preprocessing files");
+    Logger::preprocessor(LogLevel::INFO, "start preprocessor files");
 
     if (!sources_.contains(main_source_)) {
       throw MainSourceNotFoundException(main_source_);

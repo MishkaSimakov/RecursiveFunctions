@@ -27,6 +27,8 @@ add_executable(
         unit/syntax/SyntaxExceptionsTests.cpp
         unit/compilation/CompileTreeTestCase.h
         unit/compilation/CorrectCompileTreeTests.cpp
+        unit/preprocessor/PreprocessorTestCase.h
+        unit/preprocessor/PreprocessorTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)
