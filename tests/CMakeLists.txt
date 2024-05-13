@@ -18,6 +18,7 @@ add_executable(
         Tests
         feature/ArithmeticsTests.cpp
         feature/FastArithmeticsTests.cpp
+        feature/IsPrimeTests.cpp
         feature/ProgramRunTestCase.h
         feature/ArgminTests.cpp
         unit/lexis/LexisTests.cpp
