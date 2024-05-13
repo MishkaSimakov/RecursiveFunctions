@@ -26,7 +26,6 @@ TEST_F(IsPrimeTestCase, test_is_prime_works) {
 
 TEST_F(IsPrimeTestCase, test_is_prime_argmin_works) {
   for (int i = 0; i < 200; ++i) {
-    std::cout << i << std::endl;
     ASSERT_EQ(run_program(get_function_call("is_prime_argmin", i), true),
               is_prime(i) ? 1 : 0);
   }
