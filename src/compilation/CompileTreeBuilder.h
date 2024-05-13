@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 #include "CompileTreeNodes.h"
@@ -68,8 +69,8 @@ class CompileTreeBuilder {
       const SyntaxNode& syntax_node);
 
   unique_ptr<CompileNode> build_variable_compile_node(
-    const SyntaxNode& syntax_node,
-    const ValueCompilationNodeBuilderParameters& parameters);
+      const SyntaxNode& syntax_node,
+      const ValueCompilationNodeBuilderParameters& parameters);
 
   unique_ptr<CompileNode> build_argmin_call_compile_node(
       const SyntaxNode& syntax_node,
