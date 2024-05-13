@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <optional>
 
 #include "FunctionTraits.h"
 

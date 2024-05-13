@@ -17,7 +17,7 @@ jobs:
       with:
         submodules: 'recursive'
     - name: configure
-      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-Werror" ..
+      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-Werror" ..
     - name: make
       run: cd build && cmake --build . -t Tests
     - name: Run Test
