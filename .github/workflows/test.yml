@@ -18,4 +18,11 @@ jobs:
     - name: make
       run: cd build && cmake --build . -t Tests
     - name: Run Test
-      run: cd build/tests && ./Tests
+      run: cd build/tests && ./Tests --gtest_output="xml:report.xml"
+    - name: Test Report
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
+      with:
+        name: Test Report
+        path: build/tests/report.xml
+        reporter: jest-junit
