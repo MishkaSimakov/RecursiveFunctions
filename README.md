@@ -353,6 +353,15 @@ cmake --install .
 
 После этого вам станет доступна команда `recurator`.
 
+Также для быстрой настройки окружения можно использовать Docker container.
+Dockerfile для сборки образа находится в корне проекта. Чтобы собрать образ и запустить его
+достаточно выполнить следующие шаги из корня проекта:
+
+```shell
+docker build . --tag=recurator-dev
+docker run -it --rm --mount type=bind,source=$(pwd),destination=/recurator recurator-dev
+```
+
 <a name="future">
 <h2>
 Идеи на будущее
