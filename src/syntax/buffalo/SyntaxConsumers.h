@@ -43,7 +43,6 @@ struct RootConsumptionNode final : ConsumptionNode {
   }
 };
 
-// consumers for program
 class Consumer {
  protected:
   using TokenIteratorT = vector<Token>::const_iterator;
@@ -124,14 +123,16 @@ class TokenConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax(LogLevel::DEBUG, "Consuming token:", GetTokenDescription({token_, value_}));
+    Logger::syntax(LogLevel::DEBUG, "Consuming token: {}",
+                   GetTokenDescription({token_, value_}));
 
     if (iterator == end) {
       Logger::syntax(LogLevel::DEBUG, "Met in reality: end of tokens");
       return false;
     }
 
-    Logger::syntax(LogLevel::DEBUG, "Met in reality:", GetTokenDescription(*iterator));
+    Logger::syntax(LogLevel::DEBUG, "Met in reality: {}",
+                   GetTokenDescription(*iterator));
 
     if (iterator->type != token_) {
       return false;
@@ -205,7 +206,7 @@ class RuleConsumer final : public Consumer {
       TokenIteratorT& iterator, const TokenIteratorT& end,
       const GrammarRulesT& rules,
       const unique_ptr<ConsumptionNode>& consumption_node) const override {
-    Logger::syntax(LogLevel::DEBUG, "Consuming rule:", rule_);
+    Logger::syntax(LogLevel::DEBUG, "Consuming rule: {}", rule_);
 
     return rules.at(rule_).consume(iterator, end, rules, consumption_node);
   }
@@ -216,6 +217,8 @@ inline auto operator+(unique_ptr<Consumer> left, unique_ptr<Consumer> right) {
                                                 std::move(right));
 }
 
+// idk wtf is happening with reference symbol here but its not me its
+// clang-format
 inline decltype(auto) operator|=(BranchedConsumer & left, Branch && branch) {
   left.add_branch(std::move(branch));
   return left;

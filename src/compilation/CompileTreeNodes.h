@@ -1,5 +1,4 @@
-#ifndef COMPILETREENODES_H
-#define COMPILETREENODES_H
+#pragma once
 
 #include <memory>
 #include <string>
@@ -135,5 +134,3 @@ struct AsteriskNode final : CompileNode {
   ACCEPT_COMPILER();
 };
 }  // namespace Compilation
-
-#endif  // COMPILETREENODES_H

@@ -1,16 +1,19 @@
 #pragma once
 
+#include <fmt/core.h>
+
 #include <iostream>
 #include <string>
 
-#define LOGGER_CATEGORY_LOG(category_uppercase, category_lowercase)   \
-  template <typename... Args>                                         \
-  static void category_lowercase(LogLevel level, Args&&... args) {    \
-    if (should_print(level, category_uppercase)) {                    \
-      print_pack(" ", "-",                                            \
-                 format(#category_lowercase " says:", prefix_length), \
-                 std::forward<Args>(args)...);                        \
-    }                                                                 \
+#define LOGGER_CATEGORY_LOG(category_uppercase, category_lowercase)            \
+  template <typename T, typename... Args>                                      \
+  static void category_lowercase(LogLevel level, T&& format, Args&&... args) { \
+    if (should_print(level, category_uppercase)) {                             \
+      print_pack(" ", "-",                                                     \
+                 Logger::format(#category_lowercase " says:", prefix_length),  \
+                 fmt::format(fmt::runtime(std::forward<T>(format)),            \
+                             std::forward<Args>(args)...));                    \
+    }                                                                          \
   }
 
 using std::string;

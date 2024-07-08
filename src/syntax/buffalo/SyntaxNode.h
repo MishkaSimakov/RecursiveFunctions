@@ -23,4 +23,18 @@ struct SyntaxNode {
 
   explicit SyntaxNode(SyntaxNodeType type, string value = "")
       : type(type), value(std::move(value)) {}
+
+  bool operator==(const SyntaxNode& other) const {
+    if (type != other.type || value != other.value || children.size() != other.children.size()) {
+      return false;
+    }
+
+    for (size_t i = 0; i < children.size(); ++i) {
+      if (*children[i] != *other.children[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 };

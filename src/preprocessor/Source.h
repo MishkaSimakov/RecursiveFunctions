@@ -1,5 +1,4 @@
-#ifndef SOURCE_H
-#define SOURCE_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -14,5 +13,3 @@ class Source {
   virtual ~Source() = default;
 };
 }  // namespace Preprocessing
-
-#endif  // SOURCE_H

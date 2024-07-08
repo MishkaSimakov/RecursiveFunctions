@@ -21,9 +21,17 @@ is_prime(number) = conditional(
     is_prime_loop(number, predecessor(number))
 );
 
-is_prime_argmin(x) = is_equal(
-    successor(successor(
-        argmin(remainder(x, successor(successor(*))))
-    )),
-    x
-);
+# Эта функция нужна для отсечения простых случаев (0, 1).
+# При этом обычный conditional не подошёл бы из-за особенностей исполнения,
+# т.к. в случае x = 1 он бы начал вычислять argmin, но для 1 он не останавливается
+
+is_prime_argmin_internal(x, 0) = 0;
+is_prime_argmin_internal(x, y + 1) =
+    is_equal(
+        successor(successor(
+            argmin(remainder(x, successor(successor(*))))
+        )),
+        x
+    );
+
+is_prime_argmin(x) = is_prime_argmin_internal(x, is_greater(x, 1));

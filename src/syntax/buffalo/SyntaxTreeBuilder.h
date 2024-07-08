@@ -24,8 +24,9 @@ class SyntaxTreeBuilder {
   }
 
   // please forgive me, this function I've taken from StackOverflow
-  static void PrintSyntaxTreeRecursive(const std::string& prefix,
-                                       const SyntaxNode& node, bool is_last) {
+  static void print_syntax_tree_recursive(const std::string& prefix,
+                                          const SyntaxNode& node,
+                                          bool is_last) {
     std::cout << prefix;
 
     std::cout << (is_last ? "└── " : "├── ");
@@ -59,14 +60,14 @@ class SyntaxTreeBuilder {
 
     // enter the next tree level - left and right branch
     for (size_t i = 0; i < node.children.size(); ++i) {
-      PrintSyntaxTreeRecursive(prefix + (is_last ? "    " : "│   "),
-                               *node.children[i],
-                               i == node.children.size() - 1);
+      print_syntax_tree_recursive(prefix + (is_last ? "    " : "│   "),
+                                  *node.children[i],
+                                  i == node.children.size() - 1);
     }
   }
 
-  static void PrintSyntaxTree(const SyntaxNode& node) {
-    PrintSyntaxTreeRecursive("", node, true);
+  static void print_syntax_tree(const SyntaxNode& node) {
+    print_syntax_tree_recursive("", node, true);
   }
 
  public:
