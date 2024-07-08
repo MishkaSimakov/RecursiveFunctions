@@ -47,3 +47,5 @@ is_divisible(dividend, divisor) = is_equal(remainder(dividend, divisor), 0);
 
 sqrt(0) = 0;
 sqrt(x + 1) = add(sqrt, is_equal(successor(x), multiply(successor(sqrt), successor(sqrt))));
+
+min(x, y) = conditional(is_greater(x, y), y, x);

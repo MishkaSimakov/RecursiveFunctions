@@ -3,20 +3,16 @@ project(RecursiveFunctions)
 
 set(CMAKE_CXX_STANDARD 23)
 
-if (NOT DEFINED ${CMAKE_BUILD_TYPE})
-    set(CMAKE_BUILD_TYPE Release)
-endif ()
-
-if (${CMAKE_BUILD_TYPE} EQUAL "Release")
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
     set(CMAKE_CXX_FLAGS "-O3")
 else ()
     set(CMAKE_CXX_FLAGS "-fsanitize=address")
 endif ()
 
-find_program(CCACHE_FOUND "ccache")
-if (CCACHE_FOUND)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-endif ()
+#find_program(CCACHE_FOUND "ccache")
+#if (CCACHE_FOUND)
+#    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+#endif ()
 
 # libraries
 add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)

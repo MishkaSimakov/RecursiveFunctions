@@ -17,7 +17,9 @@ void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
     auto general_case = compile_node(node.general_case, 4);
 
     //
-    size_t offset = zero_case.size() + general_case.size();
+    size_t zero_case_size = zero_case.size();
+    size_t general_case_size = general_case.size();
+    size_t offset = zero_case_size + general_case_size;
 
     result_.splice(result_.end(), zero_case);
 
@@ -49,28 +51,30 @@ void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
     // jump back to cycle start
     /* 12 */ result_.emplace_back(InstructionType::LOAD_CONST, 0);
     /* 13 */ result_.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                                  zero_case.size() + 7);
+                                  zero_case_size + 6);
 
     /* 14 */ result_.emplace_back(InstructionType::POP, 1);
     /* 15 */ result_.emplace_back(InstructionType::POP, 1);
     /* 16 */ result_.emplace_back(InstructionType::POP, 1);
   } else {
     auto zero_case = compile_node(node.zero_case, 1);
+    size_t zero_case_size = zero_case.size();
 
     recursion_parameter_position_ = current_offset_ + 1;
     auto general_case = compile_node(node.general_case, 1);
+    size_t general_case_size = general_case.size();
 
     //
     result_.emplace_back(InstructionType::LOAD, 0);
     result_.emplace_back(InstructionType::JUMP_IF_NONZERO,
-                         zero_case.size() + 4);
+                         zero_case_size + 4);
 
     offset_jumps(zero_case, result_.size());
     result_.splice(result_.end(), zero_case);
 
     result_.emplace_back(InstructionType::LOAD_CONST, 0);
     result_.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                         general_case.size() + zero_case.size() + 6);
+                         general_case_size + zero_case_size + 5);
 
     result_.emplace_back(InstructionType::DECREMENT, 0);
 

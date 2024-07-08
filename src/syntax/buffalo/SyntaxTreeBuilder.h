@@ -93,10 +93,9 @@ class SyntaxTreeBuilder {
       throw Syntax::NoRulesMatchedException();
     }
 
-    // PrintSyntaxTree(*construct_syntax_tree(consumption_root));
-
     Logger::syntax(LogLevel::INFO, "tokens successfully parsed");
     Logger::syntax(LogLevel::INFO, "start building abstract syntax tree");
+
     return construct_syntax_tree(consumption_root);
   }
 };

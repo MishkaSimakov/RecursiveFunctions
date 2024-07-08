@@ -135,6 +135,7 @@ class Main {
           tokens, RecursiveFunctionsSyntax::GetSyntax(),
           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 
+
       CompileTreeBuilder compile_tree_builder;
       for (auto& [name, args_count] : BytecodeCompiler::internal_functions) {
         compile_tree_builder.add_internal_function(name, args_count);
@@ -142,6 +143,7 @@ class Main {
 
       BytecodeCompiler compiler;
       auto compile_tree = compile_tree_builder.build(*syntax_tree);
+
       compiler.compile(*compile_tree);
 
       auto bytecode = compiler.get_result();

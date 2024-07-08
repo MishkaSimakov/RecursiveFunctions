@@ -1,0 +1,33 @@
+#include "arithmetics"
+
+# fib_pair(x, y) = add(add(multiply(x, x), x), y);
+
+# fib_left(p) = sqrt(p);
+
+# fib_pair_sum(p, p_sqrt) = monus(p, multiply(p_sqrt, p_sqrt));
+# fibonacci_step(p, p_sqrt) = fib_pair(fib_pair_sum(p, p_sqrt), p_sqrt);
+
+# fibonacci_internal(0) = fib_pair(1, 0);
+# fibonacci_internal(n + 1) = fibonacci_step(fibonacci_internal, sqrt(fibonacci_internal));
+# fibonacci(n) = fib_left(fibonacci_internal(n));
+
+# fibonacci(10);
+
+even(0) = 1;
+even(x + 1) = not(even);
+
+half(0) = 0;
+half(x + 1) = conditional(even(x), half, successor(half));
+
+fibonacci_helper(product, index) = conditional(even(index), add(product, 4), monus(product, 4));
+
+fibonacci(0) = 0;
+fibonacci(n + 1) = half(add(
+    fibonacci,
+    sqrt(fibonacci_helper(
+        multiply(5, multiply(fibonacci, fibonacci)),
+        successor(n)
+    ))
+));
+
+fibonacci(5);
