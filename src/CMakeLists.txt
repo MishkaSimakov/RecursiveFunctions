@@ -1,5 +1,5 @@
 set(CoreModuleDirectories
-    log preprocessor lexis syntax compilation execution
+    log preprocessor lexis syntax optimizations compilation execution intermediate_representation
 )
 
 foreach(directory IN LISTS CoreModuleDirectories)

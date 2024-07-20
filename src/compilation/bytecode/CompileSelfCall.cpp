@@ -1,7 +1,8 @@
 #include "BytecodeCompiler.h"
 
 namespace Compilation {
-void BytecodeCompiler::compile(const SelfCallNode& node) {
-  result_ = {{InstructionType::COPY, get_recursion_call_result_position()}};
+void BytecodeCompiler::visit(const SelfCallNode& node) {
+  string argument_register = get_register(current_argument_offset);
+  result_.emplace_back("mov", argument_register, "x19");
 }
 }  // namespace Compilation

@@ -1,9 +1,9 @@
-#include "BytecodeCompiler.h"
+#include "IRCompiler.h"
 #include "functions/FastAbsoluteDifference.h"
 #include "functions/FastAdd.h"
 
-namespace Compilation {
-void BytecodeCompiler::visit(const InternalFunctionDefinitionNode& node) {
+namespace IR {
+void IRCompiler::visit(const InternalFunctionDefinitionNode& node) {
   list<AssemblyInstruction> body;
 
   if (node.name == "__add") {
@@ -17,4 +17,4 @@ void BytecodeCompiler::visit(const InternalFunctionDefinitionNode& node) {
   result_ =
       decorate_function(get_mangled_name(node.name), std::move(body), true);
 }
-}  // namespace Compilation
+}  // namespace IR

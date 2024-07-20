@@ -1,87 +1,63 @@
 #include "BytecodeCompiler.h"
 
 namespace Compilation {
-size_t BytecodeCompiler::get_recursion_call_result_position() const {
-  return get_recursion_parameter_position() - 1;
-}
+void BytecodeCompiler::visit(const RecursiveFunctionDefinitionNode& node) {
+  string mangled_name = get_mangled_name(node.name);
+  string cycle_begin_label = mangled_name + "_recursion_cycle_begin";
+  string cycle_end_label = mangled_name + "_recursion_cycle_end";
 
-size_t BytecodeCompiler::get_recursion_parameter_position() const {
-  return current_offset_ - recursion_parameter_position_;
-}
+  list<AssemblyInstruction> function_body;
 
-void BytecodeCompiler::compile(const RecursiveFunctionDefinitionNode& node) {
-  if (node.use_previous_value) {
-    auto zero_case = compile_node(node.zero_case);
+  // save callee-saved registers
+  function_body.emplace_back("stp", "x19", "x20", "[sp, #-16]!");
+  function_body.emplace_back("str", "x21", "[sp, #-16]!");
+  function_body.emplace_back("mov", "x20", get_constant(0));
+  function_body.emplace_back("mov", "x21",
+                             get_register(node.arguments_count - 1));
 
-    recursion_parameter_position_ = current_offset_ + 3;
-    auto general_case = compile_node(node.general_case, 4);
+  // TODO: eliminate repeating x29 register write
+  function_body.emplace_back("mov", "x29", "sp");
 
-    //
-    size_t zero_case_size = zero_case.size();
-    size_t general_case_size = general_case.size();
-    size_t offset = zero_case_size + general_case_size;
+  int arguments_size = node.arguments_count;
+  arguments_size += arguments_size % 2;
+  arguments_size *= 8;
 
-    result_.splice(result_.end(), zero_case);
+  function_body.emplace_back("sub", "sp", "sp", get_constant(arguments_size));
 
-    /* 1 */ result_.emplace_back(InstructionType::LOAD, 0);
+  int offset = arguments_size;
+  for (size_t i = 0; i < node.arguments_count; ++i) {
+    string argument_register = get_register(node.arguments_count - i - 1);
 
-    // jump to the end
-    /* 2 */ result_.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                                 offset + 16);
-
-    // load variables for recursion cycle
-    /* 3 */ result_.emplace_back(InstructionType::LOAD, 0);
-    /* 4 */ result_.emplace_back(InstructionType::DECREMENT);
-    /* 5 */ result_.emplace_back(InstructionType::LOAD_CONST, 0);
-    /* 6 */ result_.emplace_back(InstructionType::COPY, 2);
-
-    offset_jumps(general_case, result_.size());
-    result_.splice(result_.end(), general_case);
-
-    // leave cycle if we calculated last value
-    /* 7 */ result_.emplace_back(InstructionType::POP, 1);
-    /* 8 */ result_.emplace_back(InstructionType::COPY, 2);
-    /* 9 */ result_.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                                 offset + 13);
-
-    // increment loop counter
-    /* 10 */ result_.emplace_back(InstructionType::INCREMENT, 1);
-    /* 11 */ result_.emplace_back(InstructionType::DECREMENT, 2);
-
-    // jump back to cycle start
-    /* 12 */ result_.emplace_back(InstructionType::LOAD_CONST, 0);
-    /* 13 */ result_.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                                  zero_case_size + 6);
-
-    /* 14 */ result_.emplace_back(InstructionType::POP, 1);
-    /* 15 */ result_.emplace_back(InstructionType::POP, 1);
-    /* 16 */ result_.emplace_back(InstructionType::POP, 1);
-  } else {
-    auto zero_case = compile_node(node.zero_case, 1);
-    size_t zero_case_size = zero_case.size();
-
-    recursion_parameter_position_ = current_offset_ + 1;
-    auto general_case = compile_node(node.general_case, 1);
-    size_t general_case_size = general_case.size();
-
-    //
-    result_.emplace_back(InstructionType::LOAD, 0);
-    result_.emplace_back(InstructionType::JUMP_IF_NONZERO,
-                         zero_case_size + 4);
-
-    offset_jumps(zero_case, result_.size());
-    result_.splice(result_.end(), zero_case);
-
-    result_.emplace_back(InstructionType::LOAD_CONST, 0);
-    result_.emplace_back(InstructionType::POP_JUMP_IF_ZERO,
-                         general_case_size + zero_case_size + 5);
-
-    result_.emplace_back(InstructionType::DECREMENT, 0);
-
-    offset_jumps(general_case, result_.size());
-    result_.splice(result_.end(), general_case);
-
-    result_.emplace_back(InstructionType::POP, 1);
+    offset -= 8;
+    string pointer = fmt::format("[sp, {}]", get_constant(offset));
+    function_body.emplace_back("str", argument_register, pointer);
   }
+
+  // first we do zero case
+  function_body.splice(function_body.end(), compile_node(node.zero_case));
+  function_body.emplace_back("cmp", "x20", "x21");
+  function_body.emplace_back("beq", cycle_end_label);
+
+  // some random alignment
+  // TODO: test different cycle alignments later
+  function_body.emplace_back(".p2align 5");
+  function_body.emplace_back(cycle_begin_label + ":");
+
+  function_body.emplace_back("mov", "x19", "x0");
+  function_body.splice(function_body.end(), compile_node(node.general_case));
+
+  function_body.emplace_back("add", "x20", "x20", get_constant(1));
+  function_body.emplace_back("cmp", "x20", "x21");
+  function_body.emplace_back("bne", cycle_begin_label);
+
+  function_body.emplace_back(cycle_end_label + ":");
+
+  function_body.emplace_back("add", "sp", "sp", get_constant(arguments_size));
+
+  // restore callee-saved registers
+  function_body.emplace_back("ldr", "x21", "[sp]", "#16");
+  function_body.emplace_back("ldp", "x19", "x20", "[sp]", "#16");
+
+  result_ = decorate_function(mangled_name, std::move(function_body));
 }
 }  // namespace Compilation

@@ -1,7 +1,7 @@
-#include "BytecodeCompiler.h"
+#include "IRCompiler.h"
 
-namespace Compilation {
-vector<AssemblyInstruction> BytecodeCompiler::get_result() const {
+namespace IR {
+vector<AssemblyInstruction> IRCompiler::get_result() const {
   vector<AssemblyInstruction> result;
 
   for (auto& definition : compiled_functions_) {
@@ -13,4 +13,4 @@ vector<AssemblyInstruction> BytecodeCompiler::get_result() const {
 
   return result;
 }
-}  // namespace Compilation
+}  // namespace IR

@@ -22,8 +22,8 @@ TEST_F(CompileTreeTestCase, test_it_build_simple_compile_tree) {
   const auto& call = get_call(tree);
   ASSERT_EQ(get_function(tree, call.index).name, "f");
   ASSERT_EQ(call.arguments.size(), 2);
-  ASSERT_EQ(node_cast<ConstantNode>(call.arguments[0]).value.as_value(), 1);
-  ASSERT_EQ(node_cast<ConstantNode>(call.arguments[1]).value.as_value(), 2);
+  ASSERT_EQ(node_cast<ConstantNode>(call.arguments[0]).value, 1);
+  ASSERT_EQ(node_cast<ConstantNode>(call.arguments[1]).value, 2);
 }
 
 TEST_F(CompileTreeTestCase, test_it_build_argmin_call) {
@@ -34,7 +34,7 @@ TEST_F(CompileTreeTestCase, test_it_build_argmin_call) {
 
   ASSERT_EQ(get_function(tree, wrapped.index).name, "f");
   ASSERT_EQ(wrapped.arguments.size(), 2);
-  ASSERT_EQ(node_cast<ConstantNode>(wrapped.arguments[0]).value.as_value(), 5);
+  ASSERT_EQ(node_cast<ConstantNode>(wrapped.arguments[0]).value, 5);
   ASSERT_NO_THROW(node_cast<AsteriskNode>(wrapped.arguments[1]));
 }
 
@@ -72,10 +72,10 @@ TEST_F(CompileTreeTestCase,
   ASSERT_FALSE(not_def.use_previous_value);
 
   const auto& zero_case = node_cast<ConstantNode>(not_def.zero_case);
-  ASSERT_EQ(zero_case.value.as_value(), 1);
+  ASSERT_EQ(zero_case.value, 1);
 
   const auto& general_case = node_cast<ConstantNode>(not_def.general_case);
-  ASSERT_EQ(general_case.value.as_value(), 0);
+  ASSERT_EQ(general_case.value, 0);
 }
 
 TEST_F(CompileTreeTestCase,
@@ -90,7 +90,7 @@ TEST_F(CompileTreeTestCase,
   ASSERT_FALSE(pred_def.use_previous_value);
 
   const auto& zero_case = node_cast<ConstantNode>(pred_def.zero_case);
-  ASSERT_EQ(zero_case.value.as_value(), 0);
+  ASSERT_EQ(zero_case.value, 0);
 
   node_cast<RecursionParameterNode>(pred_def.general_case);
 }

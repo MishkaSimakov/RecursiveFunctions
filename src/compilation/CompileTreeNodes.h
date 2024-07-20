@@ -8,10 +8,12 @@
 
 using std::vector, std::unique_ptr, std::string;
 
-#define ACCEPT_COMPILER() \
-  void accept(Compiler& compiler) override { compiler.compile(*this); }
+#define ACCEPT_VISITOR()                                     \
+  void accept(CompileTreeVisitor& compiler) const override { \
+    compiler.visit(*this);                                   \
+  }
 
-#define COMPILE_NODE_TYPE(T) virtual void compile(const T&) = 0;
+#define COMPILE_NODE_TYPE(T) virtual void visit(const T&){};
 
 namespace Compilation {
 struct ProgramNode;
@@ -26,7 +28,7 @@ struct AsteriskNode;
 struct FunctionCallNode;
 struct SelfCallNode;
 
-class Compiler {
+class CompileTreeVisitor {
  public:
   COMPILE_NODE_TYPE(ProgramNode);
   COMPILE_NODE_TYPE(FunctionDefinitionNode);
@@ -40,11 +42,11 @@ class Compiler {
   COMPILE_NODE_TYPE(FunctionCallNode);
   COMPILE_NODE_TYPE(SelfCallNode);
 
-  virtual ~Compiler() = default;
+  virtual ~CompileTreeVisitor() = default;
 };
 
 struct CompileNode {
-  virtual void accept(Compiler&) = 0;
+  virtual void accept(CompileTreeVisitor&) const = 0;
 
   virtual ~CompileNode() {}
 };
@@ -61,7 +63,7 @@ struct ProgramNode final : CompileNode {
   vector<unique_ptr<CompileNode>> functions;
   unique_ptr<CompileNode> call;
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
 struct FunctionDefinitionNode final : BaseFunctionDefinitionCompileNode {
@@ -72,38 +74,40 @@ struct FunctionDefinitionNode final : BaseFunctionDefinitionCompileNode {
       : BaseFunctionDefinitionCompileNode(std::move(name), arguments_count),
         body(std::move(body)) {}
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
 struct ConstantNode final : CompileNode {
-  ValueT value;
+  ssize_t value;
 
-  explicit ConstantNode(ValueT value) : value(value) {}
+  explicit ConstantNode(ssize_t value) : value(value) {}
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
-struct VariableNode final : CompileNode {
+struct VariableNode : CompileNode {
   size_t index;
 
   explicit VariableNode(size_t index) : index(index) {}
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
-struct RecursionParameterNode final : CompileNode {
-  ACCEPT_COMPILER();
+struct RecursionParameterNode final : VariableNode {
+  using VariableNode::VariableNode;
+
+  ACCEPT_VISITOR();
 };
 
 struct SelfCallNode final : CompileNode {
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
 struct InternalFunctionDefinitionNode final
     : BaseFunctionDefinitionCompileNode {
   using BaseFunctionDefinitionCompileNode::BaseFunctionDefinitionCompileNode;
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
 struct RecursiveFunctionDefinitionNode final
@@ -114,23 +118,28 @@ struct RecursiveFunctionDefinitionNode final
 
   using BaseFunctionDefinitionCompileNode::BaseFunctionDefinitionCompileNode;
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
 struct FunctionCallNode final : CompileNode {
   size_t index;
   vector<unique_ptr<CompileNode>> arguments;
 
-  ACCEPT_COMPILER();
+  string name;
+
+  // true iff there are no function calls among arguments
+  bool is_leaf_function_call;
+
+  ACCEPT_VISITOR();
 };
 
 struct ArgminCallNode final : CompileNode {
   unique_ptr<CompileNode> wrapped_call;
 
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 
 struct AsteriskNode final : CompileNode {
-  ACCEPT_COMPILER();
+  ACCEPT_VISITOR();
 };
 }  // namespace Compilation

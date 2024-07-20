@@ -5,6 +5,7 @@
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
 #include "execution/debug/DebugBytecodeExecutor.h"
+#include "optimizations/UnusedElimination.h"
 
 using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -113,6 +114,8 @@ class Main {
               "info and "
               "warnings, -vvv - show all log messages.");
 
+      parser.add_argument("-o", "--output").help("specify output file name");
+
       parser.add_argument("-d", "--debug")
           .default_value(false)
           .implicit_value(true)
@@ -135,7 +138,6 @@ class Main {
           tokens, RecursiveFunctionsSyntax::GetSyntax(),
           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 
-
       CompileTreeBuilder compile_tree_builder;
       for (auto& [name, args_count] : BytecodeCompiler::internal_functions) {
         compile_tree_builder.add_internal_function(name, args_count);
@@ -143,23 +145,45 @@ class Main {
 
       BytecodeCompiler compiler;
       auto compile_tree = compile_tree_builder.build(*syntax_tree);
+      compiler.visit(*compile_tree);
 
-      compiler.compile(*compile_tree);
+      UnusedElimination().apply(*compile_tree);
 
-      auto bytecode = compiler.get_result();
+      auto instructions = compiler.get_result();
 
-      bool is_debug_enabled = parser.get<bool>("debug");
-
-      ValueT result;
-      if (is_debug_enabled) {
-        DebugBytecodeExecutor executor(std::move(bytecode));
-        result = executor.execute();
-      } else {
-        BytecodeExecutor executor;
-        result = executor.execute(bytecode);
+      // TODO: add -o flag support
+      if (parser.present("-o")) {
+        throw std::runtime_error("not supported yet.");
       }
 
-      cout << result.as_value() << endl;
+      auto temp_dir = fs::temp_directory_path();
+      auto output_file = temp_dir / "somestupidassembly.s";
+
+      std::ofstream file(output_file);
+
+      for (auto instruction : instructions) {
+        file << instruction.get_string() << "\n";
+        cout << instruction.get_string() << "\n";
+      }
+
+      file.close();
+
+      auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
+      std::system(compile_command.c_str());
+      std::system("./test");
+
+      // bool is_debug_enabled = parser.get<bool>("debug");
+      //
+      // ValueT result;
+      // if (is_debug_enabled) {
+      //   DebugBytecodeExecutor executor(std::move(bytecode));
+      //   result = executor.execute();
+      // } else {
+      //   BytecodeExecutor executor;
+      //   result = executor.execute(bytecode);
+      // }
+      //
+      // cout << result.as_value() << endl;
     });
   }
 };

@@ -22,7 +22,7 @@ CompileTreeBuilder::FunctionType CompileTreeBuilder::get_function_type(
 unique_ptr<CompileNode> CompileTreeBuilder::build_constant_compile_node(
     const SyntaxNode& syntax_node) {
   size_t value = get_numeric_from_string(syntax_node);
-  return std::make_unique<ConstantNode>(ValueT::construct_value(value));
+  return std::make_unique<ConstantNode>(value);
 }
 
 unique_ptr<CompileNode> CompileTreeBuilder::build_variable_compile_node(
@@ -45,7 +45,7 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_variable_compile_node(
     case VariableType::VARIABLE:
       return std::make_unique<VariableNode>(var_info->id);
     case VariableType::RECURSION_PARAMETER:
-      return std::make_unique<RecursionParameterNode>();
+      return std::make_unique<RecursionParameterNode>(var_info->id);
     case VariableType::RECURSION_CALL:
       return std::make_unique<SelfCallNode>();
     default:
@@ -97,9 +97,15 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_function_call_compile_node(
 
   auto call_node = std::make_unique<FunctionCallNode>();
   call_node->index = function_index_itr->second;
+  call_node->name = function_name;
   call_node->arguments.reserve(arguments_count);
+  call_node->is_leaf_function_call = true;
 
   for (const auto& child : syntax_node.children) {
+    if (child->type == SyntaxNodeType::FUNCTION) {
+      call_node->is_leaf_function_call = false;
+    }
+
     call_node->arguments.push_back(
         build_value_compile_node(*child, parameters));
   }

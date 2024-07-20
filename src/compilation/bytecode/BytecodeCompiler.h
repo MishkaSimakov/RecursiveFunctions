@@ -1,24 +1,78 @@
 #pragma once
 
+#include "AssemblyInstruction.h"
 #include "compilation/CompileTreeNodes.h"
 
 namespace Compilation {
 using std::vector, std::string, std::pair;
 
-class BytecodeCompiler final : public Compiler {
-  vector<list<Instruction>> compiled_functions_;
-  list<Instruction> compiled_call_;
-  size_t current_offset_{0};
-  size_t argmin_parameter_position_{0};
-  size_t recursion_parameter_position_{0};
+class BytecodeCompiler final : public CompileTreeVisitor {
+  vector<list<AssemblyInstruction>> compiled_functions_;
+  list<AssemblyInstruction> compiled_call_;
 
-  list<Instruction> result_;
+  // when function call is compiled this variable stores index of current
+  // argument
+  size_t current_argument_offset{0};
 
-  list<Instruction> compile_node(const std::unique_ptr<CompileNode>& node,
-                                 size_t offset_change = 0) {
-    current_offset_ += offset_change;
+  list<AssemblyInstruction> result_;
+
+  static bool is_function_call(const CompileNode& node) {
+    return dynamic_cast<const FunctionCallNode*>(&node) != nullptr;
+  }
+
+  list<AssemblyInstruction> decorate_function(string name,
+                                              list<AssemblyInstruction> body,
+                                              bool is_leaf = false) const {
+    list<AssemblyInstruction> result;
+
+    // function label
+    list label = {
+        AssemblyInstruction(".global " + name),
+        AssemblyInstruction(".align 4"),
+        AssemblyInstruction(name + ":"),
+    };
+
+    result.splice(result.begin(), label);
+
+    if (!is_leaf) {
+      result.emplace_back("stp", "x29", "x30", "[sp, #-16]!");
+      result.emplace_back("mov", "x29", "sp");
+    }
+
+    result.splice(result.end(), body);
+
+    if (!is_leaf) {
+      result.emplace_back("ldp", "x29", "x30", "[sp]", "#16");
+    }
+
+    result.emplace_back("ret");
+
+    return result;
+  }
+
+  static string get_register(size_t id) {
+    string result = "x";
+    result += std::to_string(id);
+    return result;
+  }
+
+  static string get_short_register(size_t id) {
+    string result = "w";
+    result += std::to_string(id);
+    return result;
+  }
+
+  static string get_constant(int value) {
+    string result = "#";
+    result += std::to_string(value);
+    return result;
+  }
+
+  static string get_mangled_name(const string& name) { return "_" + name; }
+
+  list<AssemblyInstruction> compile_node(
+      const std::unique_ptr<CompileNode>& node, size_t offset_change = 0) {
     node->accept(*this);
-    current_offset_ -= offset_change;
 
     auto result = std::move(result_);
     result_.clear();
@@ -43,19 +97,19 @@ class BytecodeCompiler final : public Compiler {
  public:
   static const vector<pair<string, size_t>> internal_functions;
 
-  vector<Instruction> get_result() const;
+  vector<AssemblyInstruction> get_result() const;
 
-  void compile(const ProgramNode&) override;
-  void compile(const FunctionDefinitionNode&) override;
-  void compile(const RecursiveFunctionDefinitionNode&) override;
-  void compile(const RecursionParameterNode&) override;
-  void compile(const ArgminCallNode&) override;
-  void compile(const InternalFunctionDefinitionNode&) override;
-  void compile(const ConstantNode&) override;
-  void compile(const VariableNode&) override;
-  void compile(const AsteriskNode&) override;
-  void compile(const FunctionCallNode&) override;
-  void compile(const SelfCallNode&) override;
+  void visit(const ProgramNode&) override;
+  void visit(const FunctionDefinitionNode&) override;
+  void visit(const RecursiveFunctionDefinitionNode&) override;
+  void visit(const RecursionParameterNode&) override;
+  void visit(const ArgminCallNode&) override;
+  void visit(const InternalFunctionDefinitionNode&) override;
+  void visit(const ConstantNode&) override;
+  void visit(const VariableNode&) override;
+  void visit(const AsteriskNode&) override;
+  void visit(const FunctionCallNode&) override;
+  void visit(const SelfCallNode&) override;
 };
 
 inline const vector<pair<string, size_t>> BytecodeCompiler::internal_functions{

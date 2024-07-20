@@ -1,7 +1,7 @@
-#include "BytecodeCompiler.h"
+#include "IRCompiler.h"
 
-namespace Compilation {
-void BytecodeCompiler::visit(const ProgramNode& node) {
+namespace IR {
+void IRCompiler::visit(const ProgramNode& node) {
   for (auto& statement : node.functions) {
     compiled_functions_.push_back(compile_node(statement));
   }
@@ -27,4 +27,4 @@ void BytecodeCompiler::visit(const ProgramNode& node) {
   compiled_call_.emplace_back(".data");
   compiled_call_.emplace_back("format: .asciz \"Result: %i\\n\"");
 }
-}  // namespace Compilation
+}  // namespace IR
