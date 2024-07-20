@@ -3,6 +3,6 @@ test(x) = 0;
 func(x) = test(x);
 
 recursive(0) = 1;
-recursive(x + 1) = 0;
+recursive(x + 1) = func(argmin(func(*)));
 
 func(123);

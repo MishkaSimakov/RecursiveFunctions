@@ -29,21 +29,33 @@ void IR::Printer::print_basic_blocks_recursively(
     const BasicBlock& basic_block) {
   size_t index = get_block_index(basic_block);
 
+  auto& is_printed = used_[&basic_block].second;
+
+  if (is_printed) {
+    return;
+  }
+
+  is_printed = true;
+
   os_ << index << ":\n";
   print_basic_block(basic_block);
 
-  if (!basic_block.is_end()) {
+  if (basic_block.children.first != nullptr) {
     print_basic_blocks_recursively(*basic_block.children.first);
+  }
+
+  if (basic_block.children.second != nullptr) {
     print_basic_blocks_recursively(*basic_block.children.second);
   }
 }
 
 size_t IR::Printer::get_block_index(const BasicBlock& basic_block) {
   size_t index = used_.size();
-  auto [itr, was_inserted] = used_.emplace(&basic_block, index);
+  auto [itr, was_inserted] =
+      used_.emplace(&basic_block, std::pair{index, false});
 
   if (!was_inserted) {
-    index = itr->second;
+    index = itr->second.first;
   }
 
   return index;

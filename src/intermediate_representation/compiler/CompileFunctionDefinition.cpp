@@ -3,7 +3,7 @@
 namespace IR {
 void IRCompiler::visit(const FunctionDefinitionNode& node) {
   wrap_with_function(node.name, node.arguments_count, [&node, this] {
-    current_function_->set_begin_block(compile_node(node.body));
+    node.body->accept(*this);
   });
 }
 }  // namespace IR

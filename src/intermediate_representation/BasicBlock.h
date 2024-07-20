@@ -36,8 +36,9 @@ struct Function {
 
   Function(std::string name) : name(std::move(name)), begin_block(nullptr) {}
 
-  BasicBlock* set_begin_block(BasicBlock block) {
-    begin_block = add_block(std::move(block));
+  template <typename... Args>
+  BasicBlock* set_begin_block(Args&&... args) {
+    begin_block = add_block(std::forward<Args>(args)...);
     return begin_block;
   }
 

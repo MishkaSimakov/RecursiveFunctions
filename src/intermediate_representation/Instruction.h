@@ -134,12 +134,12 @@ struct Move final : Instruction {
 };
 
 struct Phi final : Instruction {
-  std::vector<Temporary> temporaries;
+  std::vector<TemporaryOrConstant> values;
 
   std::string to_string() const override {
     return fmt::format(
         "{} = phi [{}]", result_destination,
-        fmt::join(temporaries | std::views::transform([](Temporary value) {
+        fmt::join(values | std::views::transform([](TemporaryOrConstant value) {
                     return value.to_string();
                   }),
                   ", "));

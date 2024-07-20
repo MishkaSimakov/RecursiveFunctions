@@ -10,7 +10,7 @@ namespace IR {
 class Printer {
   static constexpr auto prefix = "\t";
 
-  using UsedContainerT = std::unordered_map<const BasicBlock*, size_t>;
+  using UsedContainerT = std::unordered_map<const BasicBlock*, std::pair<size_t, bool>>;
 
   std::ostream& os_;
   UsedContainerT used_;

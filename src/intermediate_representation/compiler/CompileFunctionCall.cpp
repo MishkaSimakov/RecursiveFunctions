@@ -16,7 +16,7 @@ void IRCompiler::visit(const FunctionCallNode& node) {
     argument->accept(*this);
   }
 
-  result_.instructions.push_back(
+  result_->instructions.push_back(
       std::make_unique<FunctionCall>(compiled_calls_stack_.top()));
   compiled_calls_stack_.pop();
 

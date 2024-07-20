@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <stack>
 #include <type_traits>
 
@@ -13,7 +14,7 @@ using namespace Compilation;
 class IRCompiler final : public CompileTreeVisitor {
   Program program_;
   Function* current_function_{nullptr};
-  BasicBlock result_;
+  BasicBlock* result_{nullptr};
 
   std::stack<FunctionCall> compiled_calls_stack_;
 
@@ -21,26 +22,18 @@ class IRCompiler final : public CompileTreeVisitor {
   Temporary recursion_parameter_temporary_{};
   Temporary asterisk_temporary_{};
 
-  BasicBlock compile_node(const std::unique_ptr<CompileNode>& node) {
-    node->accept(*this);
-
-    auto result = std::move(result_);
-    result_ = BasicBlock();
-
-    return result;
-  }
-
   template <typename Callable>
-  void wrap_with_function(std::string name, size_t start_temp_index, Callable&& lambda)
-    requires std::is_invocable_v<Callable> {
+  void wrap_with_function(std::string name, size_t start_temp_index,
+                          Callable&& lambda)
+    requires std::is_invocable_v<Callable>
+  {
     Function func(std::move(name));
 
     current_temporary_index_ = start_temp_index;
     current_function_ = &func;
+    result_ = func.set_begin_block();
 
     lambda();
-
-    current_function_ = nullptr;
 
     program_.functions.push_back(std::move(func));
   }
@@ -50,9 +43,11 @@ class IRCompiler final : public CompileTreeVisitor {
   }
 
   void assign_or_pass_as_argument(TemporaryOrConstant value) {
-    if (compiled_calls_stack_.empty()) {
+    // TODO: replace with constant
+    if (compiled_calls_stack_.empty() ||
+        compiled_calls_stack_.top().name == "argmin") {
       // we should return variable immediately
-      result_.end_value = value;
+      result_->end_value = value;
       return;
     }
 
