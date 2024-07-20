@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stack>
+#include <type_traits>
 
 #include "compilation/CompileTreeNodes.h"
 #include "intermediate_representation/BasicBlock.h"
@@ -11,13 +12,14 @@ using namespace Compilation;
 
 class IRCompiler final : public CompileTreeVisitor {
   Program program_;
-  BasicBlock result_{};
+  Function* current_function_{nullptr};
+  BasicBlock result_;
 
   std::stack<FunctionCall> compiled_calls_stack_;
 
-  size_t current_argument_index_{0};
   size_t current_temporary_index_{0};
   Temporary recursion_parameter_temporary_{};
+  Temporary asterisk_temporary_{};
 
   BasicBlock compile_node(const std::unique_ptr<CompileNode>& node) {
     node->accept(*this);
@@ -26,6 +28,21 @@ class IRCompiler final : public CompileTreeVisitor {
     result_ = BasicBlock();
 
     return result;
+  }
+
+  template <typename Callable>
+  void wrap_with_function(std::string name, size_t start_temp_index, Callable&& lambda)
+    requires std::is_invocable_v<Callable> {
+    Function func(std::move(name));
+
+    current_temporary_index_ = start_temp_index;
+    current_function_ = &func;
+
+    lambda();
+
+    current_function_ = nullptr;
+
+    program_.functions.push_back(std::move(func));
   }
 
   Temporary get_next_temporary() {

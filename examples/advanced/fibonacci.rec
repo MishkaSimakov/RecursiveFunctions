@@ -1,5 +1,8 @@
 test(x) = 0;
 
-func(x) = x;
+func(x) = test(x);
+
+recursive(0) = 1;
+recursive(x + 1) = 0;
 
 func(123);

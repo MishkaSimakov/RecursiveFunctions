@@ -31,6 +31,7 @@ add_executable(
         unit/preprocessor/PreprocessorTestCase.h
         unit/preprocessor/PreprocessorTests.cpp
         unit/execution/BytecodeExecutorTests.cpp
+        unit/compilation/ArgminTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)

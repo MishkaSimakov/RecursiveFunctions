@@ -1,7 +1,7 @@
 #pragma once
 
+#include <deque>
 #include <list>
-#include <memory>
 
 #include "Instruction.h"
 
@@ -15,26 +15,10 @@ struct BasicBlock {
   TemporaryOrConstant end_value = TemporaryOrConstant::constant(0);
 
   // 2 children
-  using shared_pointer = std::shared_ptr<BasicBlock>;
-  std::pair<shared_pointer, shared_pointer> children;
+  std::pair<BasicBlock*, BasicBlock*> children;
 
   // many parents
-  using weak_pointer = std::weak_ptr<BasicBlock>;
-  std::vector<weak_pointer> parents;
-
-  void append(BasicBlock other) {
-    if (!is_end()) {
-      throw std::runtime_error("In IR cannot append to non-end basic block");
-    }
-
-    if (!other.is_begin()) {
-      throw std::runtime_error("In IR cannot append non-begin basic block");
-    }
-
-    instructions.splice(instructions.end(), other.instructions);
-    end_value = other.end_value;
-    children = std::move(other.children);
-  }
+  std::vector<BasicBlock*> parents;
 
   bool is_begin() const { return parents.empty(); }
 
@@ -47,22 +31,24 @@ struct Function {
   static constexpr auto entrypoint = "main";
 
   std::string name;
-  std::shared_ptr<BasicBlock> begin_block;
+  std::deque<BasicBlock> basic_blocks;
+  BasicBlock* begin_block;
 
-  Function(auto&& name, BasicBlock begin)
-      : name(std::forward<decltype(name)>(name)),
-        begin_block(std::make_shared<BasicBlock>(std::move(begin))) {}
+  Function(std::string name) : name(std::move(name)), begin_block(nullptr) {}
 
-  Function(auto&& name, std::shared_ptr<BasicBlock> begin)
-      : name(std::forward<decltype(name)>(name)),
-        begin_block(std::move(begin)) {}
+  BasicBlock* set_begin_block(BasicBlock block) {
+    begin_block = add_block(std::move(block));
+    return begin_block;
+  }
+
+  template <typename... Args>
+  BasicBlock* add_block(Args&&... args) {
+    basic_blocks.emplace_back(std::forward<Args>(args)...);
+    return &basic_blocks.back();
+  }
 };
 
 struct Program {
   std::vector<Function> functions;
-
-  void add_function(auto&& name, BasicBlock body) {
-    functions.emplace_back(std::forward<decltype(name)>(name), std::move(body));
-  }
 };
 }  // namespace IR

@@ -1,11 +1,17 @@
 #pragma once
 
+#include <fmt/base.h>
+#include <fmt/ranges.h>
+
+#include <ranges>
 #include <string>
 #include <vector>
 
 namespace IR {
 struct Temporary {
   size_t index;
+
+  std::string to_string() const { return "%" + std::to_string(index); }
 };
 
 struct TemporaryOrConstant {
@@ -41,10 +47,48 @@ struct TemporaryOrConstant {
   }
 
   static TemporaryOrConstant constant(ssize_t value) { return {value, true}; }
+
+  std::string to_string() const {
+    if (is_constant) {
+      return std::to_string(index_or_value);
+    }
+
+    return "%" + std::to_string(index_or_value);
+  }
+};
+}  // namespace IR
+
+template <>
+struct fmt::formatter<IR::TemporaryOrConstant> {
+  template <typename ParseContext>
+  constexpr auto parse(ParseContext& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(const IR::TemporaryOrConstant& value, FormatContext& ctx) const {
+    return fmt::format_to(ctx.out(), "{}", value.to_string());
+  }
 };
 
+template <>
+struct fmt::formatter<IR::Temporary> {
+  template <typename ParseContext>
+  constexpr auto parse(ParseContext& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(const IR::Temporary& value, FormatContext& ctx) const {
+    return fmt::format_to(ctx.out(), "{}", value.to_string());
+  }
+};
+
+namespace IR {
 struct Instruction {
   Temporary result_destination;
+
+  virtual std::string to_string() const = 0;
 
   virtual ~Instruction() = default;
 };
@@ -52,19 +96,53 @@ struct Instruction {
 struct FunctionCall final : Instruction {
   std::string name;
   std::vector<TemporaryOrConstant> arguments;
+
+  std::string to_string() const override {
+    return fmt::format("{} = call {}({})", result_destination, name,
+                       fmt::join(arguments | std::views::transform(
+                                                 [](TemporaryOrConstant value) {
+                                                   return value.to_string();
+                                                 }),
+                                 ", "));
+  }
 };
 
 struct Addition final : Instruction {
   Temporary left;
   TemporaryOrConstant right;
+
+  std::string to_string() const override {
+    return fmt::format("{} = add {} {}", result_destination, left, right);
+  }
 };
 
 struct Subtraction final : Instruction {
   Temporary left;
   TemporaryOrConstant right;
+
+  std::string to_string() const override {
+    return fmt::format("{} = sub {} {}", result_destination, left, right);
+  }
+};
+
+struct Move final : Instruction {
+  TemporaryOrConstant source;
+
+  std::string to_string() const override {
+    return fmt::format("{} = {}", result_destination, source);
+  }
 };
 
 struct Phi final : Instruction {
   std::vector<Temporary> temporaries;
+
+  std::string to_string() const override {
+    return fmt::format(
+        "{} = phi [{}]", result_destination,
+        fmt::join(temporaries | std::views::transform([](Temporary value) {
+                    return value.to_string();
+                  }),
+                  ", "));
+  }
 };
 }  // namespace IR

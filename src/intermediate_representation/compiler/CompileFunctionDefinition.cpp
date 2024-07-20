@@ -2,8 +2,8 @@
 
 namespace IR {
 void IRCompiler::visit(const FunctionDefinitionNode& node) {
-  current_temporary_index_ = node.arguments_count;
-
-  program_.add_function(node.name, compile_node(node.body));
+  wrap_with_function(node.name, node.arguments_count, [&node, this] {
+    current_function_->set_begin_block(compile_node(node.body));
+  });
 }
 }  // namespace IR

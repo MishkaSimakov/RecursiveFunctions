@@ -5,6 +5,7 @@
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
 #include "execution/debug/DebugBytecodeExecutor.h"
+#include "intermediate_representation/Printer.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
 
 using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
@@ -150,9 +151,8 @@ class Main {
       // generate intermediate representation
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
-      for (auto& func: ir.functions) {
-        std::cout << func.name << std::endl;
-      }
+      IR::Printer printer;
+      printer.print(ir);
 
       // auto instructions = compiler.get_result();
       //
@@ -173,8 +173,8 @@ class Main {
       //
       // file.close();
       //
-      // auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
-      // std::system(compile_command.c_str());
+      // auto compile_command = fmt::format("g++ {} -o test",
+      // output_file.c_str()); std::system(compile_command.c_str());
       // std::system("./test");
 
       // bool is_debug_enabled = parser.get<bool>("debug");

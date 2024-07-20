@@ -2,6 +2,6 @@
 
 namespace IR {
 void IRCompiler::visit(const AsteriskNode& node) {
-  result_ = {};
+  assign_or_pass_as_argument(asterisk_temporary_);
 }
 }  // namespace IR

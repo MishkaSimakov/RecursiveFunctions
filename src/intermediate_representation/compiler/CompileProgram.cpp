@@ -7,7 +7,8 @@ void IRCompiler::visit(const ProgramNode& node) {
   }
 
   // wrap main program call inside main function
-  auto compiled = compile_node(node.call);
-  program_.add_function(Function::entrypoint, std::move(compiled));
+  wrap_with_function(Function::entrypoint, 0, [&node, this] {
+    current_function_->set_begin_block(compile_node(node.call));
+  });
 }
 }  // namespace IR

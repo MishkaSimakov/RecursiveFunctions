@@ -64,6 +64,10 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_variable_compile_node(
 unique_ptr<CompileNode> CompileTreeBuilder::build_argmin_call_compile_node(
     const SyntaxNode& syntax_node,
     ValueCompilationNodeBuilderParameters parameters) {
+  if (parameters.is_inside_argmin_call) {
+    throw std::runtime_error("Argmin cannot be used inside argmin.");
+  }
+
   if (syntax_node.children.size() != 1) {
     throw std::runtime_error("Argmin called with wrong count of arguments.");
   }
