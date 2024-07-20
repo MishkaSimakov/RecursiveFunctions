@@ -26,12 +26,13 @@ class CompileTreeBuilder {
   constexpr static auto kArgminFunctionName = "argmin";
 
   struct ValueCompilationNodeBuilderParameters {
+    const SyntaxNode* current_function_definition;
     bool is_inside_call_statement;
     bool is_inside_argmin_call;
     unordered_map<string, VariableInfo>* variables_map;
 
     static ValueCompilationNodeBuilderParameters for_call_statement() {
-      return {true, false, nullptr};
+      return {nullptr, true, false, nullptr};
     }
 
     bool can_contain_variable() const { return !is_inside_call_statement; }

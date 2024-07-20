@@ -12,7 +12,7 @@ struct BasicBlock {
 
   // condition (temporary condition always: left if zero, right otherwise)
   // condition or return value temporary
-  TemporaryOrConstant end_value;
+  TemporaryOrConstant end_value = TemporaryOrConstant::constant(0);
 
   // 2 children
   using shared_pointer = std::shared_ptr<BasicBlock>;
@@ -48,9 +48,21 @@ struct Function {
 
   std::string name;
   std::shared_ptr<BasicBlock> begin_block;
+
+  Function(auto&& name, BasicBlock begin)
+      : name(std::forward<decltype(name)>(name)),
+        begin_block(std::make_shared<BasicBlock>(std::move(begin))) {}
+
+  Function(auto&& name, std::shared_ptr<BasicBlock> begin)
+      : name(std::forward<decltype(name)>(name)),
+        begin_block(std::move(begin)) {}
 };
 
 struct Program {
   std::vector<Function> functions;
+
+  void add_function(auto&& name, BasicBlock body) {
+    functions.emplace_back(std::forward<decltype(name)>(name), std::move(body));
+  }
 };
 }  // namespace IR

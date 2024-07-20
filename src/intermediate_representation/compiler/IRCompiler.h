@@ -17,6 +17,7 @@ class IRCompiler final : public CompileTreeVisitor {
 
   size_t current_argument_index_{0};
   size_t current_temporary_index_{0};
+  Temporary recursion_parameter_temporary_{};
 
   BasicBlock compile_node(const std::unique_ptr<CompileNode>& node) {
     node->accept(*this);
@@ -28,11 +29,28 @@ class IRCompiler final : public CompileTreeVisitor {
   }
 
   Temporary get_next_temporary() {
-    return Temporary(current_temporary_index_++);
+    return Temporary{current_temporary_index_++};
+  }
+
+  void assign_or_pass_as_argument(TemporaryOrConstant value) {
+    if (compiled_calls_stack_.empty()) {
+      // we should return variable immediately
+      result_.end_value = value;
+      return;
+    }
+
+    auto& function_call = compiled_calls_stack_.top();
+    function_call.arguments.push_back(value);
   }
 
  public:
   static const vector<pair<string, size_t>> internal_functions;
+
+  Program get_ir(const CompileNode& root) {
+    root.accept(*this);
+
+    return std::move(program_);
+  }
 
   void visit(const ProgramNode&) override;
   void visit(const FunctionDefinitionNode&) override;

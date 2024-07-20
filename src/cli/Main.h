@@ -5,7 +5,7 @@
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
 #include "execution/debug/DebugBytecodeExecutor.h"
-#include "optimizations/UnusedElimination.h"
+#include "intermediate_representation/compiler/IRCompiler.h"
 
 using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -147,30 +147,35 @@ class Main {
       auto compile_tree = compile_tree_builder.build(*syntax_tree);
       compiler.visit(*compile_tree);
 
-      UnusedElimination().apply(*compile_tree);
+      // generate intermediate representation
+      auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
-      auto instructions = compiler.get_result();
-
-      // TODO: add -o flag support
-      if (parser.present("-o")) {
-        throw std::runtime_error("not supported yet.");
+      for (auto& func: ir.functions) {
+        std::cout << func.name << std::endl;
       }
 
-      auto temp_dir = fs::temp_directory_path();
-      auto output_file = temp_dir / "somestupidassembly.s";
-
-      std::ofstream file(output_file);
-
-      for (auto instruction : instructions) {
-        file << instruction.get_string() << "\n";
-        cout << instruction.get_string() << "\n";
-      }
-
-      file.close();
-
-      auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
-      std::system(compile_command.c_str());
-      std::system("./test");
+      // auto instructions = compiler.get_result();
+      //
+      // // TODO: add -o flag support
+      // if (parser.present("-o")) {
+      //   throw std::runtime_error("not supported yet.");
+      // }
+      //
+      // auto temp_dir = fs::temp_directory_path();
+      // auto output_file = temp_dir / "somestupidassembly.s";
+      //
+      // std::ofstream file(output_file);
+      //
+      // for (auto instruction : instructions) {
+      //   file << instruction.get_string() << "\n";
+      //   cout << instruction.get_string() << "\n";
+      // }
+      //
+      // file.close();
+      //
+      // auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
+      // std::system(compile_command.c_str());
+      // std::system("./test");
 
       // bool is_debug_enabled = parser.get<bool>("debug");
       //

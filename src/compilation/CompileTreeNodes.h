@@ -99,10 +99,6 @@ struct RecursionParameterNode final : VariableNode {
   ACCEPT_VISITOR();
 };
 
-struct SelfCallNode final : CompileNode {
-  ACCEPT_VISITOR();
-};
-
 struct InternalFunctionDefinitionNode final
     : BaseFunctionDefinitionCompileNode {
   using BaseFunctionDefinitionCompileNode::BaseFunctionDefinitionCompileNode;
@@ -118,6 +114,8 @@ struct RecursiveFunctionDefinitionNode final
 
   using BaseFunctionDefinitionCompileNode::BaseFunctionDefinitionCompileNode;
 
+  size_t get_recursion_parameter_index() const { return arguments_count - 1; }
+
   ACCEPT_VISITOR();
 };
 
@@ -127,8 +125,12 @@ struct FunctionCallNode final : CompileNode {
 
   string name;
 
-  // true iff there are no function calls among arguments
-  bool is_leaf_function_call;
+  ACCEPT_VISITOR();
+};
+
+struct SelfCallNode final : CompileNode {
+  size_t arguments_count;
+  string name;
 
   ACCEPT_VISITOR();
 };

@@ -2,10 +2,8 @@
 
 namespace IR {
 void IRCompiler::visit(const FunctionDefinitionNode& node) {
-  current_temporary_index_ = 0;
+  current_temporary_index_ = node.arguments_count;
 
-  node.body->accept(*this);
-  program_.functions.emplace_back(
-      node.name, std::make_shared<BasicBlock>(std::move(result_)));
+  program_.add_function(node.name, compile_node(node.body));
 }
 }  // namespace IR

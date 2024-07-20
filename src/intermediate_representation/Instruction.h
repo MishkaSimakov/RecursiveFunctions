@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace IR {
 struct Temporary {
@@ -9,8 +9,16 @@ struct Temporary {
 };
 
 struct TemporaryOrConstant {
-  ssize_t index_or_value;
-  bool is_constant;
+  ssize_t index_or_value{0};
+  bool is_constant{true};
+
+  TemporaryOrConstant() = default;
+
+  TemporaryOrConstant(ssize_t index_or_value, bool is_constant)
+      : index_or_value(index_or_value), is_constant(is_constant) {}
+
+  TemporaryOrConstant(Temporary temporary)
+      : index_or_value(temporary.index), is_constant(false) {}
 
   size_t index() const {
     if (is_constant) {
@@ -32,9 +40,7 @@ struct TemporaryOrConstant {
     return {static_cast<ssize_t>(index), false};
   }
 
-  static TemporaryOrConstant constant(ssize_t value) {
-    return {value, true};
-  }
+  static TemporaryOrConstant constant(ssize_t value) { return {value, true}; }
 };
 
 struct Instruction {
@@ -58,7 +64,7 @@ struct Subtraction final : Instruction {
   TemporaryOrConstant right;
 };
 
-struct Phi final: Instruction {
+struct Phi final : Instruction {
   std::vector<Temporary> temporaries;
 };
 }  // namespace IR

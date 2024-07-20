@@ -2,22 +2,24 @@
 
 namespace IR {
 void IRCompiler::visit(const FunctionCallNode& node) {
+  auto scratch_temporary = get_next_temporary();
+
   FunctionCall instruction;
 
-  instruction.result_destination = get_next_temporary();
+  instruction.result_destination = scratch_temporary;
   instruction.name = node.name;
-  instruction.arguments.resize(node.arguments.size());
+  instruction.arguments.reserve(node.arguments.size());
 
   compiled_calls_stack_.push(std::move(instruction));
 
-  for (current_argument_index_ = 0;
-       current_argument_index_ < node.arguments.size();
-       ++current_argument_index_) {
-    node.arguments[current_argument_index_]->accept(*this);
+  for (auto& argument : node.arguments) {
+    argument->accept(*this);
   }
 
   result_.instructions.push_back(
       std::make_unique<FunctionCall>(compiled_calls_stack_.top()));
   compiled_calls_stack_.pop();
+
+  assign_or_pass_as_argument(scratch_temporary);
 }
 }  // namespace IR

@@ -47,7 +47,15 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_variable_compile_node(
     case VariableType::RECURSION_PARAMETER:
       return std::make_unique<RecursionParameterNode>(var_info->id);
     case VariableType::RECURSION_CALL:
-      return std::make_unique<SelfCallNode>();
+      return [&parameters] {
+        auto self_call = std::make_unique<SelfCallNode>();
+        self_call->arguments_count =
+            parameters.current_function_definition->children.size();
+        self_call->name = parameters.current_function_definition->value;
+
+        return self_call;
+      }();
+
     default:
       throw std::runtime_error("Unexpected syntax node type.");
   }
@@ -99,13 +107,8 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_function_call_compile_node(
   call_node->index = function_index_itr->second;
   call_node->name = function_name;
   call_node->arguments.reserve(arguments_count);
-  call_node->is_leaf_function_call = true;
 
   for (const auto& child : syntax_node.children) {
-    if (child->type == SyntaxNodeType::FUNCTION) {
-      call_node->is_leaf_function_call = false;
-    }
-
     call_node->arguments.push_back(
         build_value_compile_node(*child, parameters));
   }
@@ -184,6 +187,7 @@ void CompileTreeBuilder::visit_assignment_statement(
   parameters.variables_map = &variables;
   parameters.is_inside_argmin_call = false;
   parameters.is_inside_call_statement = false;
+  parameters.current_function_definition = &info_node;
 
   if (function_type == FunctionType::RECURSIVE_GENERAL_CASE) {
     auto& last_varname = info_node.children.back()->value;
