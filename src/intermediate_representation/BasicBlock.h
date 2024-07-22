@@ -29,10 +29,13 @@ struct BasicBlock {
 struct Function {
  private:
   std::unordered_set<Temporary> calculate_escaping_recursively(
-      BasicBlock* block, std::unordered_set<Temporary> used_above) {
-    if (block == nullptr) {
+      BasicBlock* block, std::unordered_set<Temporary> used_above,
+      std::unordered_set<const BasicBlock*>& used) {
+    if (block == nullptr || used.contains(block)) {
       return {};
     }
+
+    used.insert(block);
 
     std::unordered_set<Temporary> used_below;
 
@@ -47,9 +50,9 @@ struct Function {
     }
 
     auto left_used =
-        calculate_escaping_recursively(block->children.first, used_above);
-    auto right_used =
-        calculate_escaping_recursively(block->children.second, used_above);
+        calculate_escaping_recursively(block->children.first, used_above, used);
+    auto right_used = calculate_escaping_recursively(block->children.second,
+                                                     used_above, used);
 
     used_below.insert(left_used.begin(), left_used.end());
     used_below.insert(right_used.begin(), right_used.end());
@@ -81,7 +84,8 @@ struct Function {
                                TemporariesInfo{{begin_block}, begin_block});
     }
 
-    calculate_escaping_recursively(begin_block, {});
+    std::unordered_set<const BasicBlock*> used_blocks;
+    calculate_escaping_recursively(begin_block, {}, used_blocks);
   }
 
  public:
@@ -95,7 +99,7 @@ struct Function {
     // block where temporary is first (and last because of ssa) assigned
     BasicBlock* origin_block;
 
-    bool is_escaping() const { return using_blocks.size() > 1; }
+    bool is_escaping() const { return is_used_in_descendants(origin_block); }
 
     bool is_used_in_descendants(const BasicBlock* block) const {
       if (using_blocks.contains(block->children.first)) {

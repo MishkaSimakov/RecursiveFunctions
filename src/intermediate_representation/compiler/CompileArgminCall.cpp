@@ -12,12 +12,16 @@ void IRCompiler::visit(const ArgminCallNode& node) {
 
   // main loop body
 
-  auto* loop_block = current_function_->add_block();
+  BasicBlock* loop_block = result_;
 
-  result_->children.first = loop_block;
-  loop_block->parents = {result_, loop_block};
+  if (!result_->instructions.empty()) {
+    loop_block = current_function_->add_block();
 
-  result_ = loop_block;
+    result_->children.first = loop_block;
+    loop_block->parents = {result_, loop_block};
+
+    result_ = loop_block;
+  }
 
   auto phi_node = std::make_unique<Phi>();
   phi_node->result_destination = asterisk_temporary_;
@@ -33,7 +37,9 @@ void IRCompiler::visit(const ArgminCallNode& node) {
   add_instruction->result_destination = other_asterisk_temporary;
   add_instruction->left = asterisk_temporary_;
   add_instruction->right = TemporaryOrConstant::constant(1);
-  result_->instructions.push_back(std::move(add_instruction));
+
+  auto insert_itr = std::prev(result_->instructions.end());
+  result_->instructions.insert(insert_itr, std::move(add_instruction));
 
   // returning block
   auto end_block = current_function_->add_block();

@@ -1,6 +1,6 @@
 add(x, 0) = x;
 add(x, y + 1) = successor(add);
 
-func(x, y) = add(x, y);
+test(x) = argmin(add(x, *));
 
-func(10, 10);
+test(10);
