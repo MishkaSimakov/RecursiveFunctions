@@ -21,6 +21,7 @@ TEST_F(DependenciesGraphBuilderTestCase, test_with_one_instruction) {
   Function function("main");
   function.arguments_count = 2;
   function.set_begin_block(std::move(block));
+  function.finalize();
 
   auto graph = build(function);
 
@@ -39,6 +40,7 @@ TEST_F(DependenciesGraphBuilderTestCase,
   Function function("main");
   function.arguments_count = 3;
   function.set_begin_block(std::move(block));
+  function.finalize();
 
   auto graph = build(function);
 
@@ -69,6 +71,7 @@ TEST_F(DependenciesGraphBuilderTestCase,
   Function function("main");
   function.arguments_count = 1;
   function.set_begin_block(std::move(block));
+  function.finalize();
 
   auto graph = build(function);
 

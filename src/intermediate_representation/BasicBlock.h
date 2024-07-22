@@ -136,7 +136,7 @@ struct Function {
     return &basic_blocks.back();
   }
 
-  void finalize_function() {
+  void finalize() {
     calculate_end_blocks();
     calculate_escaping_temporaries();
   }

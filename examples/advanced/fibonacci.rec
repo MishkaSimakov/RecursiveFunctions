@@ -1,4 +1,6 @@
 add(x, 0) = x;
 add(x, y + 1) = successor(add);
 
-add(add(5, 10), 10);
+func(x, y) = add(x, y);
+
+func(10, 10);

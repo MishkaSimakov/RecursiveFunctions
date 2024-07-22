@@ -36,7 +36,7 @@ class IRCompiler final : public CompileTreeVisitor {
 
     lambda();
 
-    func.finalize_function();
+    func.finalize();
     program_.functions.push_back(std::move(func));
   }
 
