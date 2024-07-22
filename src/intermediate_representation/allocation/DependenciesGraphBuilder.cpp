@@ -122,7 +122,7 @@ void IR::DependenciesGraphBuilder::print_result() const {
 
 IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
     const Function& function) {
-  std::cout << "Dependencies for " << function.name << std::endl;
+  // std::cout << "Dependencies for " << function.name << std::endl;
 
   for (size_t i = 0; i < function.arguments_count; ++i) {
     storage_.add_live(function.begin_block, Position::BEFORE, Temporary{i});
@@ -172,14 +172,14 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
       auto& live_after = storage_.get_live(instruction.get(), Position::AFTER);
       create_dependencies(live_after);
 
-      std::cout << fmt::format("Before: {}\n", fmt::join(live_before, ", "));
-      std::cout << "Instruction: " << instruction->to_string() << std::endl;
-      std::cout << fmt::format("After: {}\n", fmt::join(live_after, ", "));
+      // std::cout << fmt::format("Before: {}\n", fmt::join(live_before, ", "));
+      // std::cout << "Instruction: " << instruction->to_string() << std::endl;
+      // std::cout << fmt::format("After: {}\n", fmt::join(live_after, ", "));
     }
   }
 
-  std::cout << std::endl;
-  print_result();
+  // std::cout << std::endl;
+  // print_result();
 
   return std::move(result_);
 }

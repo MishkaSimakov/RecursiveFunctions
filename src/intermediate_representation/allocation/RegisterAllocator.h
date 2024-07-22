@@ -1,4 +1,8 @@
 #pragma once
+#include <unordered_map>
+#include <vector>
+#include <ranges>
+
 #include "TemporaryDependenciesGraph.h"
 #include "intermediate_representation/BasicBlock.h"
 
@@ -13,8 +17,12 @@ namespace IR {
 class RegisterAllocator {
   constexpr static size_t kRegistersCount = 10;
 
+  std::unordered_map<Temporary, ssize_t> get_colouring(
+      const TemporaryDependenciesGraph&) const;
+
   void apply_to_function(Function&);
-public:
+
+ public:
   void apply(Program&);
 };
-}
+}  // namespace IR
