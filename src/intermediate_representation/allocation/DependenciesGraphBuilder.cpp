@@ -8,10 +8,17 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
                                                  const BasicBlock* block) {
   const auto& instructions = block->instructions;
 
-  // transfer from parents
+  // transfer from parents only those temporaries that are used in this block
+  // (or in blocks below)
   for (auto parent : block->parents) {
-    storage_.add_live(block, Position::BEFORE,
-                      storage_.get_live(parent, Position::AFTER));
+    auto live = storage_.get_live(parent, Position::AFTER);
+
+    for (Temporary temp : live) {
+      const auto& info = function.temporaries_info.find(temp)->second;
+      if (info.using_blocks.contains(block)) {
+        storage_.add_live(block, Position::BEFORE, temp);
+      }
+    }
   }
 
   // transfer to space before first variable
@@ -25,7 +32,7 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
     for (auto temporary : instruction->get_temporaries_in_arguments()) {
       auto itr = function.temporaries_info.find(temporary);
 
-      if (itr->second.is_escaping) {
+      if (itr->second.is_used_in_descendants(block)) {
         continue;
       }
 
@@ -33,14 +40,14 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
     }
   }
 
-  // special case: for function arguments that do not escape first block
-  // we set last usage to the first instruction in the block
+  // special case: for function arguments that are not used in program we set
+  // last usage to the first instruction in the block
   if (block == function.begin_block) {
     for (size_t i = 0; i < function.arguments_count; ++i) {
       Temporary temporary{i};
 
-      auto itr = function.temporaries_info.find(temporary);
-      if (!itr->second.is_escaping && !last_usage.contains(temporary)) {
+      auto& info = function.temporaries_info.find(temporary)->second;
+      if (!info.is_escaping() && !last_usage.contains(temporary)) {
         last_usage[temporary] = block->instructions.front().get();
       }
     }

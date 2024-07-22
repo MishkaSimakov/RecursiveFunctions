@@ -4,6 +4,7 @@
 #include <list>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "Instruction.h"
 
@@ -27,27 +28,43 @@ struct BasicBlock {
 
 struct Function {
  private:
-  void calculate_escaping_recursively(BasicBlock* block) {
+  std::unordered_set<Temporary> calculate_escaping_recursively(
+      BasicBlock* block, std::unordered_set<Temporary> used_above) {
     if (block == nullptr) {
-      return;
+      return {};
     }
+
+    std::unordered_set<Temporary> used_below;
 
     for (auto& instruction : block->instructions) {
       if (instruction->has_return_value()) {
-        temporaries_info.emplace(instruction->result_destination,
-                                 TemporariesInfo{false, block});
-      }
+        used_above.emplace(instruction->result_destination);
+        used_below.emplace(instruction->result_destination);
 
-      for (auto temporary : instruction->get_temporaries_in_arguments()) {
-        auto& info = temporaries_info[temporary];
-        if (info.origin_block != block) {
-          info.is_escaping = true;
-        }
+        temporaries_info.emplace(instruction->result_destination,
+                                 TemporariesInfo{{block}, block});
       }
     }
 
-    calculate_escaping_recursively(block->children.first);
-    calculate_escaping_recursively(block->children.second);
+    auto left_used =
+        calculate_escaping_recursively(block->children.first, used_above);
+    auto right_used =
+        calculate_escaping_recursively(block->children.second, used_above);
+
+    used_below.insert(left_used.begin(), left_used.end());
+    used_below.insert(right_used.begin(), right_used.end());
+
+    for (auto& instruction : block->instructions) {
+      for (auto temporary : instruction->get_temporaries_in_arguments()) {
+        used_below.insert(temporary);
+      }
+    }
+
+    for (auto temporary : used_below) {
+      temporaries_info[temporary].using_blocks.insert(block);
+    }
+
+    return used_below;
   }
 
   void calculate_end_blocks() {
@@ -61,18 +78,36 @@ struct Function {
   void calculate_escaping_temporaries() {
     for (size_t i = 0; i < arguments_count; ++i) {
       temporaries_info.emplace(Temporary{i},
-                               TemporariesInfo{false, begin_block});
+                               TemporariesInfo{{begin_block}, begin_block});
     }
 
-    calculate_escaping_recursively(begin_block);
+    calculate_escaping_recursively(begin_block, {});
   }
 
  public:
   static constexpr auto entrypoint = "main";
 
   struct TemporariesInfo {
-    bool is_escaping;
+    // this is basic blocks that use that temporary or blocks which ancestors
+    // use that temporary
+    std::unordered_set<const BasicBlock*> using_blocks;
+
+    // block where temporary is first (and last because of ssa) assigned
     BasicBlock* origin_block;
+
+    bool is_escaping() const { return using_blocks.size() > 1; }
+
+    bool is_used_in_descendants(const BasicBlock* block) const {
+      if (using_blocks.contains(block->children.first)) {
+        return true;
+      }
+
+      if (using_blocks.contains(block->children.second)) {
+        return true;
+      }
+
+      return false;
+    }
   };
 
   std::string name;
