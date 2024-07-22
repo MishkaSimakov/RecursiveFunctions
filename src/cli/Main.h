@@ -6,7 +6,9 @@
 #include "RecursiveFunctions.h"
 #include "execution/debug/DebugBytecodeExecutor.h"
 #include "intermediate_representation/Printer.h"
+#include "intermediate_representation/allocation/RegisterAllocator.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
+#include "intermediate_representation/optimizations/Optimizer.h"
 
 using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -153,6 +155,9 @@ class Main {
 
       IR::Printer printer;
       printer.print(ir);
+
+      IR::RegisterAllocator allocator;
+      allocator.apply(ir);
 
       // auto instructions = compiler.get_result();
       //

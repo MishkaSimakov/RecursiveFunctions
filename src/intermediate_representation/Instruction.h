@@ -3,92 +3,70 @@
 #include <fmt/base.h>
 #include <fmt/ranges.h>
 
+#include <algorithm>
 #include <ranges>
 #include <string>
+#include <type_traits>
+#include <typeinfo>
 #include <vector>
 
-namespace IR {
-struct Temporary {
-  size_t index;
-
-  std::string to_string() const { return "%" + std::to_string(index); }
-};
-
-struct TemporaryOrConstant {
-  ssize_t index_or_value{0};
-  bool is_constant{true};
-
-  TemporaryOrConstant() = default;
-
-  TemporaryOrConstant(ssize_t index_or_value, bool is_constant)
-      : index_or_value(index_or_value), is_constant(is_constant) {}
-
-  TemporaryOrConstant(Temporary temporary)
-      : index_or_value(temporary.index), is_constant(false) {}
-
-  size_t index() const {
-    if (is_constant) {
-      throw std::runtime_error("In IR constant used as temporary");
-    }
-
-    return index_or_value;
-  }
-
-  ssize_t value() const {
-    if (!is_constant) {
-      throw std::runtime_error("In IR temporary used as constant");
-    }
-
-    return index_or_value;
-  }
-
-  static TemporaryOrConstant temporary(size_t index) {
-    return {static_cast<ssize_t>(index), false};
-  }
-
-  static TemporaryOrConstant constant(ssize_t value) { return {value, true}; }
-
-  std::string to_string() const {
-    if (is_constant) {
-      return std::to_string(index_or_value);
-    }
-
-    return "%" + std::to_string(index_or_value);
-  }
-};
-}  // namespace IR
-
-template <>
-struct fmt::formatter<IR::TemporaryOrConstant> {
-  template <typename ParseContext>
-  constexpr auto parse(ParseContext& ctx) {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(const IR::TemporaryOrConstant& value, FormatContext& ctx) const {
-    return fmt::format_to(ctx.out(), "{}", value.to_string());
-  }
-};
-
-template <>
-struct fmt::formatter<IR::Temporary> {
-  template <typename ParseContext>
-  constexpr auto parse(ParseContext& ctx) {
-    return ctx.begin();
-  }
-
-  template <typename FormatContext>
-  auto format(const IR::Temporary& value, FormatContext& ctx) const {
-    return fmt::format_to(ctx.out(), "{}", value.to_string());
-  }
-};
+#include "Temporary.h"
 
 namespace IR {
 struct Instruction {
+ private:
+  virtual bool equal(const Instruction&) const = 0;
+
+  template <typename T>
+  static void filter_temporaries_inserter(std::vector<Temporary>& result,
+                                          T&& value) {
+    if constexpr (std::is_same_v<Temporary, std::decay_t<T>>) {
+      result.emplace_back(value);
+    } else if constexpr (std::is_same_v<TemporaryOrConstant, std::decay_t<T>>) {
+      if (!value.is_constant) {
+        result.emplace_back(Temporary{value.index()});
+      }
+    } else {
+      for (auto temp : value) {
+        filter_temporaries_inserter(result, temp);
+      }
+    }
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<Instruction, T>
+  bool is_of_type() const {
+    return typeid(*this) == typeid(T);
+  }
+
+ protected:
+  template <typename... Args>
+    requires(
+        (std::is_same_v<std::decay_t<Args>, Temporary> ||
+         std::is_same_v<std::decay_t<Args>, TemporaryOrConstant> ||
+         std::is_same_v<std::decay_t<Args>, std::vector<TemporaryOrConstant>> ||
+         std::is_same_v<std::decay_t<Args>, std::vector<Temporary>>) &&
+        ...)
+  static std::vector<Temporary> filter_temporaries(Args&&... args) {
+    std::vector<Temporary> result;
+
+    (filter_temporaries_inserter(result, std::forward<decltype(args)>(args)),
+     ...);
+    return result;
+  }
+
+ public:
   Temporary result_destination;
 
   virtual std::string to_string() const = 0;
+
+  bool operator==(const Instruction& other) const {
+    return typeid(*this) == typeid(other) && equal(other);
+  }
+
+  virtual std::vector<Temporary> get_temporaries_in_arguments() = 0;
+
+  bool has_return_value() const;
 
   virtual ~Instruction() = default;
 };
@@ -105,6 +83,17 @@ struct FunctionCall final : Instruction {
                                                  }),
                                  ", "));
   }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(arguments);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const FunctionCall&>(instruction);
+
+    return name == other.name && arguments == other.arguments;
+  }
 };
 
 struct Addition final : Instruction {
@@ -113,6 +102,17 @@ struct Addition final : Instruction {
 
   std::string to_string() const override {
     return fmt::format("{} = add {} {}", result_destination, left, right);
+  }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(left, right);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Addition&>(instruction);
+
+    return left == other.left && right == other.right;
   }
 };
 
@@ -123,6 +123,17 @@ struct Subtraction final : Instruction {
   std::string to_string() const override {
     return fmt::format("{} = sub {} {}", result_destination, left, right);
   }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(left, right);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Subtraction&>(instruction);
+
+    return left == other.left && right == other.right;
+  }
 };
 
 struct Move final : Instruction {
@@ -130,6 +141,17 @@ struct Move final : Instruction {
 
   std::string to_string() const override {
     return fmt::format("{} = {}", result_destination, source);
+  }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(source);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Move&>(instruction);
+
+    return source == other.source;
   }
 };
 
@@ -144,5 +166,60 @@ struct Phi final : Instruction {
                   }),
                   ", "));
   }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(values);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Phi&>(instruction);
+
+    return values == other.values;
+  }
 };
+
+struct Return final : Instruction {
+  TemporaryOrConstant value;
+
+  std::string to_string() const override {
+    return fmt::format("return {}", value);
+  }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(value);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Return&>(instruction);
+    return value == other.value;
+  }
+};
+
+struct Branch final : Instruction {
+  TemporaryOrConstant value;
+
+  // TODO: some kind of condition must be here
+
+  std::string to_string() const override {
+    return fmt::format("branch {} == 0 ?", value);
+  }
+
+  std::vector<Temporary> get_temporaries_in_arguments() override {
+    return filter_temporaries(value);
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Branch&>(instruction);
+    return value == other.value;
+  }
+};
+
+// this should be after because of class declarations and other stuff...
+inline bool Instruction::has_return_value() const {
+  return !(is_of_type<Return>() || is_of_type<Branch>());
+}
+
 }  // namespace IR

@@ -1,8 +1,4 @@
-test(x) = 0;
+add(x, 0) = x;
+add(x, y + 1) = successor(add);
 
-func(x) = test(x);
-
-recursive(0) = 1;
-recursive(x + 1) = func(argmin(func(*)));
-
-func(123);
+add(5, 10);

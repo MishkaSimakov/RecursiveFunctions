@@ -6,7 +6,6 @@ void IR::Printer::print_basic_block(const BasicBlock& basic_block) {
   }
 
   if (basic_block.is_end()) {
-    os_ << prefix << "return " << basic_block.end_value.to_string() << "\n";
     return;
   }
 
@@ -14,14 +13,10 @@ void IR::Printer::print_basic_block(const BasicBlock& basic_block) {
   size_t left_index = get_block_index(*basic_block.children.first);
 
   if (basic_block.children.second == nullptr) {
-    os_ << prefix << "jump " << left_index << "\n";
+    os_ << prefix << "child: " << left_index << "\n";
   } else {
     size_t right_index = get_block_index(*basic_block.children.second);
-
-    os_ << prefix
-        << fmt::format("jump {} == 0 ? {} : {}\n",
-                       basic_block.end_value.to_string(), left_index,
-                       right_index);
+    os_ << prefix << "children: " << left_index << " " << right_index << "\n";
   }
 }
 

@@ -4,8 +4,11 @@ namespace IR {
 void IRCompiler::visit(const RecursiveFunctionDefinitionNode& node) {
   wrap_with_function(node.name, node.arguments_count, [&node, this] {
     auto* condition_block = result_;
-    condition_block->end_value =
+
+    auto branch_instruction = std::make_unique<Branch>();
+    branch_instruction->value =
         TemporaryOrConstant::temporary(node.get_recursion_parameter_index());
+    condition_block->instructions.push_back(std::move(branch_instruction));
 
     recursion_parameter_temporary_ = get_next_temporary();
 

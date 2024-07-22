@@ -23,18 +23,20 @@ class IRCompiler final : public CompileTreeVisitor {
   Temporary asterisk_temporary_{};
 
   template <typename Callable>
-  void wrap_with_function(std::string name, size_t start_temp_index,
+  void wrap_with_function(std::string name, size_t arguments_count,
                           Callable&& lambda)
     requires std::is_invocable_v<Callable>
   {
     Function func(std::move(name));
+    func.arguments_count = arguments_count;
 
-    current_temporary_index_ = start_temp_index;
+    current_temporary_index_ = arguments_count;
     current_function_ = &func;
     result_ = func.set_begin_block();
 
     lambda();
 
+    func.finalize_function();
     program_.functions.push_back(std::move(func));
   }
 
@@ -43,11 +45,20 @@ class IRCompiler final : public CompileTreeVisitor {
   }
 
   void assign_or_pass_as_argument(TemporaryOrConstant value) {
-    // TODO: replace with constant
-    if (compiled_calls_stack_.empty() ||
-        compiled_calls_stack_.top().name == "argmin") {
-      // we should return variable immediately
-      result_->end_value = value;
+    if (compiled_calls_stack_.empty()) {
+      auto return_instruction = std::make_unique<Return>();
+      return_instruction->value = value;
+      result_->instructions.push_back(std::move(return_instruction));
+
+      return;
+    }
+
+    // TODO: replace argmin with constant
+    if (compiled_calls_stack_.top().name == "argmin") {
+      auto branch_instruction = std::make_unique<Branch>();
+      branch_instruction->value = value;
+      result_->instructions.push_back(std::move(branch_instruction));
+
       return;
     }
 

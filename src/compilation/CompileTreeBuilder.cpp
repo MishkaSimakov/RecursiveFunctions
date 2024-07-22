@@ -182,9 +182,10 @@ void CompileTreeBuilder::visit_assignment_statement(
       throw std::runtime_error("All function variables names must be unique.");
     }
 
-    // we store variables in reversed order
-    variables.emplace(std::move(varname), VariableInfo{variables_count - i - 1,
-                                                       VariableType::VARIABLE});
+    // TODO: changed order of variables (before in info indices were stored in
+    // reversed order)
+    variables.emplace(std::move(varname),
+                      VariableInfo{i, VariableType::VARIABLE});
   }
 
   ValueCompilationNodeBuilderParameters parameters;
