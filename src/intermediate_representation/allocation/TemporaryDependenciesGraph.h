@@ -45,7 +45,25 @@ class TemporaryDependenciesGraph {
     return components;
   }
 
-  size_t find_temporary_or_append(Temporary temporary) {
+ public:
+  struct TemporaryInfo {
+    Temporary temporary;
+    double spill_cost;
+  };
+
+  std::vector<TemporaryInfo> temporaries;
+  std::vector<std::vector<double>> edges;
+
+  void add_dependency(Temporary first, Temporary second,
+                      double same_color_cost) {
+    size_t first_index = add_temporary(first);
+    size_t second_index = add_temporary(second);
+
+    edges[first_index][second_index] = same_color_cost;
+    edges[second_index][first_index] = same_color_cost;
+  }
+
+  size_t add_temporary(Temporary temporary) {
     auto itr = std::find_if(temporaries.begin(), temporaries.end(),
                             [temporary](TemporaryInfo& info) {
                               return info.temporary == temporary;
@@ -64,24 +82,6 @@ class TemporaryDependenciesGraph {
     }
 
     return count - 1;
-  }
-
- public:
-  struct TemporaryInfo {
-    Temporary temporary;
-    double spill_cost;
-  };
-
-  std::vector<TemporaryInfo> temporaries;
-  std::vector<std::vector<double>> edges;
-
-  void add_dependency(Temporary first, Temporary second,
-                      double same_color_cost) {
-    size_t first_index = find_temporary_or_append(first);
-    size_t second_index = find_temporary_or_append(second);
-
-    edges[first_index][second_index] = same_color_cost;
-    edges[second_index][first_index] = same_color_cost;
   }
 
   // split graph into components

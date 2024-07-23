@@ -124,6 +124,10 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
     const Function& function) {
   // std::cout << "Dependencies for " << function.name << std::endl;
 
+  for (const auto& temp : function.temporaries_info | std::views::keys) {
+    result_.add_temporary(temp);
+  }
+
   for (size_t i = 0; i < function.arguments_count; ++i) {
     storage_.add_live(function.begin_block, Position::BEFORE, Temporary{i});
   }

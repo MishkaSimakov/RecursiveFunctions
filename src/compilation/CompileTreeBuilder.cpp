@@ -7,6 +7,10 @@ using Compilation::CompileTreeBuilder, Compilation::CompileNode,
 
 CompileTreeBuilder::FunctionType CompileTreeBuilder::get_function_type(
     const SyntaxNode& info_node) {
+  if (info_node.children.empty()) {
+    return FunctionType::STANDART;
+  }
+
   const auto& last_child = info_node.children.back();
   if (last_child->type == SyntaxNodeType::VARIABLE) {
     return FunctionType::STANDART;

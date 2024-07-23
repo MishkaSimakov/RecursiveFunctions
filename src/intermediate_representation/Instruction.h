@@ -64,7 +64,7 @@ struct Instruction {
     return typeid(*this) == typeid(other) && equal(other);
   }
 
-  virtual std::vector<Temporary> get_temporaries_in_arguments() = 0;
+  virtual std::vector<Temporary> get_temporaries_in_arguments() const = 0;
 
   bool has_return_value() const;
 
@@ -84,7 +84,7 @@ struct FunctionCall final : Instruction {
                                  ", "));
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(arguments);
   }
 
@@ -104,7 +104,7 @@ struct Addition final : Instruction {
     return fmt::format("{} = add {} {}", result_destination, left, right);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(left, right);
   }
 
@@ -124,7 +124,7 @@ struct Subtraction final : Instruction {
     return fmt::format("{} = sub {} {}", result_destination, left, right);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(left, right);
   }
 
@@ -143,7 +143,7 @@ struct Move final : Instruction {
     return fmt::format("{} = {}", result_destination, source);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(source);
   }
 
@@ -167,7 +167,7 @@ struct Phi final : Instruction {
                   ", "));
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(values);
   }
 
@@ -186,7 +186,7 @@ struct Return final : Instruction {
     return fmt::format("return {}", value);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(value);
   }
 
@@ -206,7 +206,7 @@ struct Branch final : Instruction {
     return fmt::format("branch {} == 0 ?", value);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() override {
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(value);
   }
 
