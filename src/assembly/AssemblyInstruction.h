@@ -2,20 +2,20 @@
 
 #include <string>
 
-using std::string;
-
+namespace Assembly {
 class AssemblyInstruction {
   std::string instruction_;
 
  public:
   template <typename... Args>
-  AssemblyInstruction(string instruction, Args&&... strings)
+  AssemblyInstruction(std::string instruction, Args&&... strings)
       : instruction_(instruction + " " + ((string(strings) + ", ") + ...)) {
     instruction_.pop_back();
     instruction_.pop_back();
   }
 
-  AssemblyInstruction(string instruction) : instruction_(instruction) {}
+  AssemblyInstruction(std::string instruction) : instruction_(instruction) {}
 
-  string get_string() const { return instruction_; }
+  std::string get_string() const { return instruction_; }
 };
+}  // namespace Assembly

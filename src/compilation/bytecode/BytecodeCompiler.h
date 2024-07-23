@@ -1,7 +1,14 @@
 #pragma once
 
-#include "AssemblyInstruction.h"
+#include <list>
+#include <string>
+#include <vector>
+
+#include "assembly/AssemblyInstruction.h"
 #include "compilation/CompileTreeNodes.h"
+
+using Assembly::AssemblyInstruction;
+using std::vector, std::list, std::string;
 
 namespace Compilation {
 using std::vector, std::string, std::pair;
@@ -79,20 +86,6 @@ class BytecodeCompiler final : public CompileTreeVisitor {
 
     return result;
   }
-
-  static void offset_jumps(list<Instruction>& instructions, size_t offset) {
-    for (auto& instruction : instructions) {
-      if (instruction.type == InstructionType::POP_JUMP_IF_ZERO ||
-          instruction.type == InstructionType::JUMP_IF_NONZERO) {
-        instruction.argument += offset;
-      }
-    }
-  }
-
-  size_t get_recursion_parameter_position() const;
-  size_t get_recursion_call_result_position() const;
-
-  size_t get_argmin_parameter_position() const;
 
  public:
   static const vector<pair<string, size_t>> internal_functions;
