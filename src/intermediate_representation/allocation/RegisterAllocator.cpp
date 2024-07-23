@@ -1,6 +1,7 @@
 #include "RegisterAllocator.h"
 
 #include "DependenciesGraphBuilder.h"
+#include "intermediate_representation/Function.h"
 
 std::unordered_map<IR::Temporary, ssize_t> IR::RegisterAllocator::get_colouring(
     const TemporaryDependenciesGraph& graph) const {
@@ -93,8 +94,6 @@ void IR::RegisterAllocator::apply_to_function(Function& function) {
   // precise solution)
   auto colouring = get_colouring(graph);
 
-  // apply result to IR (create move, load and store instructions)
-
   // just print colouring for now
   for (auto [temp, color] : colouring) {
     if (color == -1) {
@@ -128,7 +127,8 @@ void IR::RegisterAllocator::add_edges_for_phi(
 
 void IR::RegisterAllocator::set_spill_fine(const Function& function,
                                            TemporaryDependenciesGraph& graph) {
-  for (auto& temp: graph.temporaries) {
+  // TODO: this must depend on variable position
+  for (auto& temp : graph.temporaries) {
     temp.spill_cost = -1000;
   }
 }

@@ -71,11 +71,6 @@ class DependenciesGraphBuilder {
   LiveTemporariesStorage storage_;
   TemporaryDependenciesGraph result_;
 
-  enum class BasicBlockStatus { DEFAULT, IN_QUEUE, PROCESSED };
-
-  std::unordered_map<BasicBlock*, BasicBlockStatus> blocks_statuses_;
-  std::stack<BasicBlock*> blocks_to_process_;
-
   void process_block(const Function& function, const BasicBlock*);
   void create_dependencies(const std::unordered_set<Temporary>&);
   void print_result() const;

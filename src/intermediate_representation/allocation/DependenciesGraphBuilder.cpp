@@ -4,6 +4,8 @@
 
 #include <iostream>
 
+#include "intermediate_representation/Function.h"
+
 void IR::DependenciesGraphBuilder::process_block(const Function& function,
                                                  const BasicBlock* block) {
   const auto& instructions = block->instructions;
@@ -132,37 +134,10 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
     storage_.add_live(function.begin_block, Position::BEFORE, Temporary{i});
   }
 
-  for (auto block : function.end_blocks) {
-    blocks_statuses_[block] = BasicBlockStatus::IN_QUEUE;
-    blocks_to_process_.push(block);
-  }
-
   // process each block and register live variables at each program point
-  while (!blocks_to_process_.empty()) {
-    BasicBlock* block = blocks_to_process_.top();
-
-    bool ready = true;
-    for (auto parent : block->parents) {
-      BasicBlockStatus& status = blocks_statuses_[parent];
-
-      if (status == BasicBlockStatus::DEFAULT) {
-        blocks_to_process_.push(parent);
-        status = BasicBlockStatus::IN_QUEUE;
-      }
-
-      if (status != BasicBlockStatus::PROCESSED) {
-        ready = false;
-      }
-    }
-
-    if (!ready) {
-      continue;
-    }
-
-    blocks_to_process_.pop();
+  function.traverse_blocks([this, &function](const BasicBlock* block) {
     process_block(function, block);
-    blocks_statuses_[block] = BasicBlockStatus::PROCESSED;
-  }
+  });
 
   // create edges between live variables
   // TODO: remove second action
