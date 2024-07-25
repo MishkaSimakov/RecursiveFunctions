@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "intermediate_representation/BasicBlock.h"
+#include "intermediate_representation/Function.h"
 
 namespace IR {
 class Optimizer {
@@ -21,8 +22,9 @@ class Optimizer {
 
     std::invoke(callable, *block);
 
-    apply_to_each_block_recursively(block->children.first, callable, used);
-    apply_to_each_block_recursively(block->children.second, callable, used);
+    for (auto child: block->children) {
+      apply_to_each_block_recursively(child, callable, used);
+    }
   }
 
   void apply_to_each_block(Function& function, const auto& callable) const {

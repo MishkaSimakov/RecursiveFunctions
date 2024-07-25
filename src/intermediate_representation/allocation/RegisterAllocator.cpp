@@ -94,6 +94,9 @@ void IR::RegisterAllocator::apply_to_function(Function& function) {
   // precise solution)
   auto colouring = get_colouring(graph);
 
+  // remove phi node (now we can forget about ssa)
+  remove_phi_nodes(function, colouring);
+
   // just print colouring for now
   for (auto [temp, color] : colouring) {
     if (color == -1) {
@@ -118,7 +121,7 @@ void IR::RegisterAllocator::add_edges_for_phi(
       for (size_t i = 0; i < temporary_arguments.size(); ++i) {
         for (size_t j = 0; j < i; ++j) {
           graph.add_dependency(temporary_arguments[i], temporary_arguments[j],
-                               50);
+                               kPhiNodeWeight);
         }
       }
     }
@@ -129,7 +132,46 @@ void IR::RegisterAllocator::set_spill_fine(const Function& function,
                                            TemporaryDependenciesGraph& graph) {
   // TODO: this must depend on variable position
   for (auto& temp : graph.temporaries) {
-    temp.spill_cost = -1000;
+    temp.spill_cost = kSpillCost;
+  }
+}
+
+void IR::RegisterAllocator::remove_phi_nodes(
+    Function& function, const std::unordered_map<Temporary, ssize_t>&) {
+  for (auto& block : function.basic_blocks) {
+    auto& instructions = block.instructions;
+    for (auto itr = instructions.begin(); itr != instructions.end();) {
+      auto* phi_node = dynamic_cast<const Phi*>(itr->get());
+
+      if (phi_node == nullptr) {
+        ++itr;
+        continue;
+      }
+
+      bool can_omit_moves = true;
+
+      for (auto [block, value] : phi_node->values) {
+        if (value.is_temporary() &&
+            phi_node->result_destination != Temporary{value.index()}) {
+          can_omit_moves = false;
+          break;
+        }
+      }
+
+      for (auto [block, value] : phi_node->values) {
+        if (can_omit_moves && value.is_temporary()) {
+          continue;
+        }
+
+        auto move_instruction = std::make_unique<Move>();
+        move_instruction->result_destination = phi_node->result_destination;
+        move_instruction->source = value;
+
+        block->instructions.push_back(std::move(move_instruction));
+      }
+
+      itr = instructions.erase(itr);
+    }
   }
 }
 

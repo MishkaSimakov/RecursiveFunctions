@@ -153,11 +153,11 @@ class Main {
       // generate intermediate representation
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
-      IR::Printer printer;
-      printer.print(ir);
-
       IR::RegisterAllocator allocator;
       allocator.apply(ir);
+
+      IR::Printer printer;
+      printer.print(ir);
 
       // auto instructions = compiler.get_result();
       //

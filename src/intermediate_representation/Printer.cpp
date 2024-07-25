@@ -1,5 +1,7 @@
 #include "Printer.h"
 
+#include "Function.h"
+
 void IR::Printer::print_basic_block(const BasicBlock& basic_block) {
   for (const auto& instruction : basic_block.instructions) {
     os_ << prefix << instruction->to_string() << "\n";
@@ -10,14 +12,13 @@ void IR::Printer::print_basic_block(const BasicBlock& basic_block) {
   }
 
   // some branches should be printed
-  size_t left_index = get_block_index(*basic_block.children.first);
-
-  if (basic_block.children.second == nullptr) {
-    os_ << prefix << "child: " << left_index << "\n";
-  } else {
-    size_t right_index = get_block_index(*basic_block.children.second);
-    os_ << prefix << "children: " << left_index << " " << right_index << "\n";
+  std::cout << prefix << "children:";
+  for (auto child : basic_block.children) {
+    std::cout << " "
+              << (child == nullptr ? "null"
+                                   : std::to_string(get_block_index(*child)));
   }
+  std::cout << "\n";
 }
 
 void IR::Printer::print_basic_blocks_recursively(
@@ -35,12 +36,10 @@ void IR::Printer::print_basic_blocks_recursively(
   os_ << index << ":\n";
   print_basic_block(basic_block);
 
-  if (basic_block.children.first != nullptr) {
-    print_basic_blocks_recursively(*basic_block.children.first);
-  }
-
-  if (basic_block.children.second != nullptr) {
-    print_basic_blocks_recursively(*basic_block.children.second);
+  for (auto child : basic_block.children) {
+    if (child != nullptr) {
+      print_basic_blocks_recursively(*child);
+    }
   }
 }
 

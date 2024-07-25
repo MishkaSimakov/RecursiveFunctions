@@ -1,5 +1,6 @@
 #include "Function.h"
 
+#include <iostream>
 #include <stack>
 
 std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
@@ -23,13 +24,16 @@ std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
     }
   }
 
-  auto left_used =
-      calculate_escaping_recursively(block->children.first, used_above, used);
-  auto right_used =
-      calculate_escaping_recursively(block->children.second, used_above, used);
+  for (auto child : block->children) {
+    // we also calculate parents at the same time
+    if (child != nullptr) {
+      child->parents.push_back(block);
+    }
 
-  used_below.insert(left_used.begin(), left_used.end());
-  used_below.insert(right_used.begin(), right_used.end());
+    auto used_below_in_child =
+        calculate_escaping_recursively(child, used_above, used);
+    used_below.insert(used_below_in_child.begin(), used_below_in_child.end());
+  }
 
   for (auto& instruction : block->instructions) {
     for (auto temporary : instruction->get_temporaries_in_arguments()) {
@@ -64,13 +68,11 @@ void IR::Function::calculate_escaping_temporaries() {
 
 void IR::Function::traverse_blocks(
     std::function<void(const BasicBlock*)> callable) const {
-  enum class BasicBlockStatus { DEFAULT, IN_QUEUE, PROCESSED };
-
   std::stack<const BasicBlock*> blocks_to_process;
-  std::unordered_map<const BasicBlock*, BasicBlockStatus> statuses;
+  std::unordered_set<const BasicBlock*> visited;
 
   for (auto block : end_blocks) {
-    statuses[block] = BasicBlockStatus::IN_QUEUE;
+    visited.insert(block);
     blocks_to_process.push(block);
   }
 
@@ -79,14 +81,10 @@ void IR::Function::traverse_blocks(
 
     bool ready = true;
     for (auto parent : block->parents) {
-      BasicBlockStatus& status = statuses[parent];
-
-      if (status == BasicBlockStatus::DEFAULT) {
+      if (!visited.contains(parent)) {
         blocks_to_process.push(parent);
-        status = BasicBlockStatus::IN_QUEUE;
-      }
+        visited.insert(parent);
 
-      if (status != BasicBlockStatus::PROCESSED) {
         ready = false;
       }
     }
@@ -97,6 +95,16 @@ void IR::Function::traverse_blocks(
 
     blocks_to_process.pop();
     callable(block);
-    statuses[block] = BasicBlockStatus::PROCESSED;
+
+    for (auto child : block->children) {
+      if (child == nullptr) {
+        continue;
+      }
+
+      if (!visited.contains(child)) {
+        blocks_to_process.push(child);
+        visited.insert(child);
+      }
+    }
   }
 }

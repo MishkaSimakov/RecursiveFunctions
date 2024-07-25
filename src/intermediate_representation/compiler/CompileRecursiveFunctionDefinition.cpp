@@ -20,9 +20,6 @@ void IRCompiler::visit(const RecursiveFunctionDefinitionNode& node) {
     result_ = general_case;
     node.general_case->accept(*this);
 
-    zero_case->parents = {condition_block};
-    general_case->parents = {condition_block};
-
     Subtraction subtraction;
     subtraction.result_destination = recursion_parameter_temporary_;
     subtraction.left = Temporary{node.get_recursion_parameter_index()};
@@ -31,8 +28,7 @@ void IRCompiler::visit(const RecursiveFunctionDefinitionNode& node) {
     general_case->instructions.push_front(
         std::make_unique<Subtraction>(subtraction));
 
-    condition_block->children.first = zero_case;
-    condition_block->children.second = general_case;
+    condition_block->children = {zero_case, general_case};
   });
 }
 }  // namespace IR

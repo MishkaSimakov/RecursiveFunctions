@@ -18,13 +18,20 @@ class AssemblyCompiler {
                                 std::list<AssemblyInstruction> body,
                                 bool is_leaf = false);
 
+  struct CompileDTO {
+    const IR::Function& function;
+    const IR::BasicBlock* basic_block;
+
+    const std::unordered_map<IR::Temporary, ssize_t>& colouring;
+
+    std::list<AssemblyInstruction>& result;
+  };
+
   using AssemblyStorage =
       std::unordered_map<const IR::BasicBlock*, std::list<AssemblyInstruction>>;
-  using AssemblyGeneratorT =
-      std::function<void(const IR::Instruction&, const IR::BasicBlock*, std::list<AssemblyInstruction>&)>;
+  using AssemblyGeneratorT = std::function<void(CompileDTO)>;
 
-  constexpr static std::unordered_map<std::type_index, AssemblyGeneratorT>
-      generators_;
+  static std::unordered_map<std::type_index, AssemblyGeneratorT> generators_;
   AssemblyStorage storage_;
 
   void compile_basic_block(const IR::Function&, const IR::BasicBlock*);
@@ -35,6 +42,5 @@ class AssemblyCompiler {
  public:
   AssemblyCompiler() = default;
 };
-
 
 }  // namespace Assembly

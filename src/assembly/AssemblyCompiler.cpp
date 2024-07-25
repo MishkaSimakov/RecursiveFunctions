@@ -2,18 +2,15 @@
 
 #include "intermediate_representation/Function.h"
 
-constexpr std::unordered_map<std::type_index,
-                             Assembly::AssemblyCompiler::AssemblyGeneratorT>
-    Assembly::AssemblyCompiler::generators_ = {
+namespace Assembly {
+std::unordered_map<std::type_index, AssemblyCompiler::AssemblyGeneratorT>
+    AssemblyCompiler::generators_ = {
         {typeid(IR::Addition),
-         [](const IR::Instruction& instruction, const IR::BasicBlock* block,
-            std::list<AssemblyInstruction>& compiled) {
-          compiled.emplace_back("add");
-         }}};
+         [](CompileDTO data) { data.result.emplace_back("add"); }}};
 
-auto Assembly::AssemblyCompiler::decorate_function(
-    const std::string& name, std::list<AssemblyInstruction> body,
-    bool is_leaf) {
+auto AssemblyCompiler::decorate_function(const std::string& name,
+                                         std::list<AssemblyInstruction> body,
+                                         bool is_leaf) {
   std::list<AssemblyInstruction> result;
 
   // function label
@@ -41,15 +38,15 @@ auto Assembly::AssemblyCompiler::decorate_function(
   return result;
 }
 
-void Assembly::AssemblyCompiler::compile_basic_block(
-    const IR::Function& function, const IR::BasicBlock* block) {
+void AssemblyCompiler::compile_basic_block(const IR::Function& function,
+                                           const IR::BasicBlock* block) {
   for (auto& instruction : block->instructions) {
-    generators_[typeid(instruction)](*instruction, block);
+    // CompileDTO dto{function, block, };
+    // generators_[typeid(instruction)](*instruction, block);
   }
 }
 
-void Assembly::AssemblyCompiler::compile_function(
-    const IR::Function& function) {
+void AssemblyCompiler::compile_function(const IR::Function& function) {
   storage_.clear();
 
   function.traverse_blocks([this, &function](const IR::BasicBlock* block) {
@@ -74,9 +71,9 @@ void Assembly::AssemblyCompiler::compile_function(
       continue;
     }
 
-    if (block->children.second == nullptr) {
+    if (block->children[1] == nullptr) {
       // this is unconditional branch to another block
-      if (*next == block->children.second) {
+      if (*next == block->children[1]) {
         result.pop_back();
       }
 
@@ -86,13 +83,14 @@ void Assembly::AssemblyCompiler::compile_function(
     // this block has conditional jump
     // first instruction is jump to the first child
     // second - to the second
-    if (*next == block->children.first) {
+    if (*next == block->children[0]) {
       result.erase(std::prev(result.end(), 2));
-    } else if (*next == block->children.second) {
+    } else if (*next == block->children[1]) {
       result.pop_back();
     }
   }
 }
 
-std::vector<const IR::BasicBlock*> Assembly::AssemblyCompiler::arrange_blocks(
+std::vector<const IR::BasicBlock*> AssemblyCompiler::arrange_blocks(
     const IR::Function&) {}
+}  // namespace Assembly

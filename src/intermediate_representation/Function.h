@@ -32,12 +32,10 @@ struct Function {
     bool is_escaping() const { return is_used_in_descendants(origin_block); }
 
     bool is_used_in_descendants(const BasicBlock* block) const {
-      if (using_blocks.contains(block->children.first)) {
-        return true;
-      }
-
-      if (using_blocks.contains(block->children.second)) {
-        return true;
+      for (auto child : block->children) {
+        if (using_blocks.contains(child)) {
+          return true;
+        }
       }
 
       return false;

@@ -16,14 +16,14 @@ struct BasicBlock {
   std::list<std::unique_ptr<Instruction>> instructions;
 
   // 2 children
-  std::pair<BasicBlock*, BasicBlock*> children;
+  std::array<BasicBlock*, 2> children;
 
   // many parents
   std::vector<BasicBlock*> parents;
 
   bool is_begin() const { return parents.empty(); }
 
-  bool is_end() const { return children.first == nullptr; }
+  bool is_end() const { return children[0] == nullptr; }
 
   bool is_full() const { return !is_begin() && !is_end(); }
 };

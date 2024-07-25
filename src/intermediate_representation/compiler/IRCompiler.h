@@ -6,6 +6,7 @@
 
 #include "compilation/CompileTreeNodes.h"
 #include "intermediate_representation/BasicBlock.h"
+#include "intermediate_representation/Function.h"
 
 namespace IR {
 using std::vector, std::string, std::pair;

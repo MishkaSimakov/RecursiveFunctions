@@ -1,6 +1,6 @@
-test(a, b, c, d, e, f, h, j) = a;
-f(x) = 0;
+add(x, 0) = x;
+add(x, y + 1) = successor(add);
 
-g() = test(f(0), f(0), f(0), f(0), f(0), f(0), f(0), f(0));
+test(x) = argmin(add(x, 5));
 
-g();
+test(10);

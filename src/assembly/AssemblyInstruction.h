@@ -9,7 +9,7 @@ class AssemblyInstruction {
  public:
   template <typename... Args>
   AssemblyInstruction(std::string instruction, Args&&... strings)
-      : instruction_(instruction + " " + ((string(strings) + ", ") + ...)) {
+      : instruction_(instruction + " " + ((std::string(strings) + ", ") + ...)) {
     instruction_.pop_back();
     instruction_.pop_back();
   }

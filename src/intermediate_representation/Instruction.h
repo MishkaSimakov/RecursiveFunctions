@@ -13,6 +13,8 @@
 #include "Temporary.h"
 
 namespace IR {
+struct BasicBlock;
+
 struct Instruction {
  private:
   virtual bool equal(const Instruction&) const = 0;
@@ -156,19 +158,22 @@ struct Move final : Instruction {
 };
 
 struct Phi final : Instruction {
-  std::vector<TemporaryOrConstant> values;
+  std::vector<std::pair<BasicBlock*, TemporaryOrConstant>> values;
 
   std::string to_string() const override {
-    return fmt::format(
-        "{} = phi [{}]", result_destination,
-        fmt::join(values | std::views::transform([](TemporaryOrConstant value) {
-                    return value.to_string();
-                  }),
-                  ", "));
+    auto arguments = values | std::views::elements<1> |
+                     std::views::transform([](TemporaryOrConstant value) {
+                       return value.to_string();
+                     });
+
+    return fmt::format("{} = phi [{}]", result_destination,
+                       fmt::join(arguments, ", "));
   }
 
   std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(values);
+    // return filter_temporaries(values);
+    // TODO: think about it
+    return {};
   }
 
  private:
@@ -217,9 +222,46 @@ struct Branch final : Instruction {
   }
 };
 
+struct Load final : Instruction {
+  size_t index;
+
+  std::string to_string() const override {
+    return fmt::format("{} = load {}", result_destination, index);
+  }
+
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
+    return {};
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Load&>(instruction);
+    return index == other.index;
+  }
+};
+
+struct Store final : Instruction {
+  Temporary temporary;
+  size_t index;
+
+  std::string to_string() const override {
+    return fmt::format("store {} into {}", temporary, index);
+  }
+
+  std::vector<Temporary> get_temporaries_in_arguments() const override {
+    return {};
+  }
+
+ private:
+  bool equal(const Instruction& instruction) const override {
+    auto& other = static_cast<const Store&>(instruction);
+    return temporary == other.temporary && index == other.index;
+  }
+};
+
 // this should be after because of class declarations and other stuff...
 inline bool Instruction::has_return_value() const {
-  return !(is_of_type<Return>() || is_of_type<Branch>());
+  return !(is_of_type<Return>() || is_of_type<Branch>() || is_of_type<Store>());
 }
 
 }  // namespace IR
