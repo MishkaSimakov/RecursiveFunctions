@@ -123,11 +123,17 @@ void IR::DependenciesGraphBuilder::print_result() const {
 }
 
 IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
-    const Function& function) {
+    Function& function) {
   // std::cout << "Dependencies for " << function.name << std::endl;
 
   for (const auto& temp : function.temporaries_info | std::views::keys) {
-    result_.add_temporary(temp);
+    if (temp.index < function.arguments_count) {
+      result_.add_temporary(
+          temp, 0,
+          std::pair{temp.index, TemporaryDependenciesGraph::kInfinity});
+    } else {
+      result_.add_temporary(temp);
+    }
   }
 
   for (size_t i = 0; i < function.arguments_count; ++i) {

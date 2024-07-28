@@ -1,6 +1,6 @@
 set(CoreModuleDirectories
-        log preprocessor lexis syntax optimizations compilation
-        execution intermediate_representation assembly
+        . log preprocessor lexis syntax optimizations compilation
+        execution intermediate_representation assembly passes
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)

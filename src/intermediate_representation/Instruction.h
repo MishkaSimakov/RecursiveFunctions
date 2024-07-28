@@ -6,14 +6,42 @@
 #include <algorithm>
 #include <ranges>
 #include <string>
-#include <type_traits>
 #include <typeinfo>
 #include <vector>
 
 #include "Temporary.h"
 
 namespace IR {
+#define INSTRUCTION_ACCEPT_VISITOR()                        \
+  void accept(InstructionVisitor& visitor) const override { \
+    visitor.visit(*this);                                   \
+  }
+#define INSTRUCTION_VISITOR_VISIT(T) virtual void visit(const T&) = 0;
+
 struct BasicBlock;
+struct FunctionCall;
+struct Addition;
+struct Subtraction;
+struct Move;
+struct Phi;
+struct Return;
+struct Branch;
+struct Load;
+struct Store;
+
+struct InstructionVisitor {
+  INSTRUCTION_VISITOR_VISIT(FunctionCall);
+  INSTRUCTION_VISITOR_VISIT(Addition);
+  INSTRUCTION_VISITOR_VISIT(Subtraction);
+  INSTRUCTION_VISITOR_VISIT(Move);
+  INSTRUCTION_VISITOR_VISIT(Phi);
+  INSTRUCTION_VISITOR_VISIT(Return);
+  INSTRUCTION_VISITOR_VISIT(Branch);
+  INSTRUCTION_VISITOR_VISIT(Load);
+  INSTRUCTION_VISITOR_VISIT(Store);
+
+  virtual ~InstructionVisitor();
+};
 
 struct Instruction {
  private:
@@ -70,6 +98,8 @@ struct Instruction {
 
   bool has_return_value() const;
 
+  virtual void accept(InstructionVisitor& visitor) const = 0;
+
   virtual ~Instruction() = default;
 };
 
@@ -89,6 +119,8 @@ struct FunctionCall final : Instruction {
   std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(arguments);
   }
+
+  INSTRUCTION_ACCEPT_VISITOR();
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -110,6 +142,8 @@ struct Addition final : Instruction {
     return filter_temporaries(left, right);
   }
 
+  INSTRUCTION_ACCEPT_VISITOR();
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Addition&>(instruction);
@@ -130,6 +164,8 @@ struct Subtraction final : Instruction {
     return filter_temporaries(left, right);
   }
 
+  INSTRUCTION_ACCEPT_VISITOR();
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Subtraction&>(instruction);
@@ -148,6 +184,8 @@ struct Move final : Instruction {
   std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(source);
   }
+
+  INSTRUCTION_ACCEPT_VISITOR();
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -176,6 +214,8 @@ struct Phi final : Instruction {
     return {};
   }
 
+  INSTRUCTION_ACCEPT_VISITOR();
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Phi&>(instruction);
@@ -194,6 +234,8 @@ struct Return final : Instruction {
   std::vector<Temporary> get_temporaries_in_arguments() const override {
     return filter_temporaries(value);
   }
+
+  INSTRUCTION_ACCEPT_VISITOR();
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -215,6 +257,8 @@ struct Branch final : Instruction {
     return filter_temporaries(value);
   }
 
+  INSTRUCTION_ACCEPT_VISITOR();
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Branch&>(instruction);
@@ -232,6 +276,8 @@ struct Load final : Instruction {
   std::vector<Temporary> get_temporaries_in_arguments() const override {
     return {};
   }
+
+  INSTRUCTION_ACCEPT_VISITOR();
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -251,6 +297,8 @@ struct Store final : Instruction {
   std::vector<Temporary> get_temporaries_in_arguments() const override {
     return {};
   }
+
+  INSTRUCTION_ACCEPT_VISITOR();
 
  private:
   bool equal(const Instruction& instruction) const override {

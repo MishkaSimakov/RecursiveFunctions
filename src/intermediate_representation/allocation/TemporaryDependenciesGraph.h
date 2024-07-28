@@ -48,7 +48,16 @@ class TemporaryDependenciesGraph {
  public:
   struct TemporaryInfo {
     Temporary temporary;
-    double spill_cost;
+    double spill_cost = 0;
+
+    std::pair<ssize_t, double> desired_color = {0, 0};
+
+    explicit TemporaryInfo(Temporary temp) : temporary(temp) {}
+    TemporaryInfo(Temporary temp, double spill_cost,
+                  std::pair<ssize_t, double> desired_color)
+        : temporary(temp),
+          spill_cost(spill_cost),
+          desired_color(std::move(desired_color)) {}
   };
 
   std::vector<TemporaryInfo> temporaries;
@@ -63,17 +72,19 @@ class TemporaryDependenciesGraph {
     edges[second_index][first_index] = same_color_cost;
   }
 
-  size_t add_temporary(Temporary temporary) {
-    auto itr = std::find_if(temporaries.begin(), temporaries.end(),
-                            [temporary](TemporaryInfo& info) {
-                              return info.temporary == temporary;
-                            });
+  size_t add_temporary(auto&&... args) {
+    TemporaryInfo info(std::forward<decltype(args)>(args)...);
+    auto temp = info.temporary;
+
+    auto itr = std::ranges::find_if(
+        temporaries,
+        [temp](const TemporaryInfo& info) { return info.temporary == temp; });
 
     if (itr != temporaries.end()) {
       return itr - temporaries.begin();
     }
 
-    temporaries.push_back(TemporaryInfo{temporary, 0});
+    temporaries.push_back(std::move(info));
 
     size_t count = temporaries.size();
     edges.emplace_back(count);

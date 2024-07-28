@@ -78,6 +78,6 @@ class DependenciesGraphBuilder {
  public:
   DependenciesGraphBuilder() = default;
 
-  TemporaryDependenciesGraph operator()(const Function&);
+  TemporaryDependenciesGraph operator()(Function&);
 };
 }  // namespace IR

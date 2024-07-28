@@ -5,10 +5,11 @@
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
 #include "execution/debug/DebugBytecodeExecutor.h"
-#include "intermediate_representation/Printer.h"
-#include "intermediate_representation/allocation/RegisterAllocator.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
-#include "intermediate_representation/optimizations/Optimizer.h"
+#include "passes/PassManager.h"
+#include "passes/liveness/LivenessPass.h"
+#include "passes/phi_elimination/PhiEliminationPass.h"
+#include "passes/print/PrintPass.h"
 
 using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -153,11 +154,12 @@ class Main {
       // generate intermediate representation
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
-      IR::RegisterAllocator allocator;
-      allocator.apply(ir);
+      Passes::PassManager pass_manager(ir);
+      pass_manager.register_pass<Passes::LivenessPass>();
+      pass_manager.register_pass<Passes::PhiEliminationPass>();
+      pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
-      IR::Printer printer;
-      printer.print(ir);
+      pass_manager.apply();
 
       // auto instructions = compiler.get_result();
       //

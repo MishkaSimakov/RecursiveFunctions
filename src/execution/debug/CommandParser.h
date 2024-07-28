@@ -4,14 +4,12 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <optional>
 #include <regex>
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
-#include <optional>
-
-#include "FunctionTraits.h"
 
 using std::string, std::map, std::vector, std::cout, std::cin, std::endl;
 

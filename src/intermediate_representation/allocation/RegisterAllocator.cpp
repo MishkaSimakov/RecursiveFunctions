@@ -1,5 +1,7 @@
 #include "RegisterAllocator.h"
 
+#include <numeric>
+
 #include "DependenciesGraphBuilder.h"
 #include "intermediate_representation/Function.h"
 
@@ -10,6 +12,16 @@ std::unordered_map<IR::Temporary, ssize_t> IR::RegisterAllocator::get_colouring(
   auto comparator = [](const ColouringT& first, const ColouringT& second) {
     return first.first < second.first;
   };
+
+  // we should sort temporaries by their desired color cost
+  // here we store permutation
+  std::vector<size_t> permutation(graph.temporaries.size());
+  std::iota(permutation.begin(), permutation.end(), 0);
+
+  std::ranges::sort(
+      permutation, [&temp = graph.temporaries](size_t a, size_t b) {
+        return temp[a].desired_color.second < temp[b].desired_color.second;
+      });
 
   std::vector<ColouringT> queue;
   ColouringT top;
@@ -27,10 +39,30 @@ std::unordered_map<IR::Temporary, ssize_t> IR::RegisterAllocator::get_colouring(
 
     queue.pop_back();
 
+    size_t current_node = permutation[colouring.size()];
+
     // we should take into account each color and spilling
-    for (size_t color = 0; color < kRegistersCount; ++color) {
+    for (size_t color = 0; color <= kRegistersCount; ++color) {
       double cost = top.first;
-      size_t current_node = colouring.size();
+      bool is_color_required = false;
+      size_t actual_color;
+
+      if (color == 0) {
+        auto [desired_color, additional_cost] =
+            graph.temporaries[current_node].desired_color;
+        if (additional_cost == 0) {
+          continue;
+        }
+
+        color = desired_color;
+        cost += additional_cost;
+
+        if (additional_cost == TemporaryDependenciesGraph::kInfinity) {
+          is_color_required = true;
+        }
+      } else {
+        actual_color = color - 1;
+      }
 
       for (size_t j = 0; j < colouring.size(); ++j) {
         // we only care aboud cost if colors are the same
@@ -38,7 +70,7 @@ std::unordered_map<IR::Temporary, ssize_t> IR::RegisterAllocator::get_colouring(
           continue;
         }
 
-        double edge_cost = graph.edges[current_node][j];
+        double edge_cost = graph.edges[current_node][permutation[j]];
 
         if (edge_cost == -TemporaryDependenciesGraph::kInfinity) {
           cost = -TemporaryDependenciesGraph::kInfinity;
@@ -57,10 +89,14 @@ std::unordered_map<IR::Temporary, ssize_t> IR::RegisterAllocator::get_colouring(
       queue.emplace_back(cost, colouring);
       std::ranges::push_heap(queue, comparator);
       colouring.pop_back();
+
+      if (color == 0 && is_color_required) {
+        break;
+      }
     }
 
     // we should consider spilling
-    double cost = top.first + graph.temporaries[colouring.size()].spill_cost;
+    double cost = top.first + graph.temporaries[current_node].spill_cost;
 
     colouring.push_back(-1);
     queue.emplace_back(cost, std::move(colouring));
@@ -150,7 +186,7 @@ void IR::RegisterAllocator::remove_phi_nodes(
 
       bool can_omit_moves = true;
 
-      for (auto [block, value] : phi_node->values) {
+      for (auto value : phi_node->values | std::views::values) {
         if (value.is_temporary() &&
             phi_node->result_destination != Temporary{value.index()}) {
           can_omit_moves = false;

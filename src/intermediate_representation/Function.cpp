@@ -66,10 +66,9 @@ void IR::Function::calculate_escaping_temporaries() {
   calculate_escaping_recursively(begin_block, {}, used_blocks);
 }
 
-void IR::Function::traverse_blocks(
-    std::function<void(const BasicBlock*)> callable) const {
-  std::stack<const BasicBlock*> blocks_to_process;
-  std::unordered_set<const BasicBlock*> visited;
+void IR::Function::traverse_blocks(std::function<void(BasicBlock*)> callable) {
+  std::stack<BasicBlock*> blocks_to_process;
+  std::unordered_set<BasicBlock*> visited;
 
   for (auto block : end_blocks) {
     visited.insert(block);
@@ -77,7 +76,7 @@ void IR::Function::traverse_blocks(
   }
 
   while (!blocks_to_process.empty()) {
-    const BasicBlock* block = blocks_to_process.top();
+    BasicBlock* block = blocks_to_process.top();
 
     bool ready = true;
     for (auto parent : block->parents) {

@@ -74,6 +74,6 @@ struct Function {
   }
 
   // traverse all basic blocks in such order that when one block is calculated
-  void traverse_blocks(std::function<void(const BasicBlock*)> callable) const;
+  void traverse_blocks(std::function<void(BasicBlock*)> callable);
 };
 }  // namespace IR
