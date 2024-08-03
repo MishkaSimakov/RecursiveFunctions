@@ -199,10 +199,8 @@ void IR::RegisterAllocator::remove_phi_nodes(
           continue;
         }
 
-        auto move_instruction = std::make_unique<Move>();
-        move_instruction->result_destination = phi_node->result_destination;
-        move_instruction->source = value;
-
+        auto move_instruction =
+            std::make_unique<Move>(phi_node->result_destination, value);
         block->instructions.push_back(std::move(move_instruction));
       }
 

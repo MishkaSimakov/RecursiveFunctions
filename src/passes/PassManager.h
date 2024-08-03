@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Pass.h"
+#include "analysis/AnalysisManager.h"
 #include "intermediate_representation/BasicBlock.h"
 #include "liveness/LiveTemporariesStorage.h"
 
@@ -18,7 +19,9 @@ class PassManager {
   IR::Program& program;
   LiveTemporariesStorage live_storage;
 
-  PassManager(IR::Program& program): program(program) {}
+  Analysis::AnalysisManager analysis_manager;
+
+  PassManager(IR::Program& program) : program(program) {}
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<Pass, T> &&

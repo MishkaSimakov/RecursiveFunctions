@@ -1,9 +1,6 @@
 #pragma once
 
 #include "compilation/CompileTreeBuilder.h"
-#include "compilation/Instructions.h"
-#include "compilation/bytecode/BytecodeCompiler.h"
-#include "execution/BytecodeExecutor.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "log/Logger.h"
 #include "preprocessor/FileSource.h"

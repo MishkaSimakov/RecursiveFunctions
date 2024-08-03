@@ -1,6 +1,6 @@
+s(x) = successor(x);
+
 add(x, 0) = x;
-add(x, y + 1) = successor(add);
+add(x, y + 1) = s(add);
 
-test(x) = argmin(add(x, 5));
-
-test(10);
+add(2, 2);

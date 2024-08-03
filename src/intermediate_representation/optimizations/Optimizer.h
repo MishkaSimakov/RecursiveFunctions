@@ -1,9 +1,10 @@
 #pragma once
-#include <unordered_set>
 #include <functional>
+#include <unordered_set>
 
 #include "intermediate_representation/BasicBlock.h"
 #include "intermediate_representation/Function.h"
+#include "intermediate_representation/Program.h"
 
 namespace IR {
 class Optimizer {
@@ -22,7 +23,7 @@ class Optimizer {
 
     std::invoke(callable, *block);
 
-    for (auto child: block->children) {
+    for (auto child : block->children) {
       apply_to_each_block_recursively(child, callable, used);
     }
   }

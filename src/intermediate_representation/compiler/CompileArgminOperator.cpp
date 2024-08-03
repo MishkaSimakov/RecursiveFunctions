@@ -1,9 +1,8 @@
 #include "IRCompiler.h"
 
 namespace IR {
-void IRCompiler::visit(const ArgminCallNode& node) {
-  FunctionCall argmin_call;
-  argmin_call.name = "argmin";
+void IRCompiler::visit(const ArgminOperatorNode& node) {
+  FunctionCall argmin_call(Temporary{}, ArgminOperatorNode::operator_name);
   compiled_calls_stack_.push(std::move(argmin_call));
 
   // we allocate 2 temporaries for the sake of ssa
@@ -17,23 +16,21 @@ void IRCompiler::visit(const ArgminCallNode& node) {
   result_->children[0] = loop_block;
   result_ = loop_block;
 
-  auto phi_node = std::make_unique<Phi>();
+  auto phi_node = std::make_unique<Phi>(asterisk_temporary_);
   phi_node->result_destination = asterisk_temporary_;
   phi_node->values.emplace_back(previous, TemporaryOrConstant::constant(0));
   phi_node->values.emplace_back(loop_block, other_asterisk_temporary);
 
   loop_block->instructions.push_back(std::move(phi_node));
 
-  node.wrapped_call->accept(*this);
+  node.wrapped->accept(*this);
 
   // asterisk += 1
-  auto add_instruction = std::make_unique<Addition>();
-  add_instruction->result_destination = other_asterisk_temporary;
-  add_instruction->left = asterisk_temporary_;
-  add_instruction->right = TemporaryOrConstant::constant(1);
-
   auto insert_itr = std::prev(result_->instructions.end());
-  result_->instructions.insert(insert_itr, std::move(add_instruction));
+  result_->instructions.insert(
+      insert_itr,
+      std::make_unique<Addition>(other_asterisk_temporary, asterisk_temporary_,
+                                 TemporaryOrConstant::constant(1)));
 
   // returning block
   auto end_block = current_function_->add_block();

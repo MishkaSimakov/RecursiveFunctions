@@ -4,14 +4,14 @@
 
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
-#include "execution/debug/DebugBytecodeExecutor.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
 #include "passes/PassManager.h"
+#include "passes/inline/InlinePass.h"
 #include "passes/liveness/LivenessPass.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
 
-using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
+using Compilation::CompileTreeBuilder;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
 
 namespace Cli {
@@ -143,20 +143,15 @@ class Main {
           RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
 
       CompileTreeBuilder compile_tree_builder;
-      for (auto& [name, args_count] : BytecodeCompiler::internal_functions) {
-        compile_tree_builder.add_internal_function(name, args_count);
-      }
-
-      BytecodeCompiler compiler;
       auto compile_tree = compile_tree_builder.build(*syntax_tree);
-      compiler.visit(*compile_tree);
 
       // generate intermediate representation
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
       Passes::PassManager pass_manager(ir);
-      pass_manager.register_pass<Passes::LivenessPass>();
-      pass_manager.register_pass<Passes::PhiEliminationPass>();
+      // pass_manager.register_pass<Passes::LivenessPass>();
+      pass_manager.register_pass<Passes::InlinePass>();
+      // pass_manager.register_pass<Passes::PhiEliminationPass>();
       pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
       pass_manager.apply();

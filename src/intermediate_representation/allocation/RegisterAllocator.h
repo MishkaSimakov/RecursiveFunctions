@@ -7,6 +7,7 @@
 #include "TemporaryDependenciesGraph.h"
 #include "intermediate_representation/BasicBlock.h"
 #include "intermediate_representation/Function.h"
+#include "intermediate_representation/Program.h"
 
 namespace IR {
 class RegisterAllocator {

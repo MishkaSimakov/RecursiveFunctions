@@ -10,11 +10,8 @@ void IR::CommonElimination::apply(BasicBlock& block) {
         continue;
       }
 
-      auto move_instruction = std::make_unique<Move>();
-      move_instruction->result_destination = (*second)->result_destination;
-      move_instruction->source = (*first)->result_destination;
-
-      *second = std::move(move_instruction);
+      *second = std::make_unique<Move>((*second)->result_destination,
+                                       (*first)->result_destination);
     }
   }
 }

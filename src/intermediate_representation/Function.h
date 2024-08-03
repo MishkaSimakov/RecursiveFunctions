@@ -1,7 +1,7 @@
 #pragma once
 
-#include <deque>
 #include <functional>
+#include <list>
 #include <unordered_set>
 
 #include "BasicBlock.h"
@@ -43,10 +43,11 @@ struct Function {
   };
 
   std::string name;
-  std::deque<BasicBlock> basic_blocks;
+  std::list<BasicBlock> basic_blocks;
   BasicBlock* begin_block;
   size_t arguments_count;
   std::vector<BasicBlock*> end_blocks;
+  bool is_recursive;
 
   // it is guaranteed that ALL temporaries are contained inside the variable
   std::unordered_map<Temporary, TemporariesInfo> temporaries_info;
@@ -68,7 +69,22 @@ struct Function {
     return &basic_blocks.back();
   }
 
+  size_t get_max_temporary_index() const {
+    size_t temporary_index = 0;
+    for (const auto& temp : temporaries_info | std::views::keys) {
+      if (temp.index > temporary_index) {
+        temporary_index = temp.index;
+      }
+    }
+
+    return temporary_index;
+  }
+
   void finalize() {
+    temporaries_info.clear();
+    end_blocks.clear();
+    is_recursive = false;
+
     calculate_end_blocks();
     calculate_escaping_temporaries();
   }

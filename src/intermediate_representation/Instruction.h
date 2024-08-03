@@ -4,6 +4,7 @@
 #include <fmt/ranges.h>
 
 #include <algorithm>
+#include <unordered_map>
 #include <ranges>
 #include <string>
 #include <typeinfo>
@@ -43,6 +44,15 @@ struct InstructionVisitor {
   virtual ~InstructionVisitor();
 };
 
+template <typename T>
+concept ContainsTemporary =
+    std::same_as<T, Temporary> || std::same_as<T, TemporaryOrConstant>;
+
+template <typename T>
+concept RangeOrValueContainingTemporary =
+    std::ranges::range<T> && ContainsTemporary<std::ranges::range_value_t<T>> ||
+    ContainsTemporary<T>;
+
 struct Instruction {
  private:
   virtual bool equal(const Instruction&) const = 0;
@@ -64,6 +74,31 @@ struct Instruction {
   }
 
   template <typename T>
+  static void replace_temporaries_helper(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map,
+      T& value) {
+    if constexpr (std::is_same_v<Temporary, T>) {
+      auto itr = temp_map.find(value);
+
+      if (itr != temp_map.end()) {
+        value.index = itr->second.index();
+      }
+    } else if constexpr (std::is_same_v<TemporaryOrConstant, std::decay_t<T>>) {
+      if (!value.is_constant) {
+        auto itr = temp_map.find(Temporary{value.index()});
+
+        if (itr != temp_map.end()) {
+          value = itr->second;
+        }
+      }
+    } else {
+      for (auto& temp : value) {
+        replace_temporaries_helper(temp_map, temp);
+      }
+    }
+  }
+
+  template <typename T>
     requires std::is_base_of_v<Instruction, T>
   bool is_of_type() const {
     return typeid(*this) == typeid(T);
@@ -71,12 +106,7 @@ struct Instruction {
 
  protected:
   template <typename... Args>
-    requires(
-        (std::is_same_v<std::decay_t<Args>, Temporary> ||
-         std::is_same_v<std::decay_t<Args>, TemporaryOrConstant> ||
-         std::is_same_v<std::decay_t<Args>, std::vector<TemporaryOrConstant>> ||
-         std::is_same_v<std::decay_t<Args>, std::vector<Temporary>>) &&
-        ...)
+    requires(RangeOrValueContainingTemporary<std::decay_t<Args>> && ...)
   static std::vector<Temporary> filter_temporaries(Args&&... args) {
     std::vector<Temporary> result;
 
@@ -85,8 +115,21 @@ struct Instruction {
     return result;
   }
 
+  template <typename... Args>
+    requires(RangeOrValueContainingTemporary<Args> && ...)
+  static void filter_and_replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map,
+      Args&... args) {
+    (replace_temporaries_helper(temp_map, args), ...);
+  }
+
  public:
   Temporary result_destination;
+
+  Instruction() = default;
+
+  explicit Instruction(Temporary result_destination)
+      : result_destination(result_destination) {}
 
   virtual std::string to_string() const = 0;
 
@@ -98,7 +141,12 @@ struct Instruction {
 
   bool has_return_value() const;
 
+  virtual std::unique_ptr<Instruction> clone() const = 0;
+
   virtual void accept(InstructionVisitor& visitor) const = 0;
+
+  virtual void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map) = 0;
 
   virtual ~Instruction() = default;
 };
@@ -106,6 +154,10 @@ struct Instruction {
 struct FunctionCall final : Instruction {
   std::string name;
   std::vector<TemporaryOrConstant> arguments;
+
+  FunctionCall(Temporary result_destination, const std::string& name,
+               const std::vector<TemporaryOrConstant>& arguments = {})
+      : Instruction(result_destination), name(name), arguments(arguments) {}
 
   std::string to_string() const override {
     return fmt::format("{} = call {}({})", result_destination, name,
@@ -122,6 +174,16 @@ struct FunctionCall final : Instruction {
 
   INSTRUCTION_ACCEPT_VISITOR();
 
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<FunctionCall>(result_destination, name, arguments);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, arguments);
+  }
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const FunctionCall&>(instruction);
@@ -131,8 +193,12 @@ struct FunctionCall final : Instruction {
 };
 
 struct Addition final : Instruction {
-  Temporary left;
+  TemporaryOrConstant left;
   TemporaryOrConstant right;
+
+  Addition(Temporary result_destination, TemporaryOrConstant left,
+           TemporaryOrConstant right)
+      : Instruction(result_destination), left(left), right(right) {}
 
   std::string to_string() const override {
     return fmt::format("{} = add {} {}", result_destination, left, right);
@@ -144,6 +210,16 @@ struct Addition final : Instruction {
 
   INSTRUCTION_ACCEPT_VISITOR();
 
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Addition>(result_destination, left, right);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, left, right);
+  }
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Addition&>(instruction);
@@ -153,8 +229,12 @@ struct Addition final : Instruction {
 };
 
 struct Subtraction final : Instruction {
-  Temporary left;
+  TemporaryOrConstant left;
   TemporaryOrConstant right;
+
+  Subtraction(Temporary result_destination, TemporaryOrConstant left,
+              TemporaryOrConstant right)
+      : Instruction(result_destination), left(left), right(right) {}
 
   std::string to_string() const override {
     return fmt::format("{} = sub {} {}", result_destination, left, right);
@@ -165,6 +245,16 @@ struct Subtraction final : Instruction {
   }
 
   INSTRUCTION_ACCEPT_VISITOR();
+
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Subtraction>(result_destination, left, right);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, left, right);
+  }
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -177,6 +267,9 @@ struct Subtraction final : Instruction {
 struct Move final : Instruction {
   TemporaryOrConstant source;
 
+  Move(Temporary result_destination, TemporaryOrConstant source)
+      : Instruction(result_destination), source(source) {}
+
   std::string to_string() const override {
     return fmt::format("{} = {}", result_destination, source);
   }
@@ -187,6 +280,16 @@ struct Move final : Instruction {
 
   INSTRUCTION_ACCEPT_VISITOR();
 
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Move>(result_destination, source);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, source);
+  }
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Move&>(instruction);
@@ -196,6 +299,7 @@ struct Move final : Instruction {
 };
 
 struct Phi final : Instruction {
+  // index of BB in function BBs vector / temporary from this block
   std::vector<std::pair<BasicBlock*, TemporaryOrConstant>> values;
 
   std::string to_string() const override {
@@ -215,6 +319,25 @@ struct Phi final : Instruction {
   }
 
   INSTRUCTION_ACCEPT_VISITOR();
+
+  Phi(Temporary result_destination,
+      const std::vector<std::pair<BasicBlock*, TemporaryOrConstant>>& values =
+          {})
+      : Instruction(result_destination), values(values) {}
+
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Phi>(result_destination, values);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination);
+
+    for (auto& temp : values | std::views::elements<1>) {
+      filter_and_replace_temporaries(temp_map, temp);
+    }
+  }
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -236,6 +359,18 @@ struct Return final : Instruction {
   }
 
   INSTRUCTION_ACCEPT_VISITOR();
+
+  Return(TemporaryOrConstant value) : value(value) {}
+
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Return>(value);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, value);
+  }
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -259,6 +394,18 @@ struct Branch final : Instruction {
 
   INSTRUCTION_ACCEPT_VISITOR();
 
+  Branch(TemporaryOrConstant value) : value(value) {}
+
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Branch>(value);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, value);
+  }
+
  private:
   bool equal(const Instruction& instruction) const override {
     auto& other = static_cast<const Branch&>(instruction);
@@ -278,6 +425,19 @@ struct Load final : Instruction {
   }
 
   INSTRUCTION_ACCEPT_VISITOR();
+
+  Load(Temporary result_destination, size_t index)
+      : Instruction(result_destination), index(index) {}
+
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Load>(result_destination, index);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination);
+  }
 
  private:
   bool equal(const Instruction& instruction) const override {
@@ -299,6 +459,19 @@ struct Store final : Instruction {
   }
 
   INSTRUCTION_ACCEPT_VISITOR();
+
+  Store(Temporary temporary, size_t index)
+      : temporary(temporary), index(index) {}
+
+  std::unique_ptr<Instruction> clone() const override {
+    return std::make_unique<Store>(temporary, index);
+  }
+
+  void replace_temporaries(
+      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
+      override {
+    filter_and_replace_temporaries(temp_map, result_destination, temporary);
+  }
 
  private:
   bool equal(const Instruction& instruction) const override {

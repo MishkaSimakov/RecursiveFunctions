@@ -1,6 +1,5 @@
 #include "Function.h"
 
-#include <iostream>
 #include <stack>
 
 std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
@@ -50,6 +49,16 @@ std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
 
 void IR::Function::calculate_end_blocks() {
   for (auto& block : basic_blocks) {
+    if (!is_recursive) {
+      for (auto& instruction : block.instructions) {
+        auto* call = dynamic_cast<const FunctionCall*>(instruction.get());
+
+        if (call != nullptr && call->name == name) {
+          is_recursive = true;
+        }
+      }
+    }
+
     if (block.is_end()) {
       end_blocks.push_back(&block);
     }

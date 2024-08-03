@@ -4,8 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "Instructions.h"
-
 using std::vector, std::unique_ptr, std::string;
 
 #define ACCEPT_VISITOR()                                     \
@@ -20,8 +18,8 @@ struct ProgramNode;
 struct FunctionDefinitionNode;
 struct RecursiveFunctionDefinitionNode;
 struct RecursionParameterNode;
-struct ArgminCallNode;
-struct InternalFunctionDefinitionNode;
+struct ArgminOperatorNode;
+struct SuccessorOperatorNode;
 struct ConstantNode;
 struct VariableNode;
 struct AsteriskNode;
@@ -34,8 +32,8 @@ class CompileTreeVisitor {
   COMPILE_NODE_TYPE(FunctionDefinitionNode);
   COMPILE_NODE_TYPE(RecursiveFunctionDefinitionNode);
   COMPILE_NODE_TYPE(RecursionParameterNode);
-  COMPILE_NODE_TYPE(ArgminCallNode);
-  COMPILE_NODE_TYPE(InternalFunctionDefinitionNode);
+  COMPILE_NODE_TYPE(ArgminOperatorNode);
+  COMPILE_NODE_TYPE(SuccessorOperatorNode);
   COMPILE_NODE_TYPE(ConstantNode);
   COMPILE_NODE_TYPE(VariableNode);
   COMPILE_NODE_TYPE(AsteriskNode);
@@ -99,9 +97,10 @@ struct RecursionParameterNode final : VariableNode {
   ACCEPT_VISITOR();
 };
 
-struct InternalFunctionDefinitionNode final
-    : BaseFunctionDefinitionCompileNode {
-  using BaseFunctionDefinitionCompileNode::BaseFunctionDefinitionCompileNode;
+struct SuccessorOperatorNode final : CompileNode {
+  constexpr static auto operator_name = "successor";
+
+  unique_ptr<CompileNode> wrapped;
 
   ACCEPT_VISITOR();
 };
@@ -135,8 +134,10 @@ struct SelfCallNode final : CompileNode {
   ACCEPT_VISITOR();
 };
 
-struct ArgminCallNode final : CompileNode {
-  unique_ptr<CompileNode> wrapped_call;
+struct ArgminOperatorNode final : CompileNode {
+  constexpr static auto operator_name = "argmin";
+
+  unique_ptr<CompileNode> wrapped;
 
   ACCEPT_VISITOR();
 };

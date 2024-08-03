@@ -27,11 +27,8 @@ void Passes::PhiEliminationPass::process_block(IR::Function& function,
         continue;
       }
 
-      auto move_instruction = std::make_unique<IR::Move>();
-      move_instruction->result_destination = phi_node->result_destination;
-      move_instruction->source = value;
-
-      block->instructions.push_back(std::move(move_instruction));
+      block->instructions.push_back(
+          std::make_unique<IR::Move>(phi_node->result_destination, value));
     }
 
     itr = instructions.erase(itr);

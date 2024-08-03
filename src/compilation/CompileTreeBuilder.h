@@ -23,8 +23,6 @@ class CompileTreeBuilder {
   vector<unique_ptr<CompileNode>> functions_;
   unique_ptr<CompileNode> call_;
 
-  constexpr static auto kArgminFunctionName = "argmin";
-
   struct ValueCompilationNodeBuilderParameters {
     const SyntaxNode* current_function_definition;
     bool is_inside_call_statement;
@@ -73,9 +71,13 @@ class CompileTreeBuilder {
       const SyntaxNode& syntax_node,
       const ValueCompilationNodeBuilderParameters& parameters);
 
-  unique_ptr<CompileNode> build_argmin_call_compile_node(
+  unique_ptr<CompileNode> build_argmin_operator_compile_node(
       const SyntaxNode& syntax_node,
       ValueCompilationNodeBuilderParameters parameters);
+
+  unique_ptr<CompileNode> build_successor_operator_compile_node(
+      const SyntaxNode& syntax_node,
+      const ValueCompilationNodeBuilderParameters& parameters);
 
   unique_ptr<CompileNode> build_function_call_compile_node(
       const SyntaxNode& syntax_node,
@@ -112,8 +114,6 @@ class CompileTreeBuilder {
       FunctionType function_type);
 
  public:
-  void add_internal_function(string name, size_t arguments_count);
-
   unique_ptr<ProgramNode> build(const SyntaxNode& syntax_tree_root);
 };
 }  // namespace Compilation

@@ -1,10 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <deque>
 #include <list>
 #include <memory>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "Instruction.h"
 
@@ -12,8 +11,10 @@ namespace IR {
 struct Function;
 
 struct BasicBlock {
+  using InstructionsListT = std::list<std::unique_ptr<Instruction>>;
+
   // instructions
-  std::list<std::unique_ptr<Instruction>> instructions;
+  InstructionsListT instructions;
 
   // 2 children
   std::array<BasicBlock*, 2> children;
@@ -26,9 +27,15 @@ struct BasicBlock {
   bool is_end() const { return children[0] == nullptr; }
 
   bool is_full() const { return !is_begin() && !is_end(); }
-};
 
-struct Program {
-  std::vector<Function> functions;
+  BasicBlock copy_instructions() const {
+    BasicBlock copy;
+
+    for (auto& instruction : instructions) {
+      copy.instructions.push_back(instruction->clone());
+    }
+
+    return copy;
+  }
 };
 }  // namespace IR

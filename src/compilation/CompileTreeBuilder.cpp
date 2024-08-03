@@ -65,7 +65,7 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_variable_compile_node(
   }
 }
 
-unique_ptr<CompileNode> CompileTreeBuilder::build_argmin_call_compile_node(
+unique_ptr<CompileNode> CompileTreeBuilder::build_argmin_operator_compile_node(
     const SyntaxNode& syntax_node,
     ValueCompilationNodeBuilderParameters parameters) {
   if (parameters.is_inside_argmin_call) {
@@ -73,15 +73,33 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_argmin_call_compile_node(
   }
 
   if (syntax_node.children.size() != 1) {
-    throw std::runtime_error("Argmin called with wrong count of arguments.");
+    throw std::runtime_error(
+        "Argmin operator used with wrong count of arguments.");
   }
 
   const auto& wrapped_value = *syntax_node.children[0];
 
-  auto node = std::make_unique<ArgminCallNode>();
+  auto node = std::make_unique<ArgminOperatorNode>();
   parameters.is_inside_argmin_call = true;
 
-  node->wrapped_call = build_value_compile_node(wrapped_value, parameters);
+  node->wrapped = build_value_compile_node(wrapped_value, parameters);
+
+  return node;
+}
+
+unique_ptr<CompileNode>
+CompileTreeBuilder::build_successor_operator_compile_node(
+    const SyntaxNode& syntax_node,
+    const ValueCompilationNodeBuilderParameters& parameters) {
+  if (syntax_node.children.size() != 1) {
+    throw std::runtime_error(
+        "Successor operator used with wrong count of arguments.");
+  }
+
+  const auto& wrapped_value = *syntax_node.children[0];
+
+  auto node = std::make_unique<SuccessorOperatorNode>();
+  node->wrapped = build_value_compile_node(wrapped_value, parameters);
 
   return node;
 }
@@ -91,8 +109,11 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_function_call_compile_node(
     const ValueCompilationNodeBuilderParameters& parameters) {
   const string& function_name = syntax_node.value;
 
-  if (function_name == kArgminFunctionName) {
-    return build_argmin_call_compile_node(syntax_node, parameters);
+  if (function_name == ArgminOperatorNode::operator_name) {
+    return build_argmin_operator_compile_node(syntax_node, parameters);
+  }
+  if (function_name == SuccessorOperatorNode::operator_name) {
+    return build_successor_operator_compile_node(syntax_node, parameters);
   }
 
   auto& children = syntax_node.children;
@@ -264,12 +285,6 @@ void CompileTreeBuilder::complete_recursive_function_definition(
 
     node.general_case = std::move(value_compile_node);
   }
-}
-
-void CompileTreeBuilder::add_internal_function(string name,
-                                               size_t arguments_count) {
-  construct_definition_node<InternalFunctionDefinitionNode>(name,
-                                                            arguments_count);
 }
 
 unique_ptr<ProgramNode> CompileTreeBuilder::build(

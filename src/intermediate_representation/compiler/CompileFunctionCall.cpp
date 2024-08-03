@@ -4,10 +4,8 @@ namespace IR {
 void IRCompiler::visit(const FunctionCallNode& node) {
   auto scratch_temporary = get_next_temporary();
 
-  FunctionCall instruction;
+  FunctionCall instruction(scratch_temporary, node.name);
 
-  instruction.result_destination = scratch_temporary;
-  instruction.name = node.name;
   instruction.arguments.reserve(node.arguments.size());
 
   compiled_calls_stack_.push(std::move(instruction));
@@ -18,6 +16,7 @@ void IRCompiler::visit(const FunctionCallNode& node) {
 
   result_->instructions.push_back(
       std::make_unique<FunctionCall>(compiled_calls_stack_.top()));
+
   compiled_calls_stack_.pop();
 
   assign_or_pass_as_argument(scratch_temporary);
