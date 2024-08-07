@@ -5,8 +5,8 @@ void IRCompiler::visit(const RecursiveFunctionDefinitionNode& node) {
   wrap_with_function(node.name, node.arguments_count, [&node, this] {
     auto* condition_block = result_;
 
-    condition_block->instructions.push_back(std::make_unique<Branch>(
-        TemporaryOrConstant::temporary(node.get_recursion_parameter_index())));
+    condition_block->instructions.push_back(std::make_unique<Branch>(Value(
+        node.get_recursion_parameter_index(), ValueType::VIRTUAL_REGISTER)));
 
     recursion_parameter_temporary_ = get_next_temporary();
 
@@ -19,8 +19,9 @@ void IRCompiler::visit(const RecursiveFunctionDefinitionNode& node) {
     node.general_case->accept(*this);
 
     Subtraction subtraction(recursion_parameter_temporary_,
-                            Temporary{node.get_recursion_parameter_index()},
-                            TemporaryOrConstant::constant(1));
+                            Value(node.get_recursion_parameter_index(),
+                                  ValueType::VIRTUAL_REGISTER),
+                            Value(1, ValueType::CONSTANT));
 
     general_case->instructions.push_front(
         std::make_unique<Subtraction>(subtraction));

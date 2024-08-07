@@ -11,7 +11,7 @@ namespace IR {
 struct Function;
 
 struct BasicBlock {
-  using InstructionsListT = std::list<std::unique_ptr<Instruction>>;
+  using InstructionsListT = std::list<std::unique_ptr<BaseInstruction>>;
 
   // instructions
   InstructionsListT instructions;

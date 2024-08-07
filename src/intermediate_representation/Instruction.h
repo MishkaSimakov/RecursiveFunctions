@@ -4,19 +4,59 @@
 #include <fmt/ranges.h>
 
 #include <algorithm>
-#include <unordered_map>
 #include <ranges>
 #include <string>
 #include <typeinfo>
+#include <unordered_map>
 #include <vector>
 
-#include "Temporary.h"
+#include "Value.h"
+
+template <bool is_empty, typename T>
+struct PossiblyEmptyStorage {};
+
+template <typename T>
+struct PossiblyEmptyStorage<false, T> {
+  T value;
+
+  explicit PossiblyEmptyStorage(T value) : value(value) {}
+
+  bool operator==(const PossiblyEmptyStorage&) const = default;
+
+  operator T() { return value; }
+  operator T() const { return value; }
+
+  bool operator==(const T& other) const { return value == other; }
+};
+
+// fmt library helpers
+template <bool is_empty, typename T>
+struct fmt::formatter<PossiblyEmptyStorage<is_empty, T>> {
+  template <typename ParseContext>
+  constexpr auto parse(ParseContext& ctx) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(PossiblyEmptyStorage<is_empty, T> value,
+              FormatContext& ctx) const {
+    if constexpr (is_empty) {
+      return fmt::format_to(ctx.out(), "empty");
+    } else {
+      return fmt::format_to(ctx.out(), "{}", value.value);
+    }
+  }
+};
 
 namespace IR {
-#define INSTRUCTION_ACCEPT_VISITOR()                        \
-  void accept(InstructionVisitor& visitor) const override { \
-    visitor.visit(*this);                                   \
+#define INSTRUCTION_MEMBERS()                                      \
+  void accept(InstructionVisitor& visitor) const override {        \
+    visitor.visit(*this);                                          \
+  }                                                                \
+  std::unique_ptr<BaseInstruction> clone() const override {        \
+    return std::make_unique<std::decay_t<decltype(*this)>>(*this); \
   }
+
 #define INSTRUCTION_VISITOR_VISIT(T) virtual void visit(const T&) = 0;
 
 struct BasicBlock;
@@ -29,6 +69,7 @@ struct Return;
 struct Branch;
 struct Load;
 struct Store;
+struct SwapWithStack;
 
 struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(FunctionCall);
@@ -40,449 +81,338 @@ struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(Branch);
   INSTRUCTION_VISITOR_VISIT(Load);
   INSTRUCTION_VISITOR_VISIT(Store);
+  INSTRUCTION_VISITOR_VISIT(SwapWithStack);
 
   virtual ~InstructionVisitor();
 };
 
-template <typename T>
-concept ContainsTemporary =
-    std::same_as<T, Temporary> || std::same_as<T, TemporaryOrConstant>;
-
-template <typename T>
-concept RangeOrValueContainingTemporary =
-    std::ranges::range<T> && ContainsTemporary<std::ranges::range_value_t<T>> ||
-    ContainsTemporary<T>;
-
-struct Instruction {
+struct BaseInstruction {
  private:
-  virtual bool equal(const Instruction&) const = 0;
-
   template <typename T>
-  static void filter_temporaries_inserter(std::vector<Temporary>& result,
-                                          T&& value) {
-    if constexpr (std::is_same_v<Temporary, std::decay_t<T>>) {
-      result.emplace_back(value);
-    } else if constexpr (std::is_same_v<TemporaryOrConstant, std::decay_t<T>>) {
-      if (!value.is_constant) {
-        result.emplace_back(Temporary{value.index()});
+  static void replace_values_helper_helper(
+      const std::unordered_map<Value, Value>& mapping, T& arg) {
+    if constexpr (std::is_same_v<Value, T>) {
+      auto itr = mapping.find(arg);
+
+      if (itr != mapping.end()) {
+        arg = itr->second;
       }
     } else {
-      for (auto temp : value) {
-        filter_temporaries_inserter(result, temp);
+      for (Value value : arg) {
+        replace_values_helper_helper(mapping, value);
       }
     }
-  }
-
-  template <typename T>
-  static void replace_temporaries_helper(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map,
-      T& value) {
-    if constexpr (std::is_same_v<Temporary, T>) {
-      auto itr = temp_map.find(value);
-
-      if (itr != temp_map.end()) {
-        value.index = itr->second.index();
-      }
-    } else if constexpr (std::is_same_v<TemporaryOrConstant, std::decay_t<T>>) {
-      if (!value.is_constant) {
-        auto itr = temp_map.find(Temporary{value.index()});
-
-        if (itr != temp_map.end()) {
-          value = itr->second;
-        }
-      }
-    } else {
-      for (auto& temp : value) {
-        replace_temporaries_helper(temp_map, temp);
-      }
-    }
-  }
-
-  template <typename T>
-    requires std::is_base_of_v<Instruction, T>
-  bool is_of_type() const {
-    return typeid(*this) == typeid(T);
   }
 
  protected:
-  template <typename... Args>
-    requires(RangeOrValueContainingTemporary<std::decay_t<Args>> && ...)
-  static std::vector<Temporary> filter_temporaries(Args&&... args) {
-    std::vector<Temporary> result;
+  template <std::ranges::range R>
+    requires std::same_as<std::ranges::range_value_t<R>, Value>
+  static std::vector<Value> filter_arguments_helper(R&& range, ValueType type) {
+    std::vector<Value> result;
 
-    (filter_temporaries_inserter(result, std::forward<decltype(args)>(args)),
-     ...);
+    for (Value value : range) {
+      if (value.type == type) {
+        result.push_back(value);
+      }
+    }
+
     return result;
   }
 
   template <typename... Args>
-    requires(RangeOrValueContainingTemporary<Args> && ...)
-  static void filter_and_replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map,
-      Args&... args) {
-    (replace_temporaries_helper(temp_map, args), ...);
+  static void replace_values_helper(
+      const std::unordered_map<Value, Value>& mapping, Args&&... args) {
+    (replace_values_helper_helper(mapping, args), ...);
   }
 
  public:
-  Temporary result_destination;
-
-  Instruction() = default;
-
-  explicit Instruction(Temporary result_destination)
-      : result_destination(result_destination) {}
+  template <typename T>
+    requires std::is_base_of_v<BaseInstruction, T>
+  bool is_of_type() const {
+    return typeid(*this) == typeid(T);
+  }
 
   virtual std::string to_string() const = 0;
 
-  bool operator==(const Instruction& other) const {
-    return typeid(*this) == typeid(other) && equal(other);
-  }
+  virtual bool operator==(const BaseInstruction& other) const = 0;
 
-  virtual std::vector<Temporary> get_temporaries_in_arguments() const = 0;
+  virtual std::vector<Value> filter_arguments(ValueType type) const = 0;
 
-  bool has_return_value() const;
+  virtual bool has_return_value() const = 0;
 
-  virtual std::unique_ptr<Instruction> clone() const = 0;
+  virtual Value get_return_value() const = 0;
 
+  virtual std::unique_ptr<BaseInstruction> clone() const = 0;
   virtual void accept(InstructionVisitor& visitor) const = 0;
 
-  virtual void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map) = 0;
+  virtual void replace_values(
+      const std::unordered_map<Value, Value>& mapping) = 0;
 
-  virtual ~Instruction() = default;
+  virtual ~BaseInstruction() = default;
 };
 
-struct FunctionCall final : Instruction {
-  std::string name;
-  std::vector<TemporaryOrConstant> arguments;
+template <size_t NArgs, bool use_return>
+struct Instruction : BaseInstruction {
+  [[no_unique_address]] PossiblyEmptyStorage<!use_return, Value> return_value;
+  std::array<Value, NArgs> arguments;
 
-  FunctionCall(Temporary result_destination, const std::string& name,
-               const std::vector<TemporaryOrConstant>& arguments = {})
-      : Instruction(result_destination), name(name), arguments(arguments) {}
+  Instruction(Value return_value, std::array<Value, NArgs> arguments)
+    requires use_return
+      : return_value(return_value), arguments(std::move(arguments)) {}
 
-  std::string to_string() const override {
-    return fmt::format("{} = call {}({})", result_destination, name,
-                       fmt::join(arguments | std::views::transform(
-                                                 [](TemporaryOrConstant value) {
-                                                   return value.to_string();
-                                                 }),
-                                 ", "));
+  Instruction(std::array<Value, NArgs> arguments)
+    requires(!use_return)
+      : arguments(std::move(arguments)) {}
+
+  std::vector<Value> filter_arguments(ValueType type) const override {
+    return filter_arguments_helper(arguments, type);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(arguments);
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<FunctionCall>(result_destination, name, arguments);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, arguments);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const FunctionCall&>(instruction);
-
-    return name == other.name && arguments == other.arguments;
-  }
-};
-
-struct Addition final : Instruction {
-  TemporaryOrConstant left;
-  TemporaryOrConstant right;
-
-  Addition(Temporary result_destination, TemporaryOrConstant left,
-           TemporaryOrConstant right)
-      : Instruction(result_destination), left(left), right(right) {}
-
-  std::string to_string() const override {
-    return fmt::format("{} = add {} {}", result_destination, left, right);
-  }
-
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(left, right);
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Addition>(result_destination, left, right);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, left, right);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Addition&>(instruction);
-
-    return left == other.left && right == other.right;
-  }
-};
-
-struct Subtraction final : Instruction {
-  TemporaryOrConstant left;
-  TemporaryOrConstant right;
-
-  Subtraction(Temporary result_destination, TemporaryOrConstant left,
-              TemporaryOrConstant right)
-      : Instruction(result_destination), left(left), right(right) {}
-
-  std::string to_string() const override {
-    return fmt::format("{} = sub {} {}", result_destination, left, right);
-  }
-
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(left, right);
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Subtraction>(result_destination, left, right);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, left, right);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Subtraction&>(instruction);
-
-    return left == other.left && right == other.right;
-  }
-};
-
-struct Move final : Instruction {
-  TemporaryOrConstant source;
-
-  Move(Temporary result_destination, TemporaryOrConstant source)
-      : Instruction(result_destination), source(source) {}
-
-  std::string to_string() const override {
-    return fmt::format("{} = {}", result_destination, source);
-  }
-
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(source);
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Move>(result_destination, source);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, source);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Move&>(instruction);
-
-    return source == other.source;
-  }
-};
-
-struct Phi final : Instruction {
-  // index of BB in function BBs vector / temporary from this block
-  std::vector<std::pair<BasicBlock*, TemporaryOrConstant>> values;
-
-  std::string to_string() const override {
-    auto arguments = values | std::views::elements<1> |
-                     std::views::transform([](TemporaryOrConstant value) {
-                       return value.to_string();
-                     });
-
-    return fmt::format("{} = phi [{}]", result_destination,
-                       fmt::join(arguments, ", "));
-  }
-
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    // return filter_temporaries(values);
-    // TODO: think about it
-    return {};
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  Phi(Temporary result_destination,
-      const std::vector<std::pair<BasicBlock*, TemporaryOrConstant>>& values =
-          {})
-      : Instruction(result_destination), values(values) {}
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Phi>(result_destination, values);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination);
-
-    for (auto& temp : values | std::views::elements<1>) {
-      filter_and_replace_temporaries(temp_map, temp);
+  void replace_values(
+      const std::unordered_map<Value, Value>& mapping) override {
+    if constexpr (use_return) {
+      return replace_values_helper(mapping, return_value.value, arguments);
+    } else {
+      return replace_values_helper(mapping, arguments);
     }
   }
 
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Phi&>(instruction);
+  bool operator==(const BaseInstruction& other) const override {
+    if (typeid(*this) != typeid(other)) {
+      return false;
+    }
 
-    return values == other.values;
+    auto& casted = static_cast<const Instruction&>(other);
+
+    if constexpr (use_return) {
+      if (casted.return_value != return_value) {
+        return false;
+      }
+    }
+
+    return casted.arguments == arguments;
   }
+
+  Value get_return_value() const override {
+    if constexpr (use_return) {
+      return return_value;
+    } else {
+      throw std::runtime_error(
+          "Instruction has not return value but was asked to present it");
+    }
+  }
+
+  bool has_return_value() const override { return use_return; }
 };
 
-struct Return final : Instruction {
-  TemporaryOrConstant value;
+template <bool use_return>
+struct VariadicInstruction : BaseInstruction {
+ protected:
+  std::string join_arguments() const {
+    return fmt::format(
+        "{}", fmt::join(arguments | std::views::transform([](Value value) {
+                          return value.to_string();
+                        }),
+                        ", "));
+  }
+
+ public:
+  [[no_unique_address]] PossiblyEmptyStorage<!use_return, Value> return_value;
+  std::vector<Value> arguments;
+
+  VariadicInstruction(Value return_value, std::vector<Value> arguments)
+    requires use_return
+      : return_value(return_value), arguments(std::move(arguments)) {}
+
+  VariadicInstruction(std::vector<Value> arguments)
+    requires(!use_return)
+      : arguments(std::move(arguments)) {}
+
+  std::vector<Value> filter_arguments(ValueType type) const override {
+    return filter_arguments_helper(arguments, type);
+  }
+
+  void replace_values(
+      const std::unordered_map<Value, Value>& mapping) override {
+    if constexpr (use_return) {
+      return replace_values_helper(mapping, return_value.value, arguments);
+    } else {
+      return replace_values_helper(mapping, arguments);
+    }
+  }
+
+  Value get_return_value() const override {
+    if constexpr (use_return) {
+      return return_value;
+    } else {
+      throw std::runtime_error(
+          "Instruction has not return value but was asked to present it");
+    }
+  }
+
+  bool operator==(const BaseInstruction& other) const override {
+    if (typeid(*this) != typeid(other)) {
+      return false;
+    }
+
+    auto& casted = static_cast<const VariadicInstruction&>(other);
+
+    if constexpr (use_return) {
+      if (casted.return_value != return_value) {
+        return false;
+      }
+    }
+
+    return casted.arguments == arguments;
+  }
+
+  bool has_return_value() const override { return use_return; }
+};
+
+struct FunctionCall final : VariadicInstruction<true> {
+  std::string name;
+
+  FunctionCall(Value return_value, const std::string& name,
+               const std::vector<Value>& arguments = {})
+      : VariadicInstruction(return_value, arguments), name(name) {}
 
   std::string to_string() const override {
-    return fmt::format("return {}", value);
+    return fmt::format("{} = call {}({})", return_value, name,
+                       join_arguments());
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(value);
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  Return(TemporaryOrConstant value) : value(value) {}
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Return>(value);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, value);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Return&>(instruction);
-    return value == other.value;
-  }
+  INSTRUCTION_MEMBERS()
 };
 
-struct Branch final : Instruction {
-  TemporaryOrConstant value;
+struct Addition final : Instruction<2, true> {
+  Addition(Value return_value, Value left, Value right)
+      : Instruction(return_value, {left, right}) {}
 
+  std::string to_string() const override {
+    return fmt::format("{} = add {} {}", return_value, arguments[0],
+                       arguments[1]);
+  }
+
+  INSTRUCTION_MEMBERS();
+};
+
+struct Subtraction final : Instruction<2, true> {
+  Subtraction(Value return_value, Value left, Value right)
+      : Instruction(return_value, {left, right}) {}
+
+  std::string to_string() const override {
+    return fmt::format("{} = sub {} {}", return_value, arguments[0],
+                       arguments[1]);
+  }
+
+  INSTRUCTION_MEMBERS();
+};
+
+struct Move final : Instruction<1, true> {
+  Move(Value return_value, Value source)
+      : Instruction(return_value, {source}) {}
+
+  std::string to_string() const override {
+    return fmt::format("{} = {}", return_value, arguments[0]);
+  }
+
+  INSTRUCTION_MEMBERS();
+};
+
+struct Phi final : BaseInstruction {
+  Value return_value;
+
+  // index of BB in function BBs vector / temporary from this block
+  std::vector<std::pair<BasicBlock*, Value>> parents;
+
+  auto values_view() { return parents | std::views::elements<1>; }
+  auto values_view() const { return parents | std::views::elements<1>; }
+
+  std::string to_string() const override {
+    auto arguments = values_view() | std::views::transform([](Value value) {
+                       return value.to_string();
+                     });
+
+    return fmt::format("{} = phi [{}]", return_value,
+                       fmt::join(arguments, ", "));
+  }
+
+  bool operator==(const BaseInstruction& other) const override {
+    auto* other_phi = dynamic_cast<const Phi*>(&other);
+
+    if (other_phi == nullptr) {
+      return false;
+    }
+
+    return return_value == other_phi->return_value;
+  }
+
+  std::vector<Value> filter_arguments(ValueType type) const override {
+    return filter_arguments_helper(values_view(), type);
+  }
+
+  void replace_values(
+      const std::unordered_map<Value, Value>& mapping) override {
+    replace_values_helper(mapping, return_value, values_view());
+  }
+
+  bool has_return_value() const override { return true; }
+
+  INSTRUCTION_MEMBERS()
+
+  Value get_return_value() const override { return return_value; }
+};
+
+struct Return final : Instruction<1, false> {
+  using Instruction::Instruction;
+
+  explicit Return(Value value) : Instruction({value}) {}
+
+  std::string to_string() const override {
+    return fmt::format("return {}", arguments[0]);
+  }
+
+  INSTRUCTION_MEMBERS();
+};
+
+struct Branch final : Instruction<1, false> {
   // TODO: some kind of condition must be here
+  explicit Branch(Value condition_value) : Instruction({condition_value}) {}
 
   std::string to_string() const override {
-    return fmt::format("branch {} == 0 ?", value);
+    return fmt::format("branch", arguments[0]);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return filter_temporaries(value);
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  Branch(TemporaryOrConstant value) : value(value) {}
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Branch>(value);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, value);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Branch&>(instruction);
-    return value == other.value;
-  }
+  INSTRUCTION_MEMBERS();
 };
 
-struct Load final : Instruction {
-  size_t index;
+struct Load final : Instruction<1, true> {
+  Load(Value return_value, Value stack_index)
+      : Instruction(return_value, {stack_index}) {
+    if (stack_index.type != ValueType::STACK_INDEX) {
+      throw std::runtime_error("Load instruction argument must be stack index");
+    }
+  }
 
   std::string to_string() const override {
-    return fmt::format("{} = load {}", result_destination, index);
+    return fmt::format("{} = load {}", return_value, arguments[0]);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return {};
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  Load(Temporary result_destination, size_t index)
-      : Instruction(result_destination), index(index) {}
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Load>(result_destination, index);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Load&>(instruction);
-    return index == other.index;
-  }
+  INSTRUCTION_MEMBERS();
 };
 
-struct Store final : Instruction {
-  Temporary temporary;
-  size_t index;
+struct Store final : Instruction<2, false> {
+  Store(Value value, Value stack_index) : Instruction({value, stack_index}) {
+    if (stack_index.type != ValueType::STACK_INDEX) {
+      throw std::runtime_error(
+          "Store instruction second argument must be valid stack index");
+    }
+  }
 
   std::string to_string() const override {
-    return fmt::format("store {} into {}", temporary, index);
+    return fmt::format("store {} into {}", arguments[0], arguments[1]);
   }
 
-  std::vector<Temporary> get_temporaries_in_arguments() const override {
-    return {};
-  }
-
-  INSTRUCTION_ACCEPT_VISITOR();
-
-  Store(Temporary temporary, size_t index)
-      : temporary(temporary), index(index) {}
-
-  std::unique_ptr<Instruction> clone() const override {
-    return std::make_unique<Store>(temporary, index);
-  }
-
-  void replace_temporaries(
-      const std::unordered_map<Temporary, TemporaryOrConstant>& temp_map)
-      override {
-    filter_and_replace_temporaries(temp_map, result_destination, temporary);
-  }
-
- private:
-  bool equal(const Instruction& instruction) const override {
-    auto& other = static_cast<const Store&>(instruction);
-    return temporary == other.temporary && index == other.index;
-  }
+  INSTRUCTION_MEMBERS();
 };
-
-// this should be after because of class declarations and other stuff...
-inline bool Instruction::has_return_value() const {
-  return !(is_of_type<Return>() || is_of_type<Branch>() || is_of_type<Store>());
-}
-
 }  // namespace IR

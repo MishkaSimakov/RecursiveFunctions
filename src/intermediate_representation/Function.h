@@ -5,13 +5,13 @@
 #include <unordered_set>
 
 #include "BasicBlock.h"
-#include "Temporary.h"
+#include "Value.h"
 
 namespace IR {
 struct Function {
  private:
-  std::unordered_set<Temporary> calculate_escaping_recursively(
-      BasicBlock* block, std::unordered_set<Temporary> used_above,
+  std::unordered_set<Value> calculate_escaping_recursively(
+      BasicBlock* block, std::unordered_set<Value> used_above,
       std::unordered_set<const BasicBlock*>& used);
 
   void calculate_end_blocks();
@@ -28,6 +28,8 @@ struct Function {
 
     // block where temporary is first (and last because of ssa) assigned
     BasicBlock* origin_block;
+
+    std::optional<size_t> index_in_stack;
 
     bool is_escaping() const { return is_used_in_descendants(origin_block); }
 
@@ -50,7 +52,7 @@ struct Function {
   bool is_recursive;
 
   // it is guaranteed that ALL temporaries are contained inside the variable
-  std::unordered_map<Temporary, TemporariesInfo> temporaries_info;
+  std::unordered_map<Value, TemporariesInfo> temporaries_info;
 
   explicit Function(std::string name)
       : name(std::move(name)), begin_block(nullptr), arguments_count(0) {}
@@ -72,12 +74,24 @@ struct Function {
   size_t get_max_temporary_index() const {
     size_t temporary_index = 0;
     for (const auto& temp : temporaries_info | std::views::keys) {
-      if (temp.index > temporary_index) {
-        temporary_index = temp.index;
+      if (temp.value > temporary_index) {
+        temporary_index = temp.value;
       }
     }
 
     return temporary_index;
+  }
+
+  size_t get_next_stack_index() const {
+    size_t max_index = 0;
+
+    for (auto& [temp, info] : temporaries_info) {
+      if (info.index_in_stack.has_value()) {
+        max_index = std::max(max_index, info.index_in_stack.value());
+      }
+    }
+
+    return max_index;
   }
 
   void finalize() {

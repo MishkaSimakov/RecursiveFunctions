@@ -36,11 +36,11 @@ void Passes::PrintPass::before_function(IR::Function& function) {
 
   os_ << function.name << "(";
 
-  auto arguments = std::views::iota(0) |
-                   std::views::take(function.arguments_count) |
-                   std::views::transform([](size_t index) {
-                     return IR::Temporary{index}.to_string();
-                   });
+  auto arguments =
+      std::views::iota(0) | std::views::take(function.arguments_count) |
+      std::views::transform([](size_t index) {
+        return IR::Value(index, IR::ValueType::VIRTUAL_REGISTER).to_string();
+      });
 
   os_ << fmt::format("{}", fmt::join(arguments, ", ")) << "):\n";
 }

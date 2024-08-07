@@ -1,9 +1,9 @@
 #pragma once
 
+#include <iostream>
 #include <memory>
 #include <stack>
 #include <type_traits>
-#include <iostream>
 
 #include "compilation/CompileTreeNodes.h"
 #include "intermediate_representation/BasicBlock.h"
@@ -22,8 +22,8 @@ class IRCompiler final : public CompileTreeVisitor {
   std::stack<FunctionCall> compiled_calls_stack_;
 
   size_t current_temporary_index_{0};
-  Temporary recursion_parameter_temporary_{};
-  Temporary asterisk_temporary_{};
+  Value recursion_parameter_temporary_{};
+  Value asterisk_temporary_{};
 
   template <typename Callable>
   void wrap_with_function(std::string name, size_t arguments_count,
@@ -43,11 +43,11 @@ class IRCompiler final : public CompileTreeVisitor {
     program_.functions.push_back(std::move(func));
   }
 
-  Temporary get_next_temporary() {
-    return Temporary{current_temporary_index_++};
+  Value get_next_temporary() {
+    return Value(current_temporary_index_++, ValueType::VIRTUAL_REGISTER);
   }
 
-  void assign_or_pass_as_argument(TemporaryOrConstant value) {
+  void assign_or_pass_as_argument(Value value) {
     if (compiled_calls_stack_.empty()) {
       result_->instructions.push_back(std::make_unique<Return>(value));
       return;
@@ -63,7 +63,7 @@ class IRCompiler final : public CompileTreeVisitor {
     if (top_call.name == SuccessorOperatorNode::operator_name) {
       auto temp = get_next_temporary();
       result_->instructions.push_back(std::make_unique<Addition>(
-          temp, value, TemporaryOrConstant::constant(1)));
+          temp, value, Value(1, ValueType::CONSTANT)));
 
       compiled_calls_stack_.pop();
       assign_or_pass_as_argument(temp);

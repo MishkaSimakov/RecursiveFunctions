@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "intermediate_representation/Temporary.h"
+#include "intermediate_representation/Value.h"
 
 namespace IR {
 class TemporaryDependenciesGraph {
@@ -47,13 +47,13 @@ class TemporaryDependenciesGraph {
 
  public:
   struct TemporaryInfo {
-    Temporary temporary;
+    Value temporary;
     double spill_cost = 0;
 
     std::pair<ssize_t, double> desired_color = {0, 0};
 
-    explicit TemporaryInfo(Temporary temp) : temporary(temp) {}
-    TemporaryInfo(Temporary temp, double spill_cost,
+    explicit TemporaryInfo(Value temp) : temporary(temp) {}
+    TemporaryInfo(Value temp, double spill_cost,
                   std::pair<ssize_t, double> desired_color)
         : temporary(temp),
           spill_cost(spill_cost),
@@ -63,8 +63,7 @@ class TemporaryDependenciesGraph {
   std::vector<TemporaryInfo> temporaries;
   std::vector<std::vector<double>> edges;
 
-  void add_dependency(Temporary first, Temporary second,
-                      double same_color_cost) {
+  void add_dependency(Value first, Value second, double same_color_cost) {
     size_t first_index = add_temporary(first);
     size_t second_index = add_temporary(second);
 

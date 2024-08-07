@@ -15,7 +15,7 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
   for (auto parent : block->parents) {
     auto live = storage_.get_live(parent, Position::AFTER);
 
-    for (Temporary temp : live) {
+    for (Value temp : live) {
       const auto& info = function.temporaries_info.find(temp)->second;
       if (info.using_blocks.contains(block)) {
         storage_.add_live(block, Position::BEFORE, temp);
@@ -28,10 +28,11 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
                     storage_.get_live(block, Position::BEFORE));
 
   // find last usage for each variable that do not escape
-  std::unordered_map<Temporary, Instruction*> last_usage;
+  std::unordered_map<Value, BaseInstruction*> last_usage;
 
   for (auto& instruction : instructions | std::views::reverse) {
-    for (auto temporary : instruction->get_temporaries_in_arguments()) {
+    for (auto temporary :
+         instruction->filter_arguments(ValueType::VIRTUAL_REGISTER)) {
       auto itr = function.temporaries_info.find(temporary);
 
       if (itr->second.is_used_in_descendants(block)) {
@@ -46,7 +47,7 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
   // last usage to the first instruction in the block
   if (block == function.begin_block) {
     for (size_t i = 0; i < function.arguments_count; ++i) {
-      Temporary temporary{i};
+      Value temporary(i, ValueType::VIRTUAL_REGISTER);
 
       auto& info = function.temporaries_info.find(temporary)->second;
       if (!info.is_escaping() && !last_usage.contains(temporary)) {
@@ -65,7 +66,7 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
     auto live_temporaries = storage_.get_live(itr->get(), Position::BEFORE);
 
     // remove dead temporaries
-    std::erase_if(live_temporaries, [&last_usage, itr](Temporary temp) {
+    std::erase_if(live_temporaries, [&last_usage, itr](Value temp) {
       auto last_usage_itr = last_usage.find(temp);
 
       return last_usage_itr != last_usage.end() &&
@@ -74,7 +75,7 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
 
     // add return value to live temporaries
     if ((*itr)->has_return_value()) {
-      live_temporaries.insert((*itr)->result_destination);
+      live_temporaries.insert((*itr)->get_return_value());
     }
 
     // save result after instruction
@@ -88,7 +89,7 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
 }
 
 void IR::DependenciesGraphBuilder::create_dependencies(
-    const std::unordered_set<Temporary>& temporaries) {
+    const std::unordered_set<Value>& temporaries) {
   for (auto first = temporaries.begin(); first != temporaries.end(); ++first) {
     for (auto second = std::next(first); second != temporaries.end();
          ++second) {
@@ -127,17 +128,18 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
   // std::cout << "Dependencies for " << function.name << std::endl;
 
   for (const auto& temp : function.temporaries_info | std::views::keys) {
-    if (temp.index < function.arguments_count) {
+    if (temp.value < function.arguments_count) {
       result_.add_temporary(
           temp, 0,
-          std::pair{temp.index, TemporaryDependenciesGraph::kInfinity});
+          std::pair{temp.value, TemporaryDependenciesGraph::kInfinity});
     } else {
       result_.add_temporary(temp);
     }
   }
 
   for (size_t i = 0; i < function.arguments_count; ++i) {
-    storage_.add_live(function.begin_block, Position::BEFORE, Temporary{i});
+    storage_.add_live(function.begin_block, Position::BEFORE,
+                      Value(i, ValueType::VIRTUAL_REGISTER));
   }
 
   // process each block and register live variables at each program point

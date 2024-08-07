@@ -7,7 +7,7 @@
 void Passes::LivenessPass::before_function(IR::Function& function) {
   for (size_t i = 0; i < function.arguments_count; ++i) {
     storage().add_live(function.begin_block, Position::BEFORE,
-                       IR::Temporary{i});
+                       IR::Value(i, IR::ValueType::VIRTUAL_REGISTER));
   }
 }
 
@@ -20,7 +20,7 @@ void Passes::LivenessPass::process_block(IR::Function& function,
   for (auto parent : block.parents) {
     auto live = storage().get_live(parent, Position::AFTER);
 
-    for (IR::Temporary temp : live) {
+    for (IR::Value temp : live) {
       const auto& info = function.temporaries_info.find(temp)->second;
       if (info.using_blocks.contains(&block)) {
         storage().add_live(&block, Position::BEFORE, temp);
@@ -29,10 +29,11 @@ void Passes::LivenessPass::process_block(IR::Function& function,
   }
 
   // find last usage for each variable that do not escape
-  std::unordered_map<IR::Temporary, IR::Instruction*> last_usage;
+  std::unordered_map<IR::Value, IR::BaseInstruction*> last_usage;
 
   for (auto& instruction : instructions | std::views::reverse) {
-    for (auto temporary : instruction->get_temporaries_in_arguments()) {
+    for (auto temporary :
+         instruction->filter_arguments(IR::ValueType::VIRTUAL_REGISTER)) {
       auto itr = function.temporaries_info.find(temporary);
 
       if (itr->second.is_used_in_descendants(&block)) {
@@ -47,7 +48,7 @@ void Passes::LivenessPass::process_block(IR::Function& function,
   // last usage to the first instruction in the block
   if (&block == function.begin_block) {
     for (size_t i = 0; i < function.arguments_count; ++i) {
-      IR::Temporary temporary{i};
+      IR::Value temporary(i, IR::ValueType::VIRTUAL_REGISTER);
 
       auto& info = function.temporaries_info.find(temporary)->second;
       if (!info.is_escaping() && !last_usage.contains(temporary)) {
@@ -66,7 +67,7 @@ void Passes::LivenessPass::process_block(IR::Function& function,
     auto live_temporaries = storage().get_live(itr->get(), Position::BEFORE);
 
     // remove dead temporaries
-    std::erase_if(live_temporaries, [&last_usage, itr](IR::Temporary temp) {
+    std::erase_if(live_temporaries, [&last_usage, itr](IR::Value temp) {
       auto last_usage_itr = last_usage.find(temp);
 
       return last_usage_itr != last_usage.end() &&
@@ -75,7 +76,7 @@ void Passes::LivenessPass::process_block(IR::Function& function,
 
     // add return value to live temporaries
     if ((*itr)->has_return_value()) {
-      live_temporaries.insert((*itr)->result_destination);
+      live_temporaries.insert((*itr)->get_return_value());
     }
 
     // save result after instruction

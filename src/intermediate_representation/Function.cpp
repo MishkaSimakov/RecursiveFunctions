@@ -2,8 +2,8 @@
 
 #include <stack>
 
-std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
-    BasicBlock* block, std::unordered_set<Temporary> used_above,
+std::unordered_set<IR::Value> IR::Function::calculate_escaping_recursively(
+    BasicBlock* block, std::unordered_set<Value> used_above,
     std::unordered_set<const BasicBlock*>& used) {
   if (block == nullptr || used.contains(block)) {
     return {};
@@ -11,15 +11,15 @@ std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
 
   used.insert(block);
 
-  std::unordered_set<Temporary> used_below;
+  std::unordered_set<Value> used_below;
 
   for (auto& instruction : block->instructions) {
     if (instruction->has_return_value()) {
-      used_above.emplace(instruction->result_destination);
-      used_below.emplace(instruction->result_destination);
+      auto return_value = instruction->get_return_value();
+      used_above.emplace(return_value);
+      used_below.emplace(return_value);
 
-      temporaries_info.emplace(instruction->result_destination,
-                               TemporariesInfo{{block}, block});
+      temporaries_info.emplace(return_value, TemporariesInfo{{block}, block});
     }
   }
 
@@ -35,7 +35,8 @@ std::unordered_set<IR::Temporary> IR::Function::calculate_escaping_recursively(
   }
 
   for (auto& instruction : block->instructions) {
-    for (auto temporary : instruction->get_temporaries_in_arguments()) {
+    for (auto temporary :
+         instruction->filter_arguments(ValueType::VIRTUAL_REGISTER)) {
       used_below.insert(temporary);
     }
   }
@@ -67,7 +68,7 @@ void IR::Function::calculate_end_blocks() {
 
 void IR::Function::calculate_escaping_temporaries() {
   for (size_t i = 0; i < arguments_count; ++i) {
-    temporaries_info.emplace(Temporary{i},
+    temporaries_info.emplace(Value(i, ValueType::VIRTUAL_REGISTER),
                              TemporariesInfo{{begin_block}, begin_block});
   }
 

@@ -25,16 +25,16 @@ void Passes::InlinePass::inline_function_call(
   // insert basic blocks
   auto new_blocks_start = std::prev(blocks.end());
   std::unordered_map<const IR::BasicBlock*, IR::BasicBlock*> blocks_mapping;
-  std::unordered_map<IR::Temporary, IR::TemporaryOrConstant>
-      temporaries_mapping;
+  std::unordered_map<IR::Value, IR::Value> temporaries_mapping;
 
   size_t temporary_index = function.get_max_temporary_index();
   for (auto temp : called_function.temporaries_info | std::views::keys) {
-    if (temp.index < called_function.arguments_count) {
+    if (temp.value < called_function.arguments_count) {
       // treat as argument
-      temporaries_mapping[temp] = call.arguments[temp.index];
+      temporaries_mapping[temp] = call.arguments[temp.value];
     } else {
-      temporaries_mapping[temp] = IR::Temporary{++temporary_index};
+      temporaries_mapping[temp] =
+          IR::Value(++temporary_index, IR::ValueType::VIRTUAL_REGISTER);
     }
   }
 
@@ -44,7 +44,7 @@ void Passes::InlinePass::inline_function_call(
 
     // we should update temporaries
     for (auto& instruction : copy.instructions) {
-      instruction->replace_temporaries(temporaries_mapping);
+      instruction->replace_values(temporaries_mapping);
     }
 
     blocks.emplace_back(std::move(copy));
@@ -74,31 +74,32 @@ void Passes::InlinePass::inline_function_call(
         continue;
       }
 
-      for (auto& origin : phi_node->values | std::views::keys) {
+      for (auto& origin : phi_node->parents | std::views::keys) {
         origin = blocks_mapping[origin];
       }
     }
   }
 
   if (should_insert_phi) {
-    second_part.instructions.push_front(
-        std::make_unique<IR::Phi>(call.result_destination));
+    auto phi = std::make_unique<IR::Phi>();
+    phi->return_value = call.return_value;
+    second_part.instructions.push_front(std::move(phi));
   }
 
   for (const auto end_block : called_function.end_blocks) {
     auto inserted_block = blocks_mapping[end_block];
     auto return_value =
         static_cast<IR::Return*>(inserted_block->instructions.back().get())
-            ->value;
+            ->arguments[0];
 
     inserted_block->instructions.pop_back();
 
     if (should_insert_phi) {
       static_cast<IR::Phi*>(second_part.instructions.front().get())
-          ->values.emplace_back(inserted_block, return_value);
+          ->parents.emplace_back(inserted_block, return_value);
     } else {
       inserted_block->instructions.push_back(
-          std::make_unique<IR::Move>(call.result_destination, return_value));
+          std::make_unique<IR::Move>(call.return_value, return_value));
     }
   }
 

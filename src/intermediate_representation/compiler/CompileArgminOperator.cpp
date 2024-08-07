@@ -2,7 +2,7 @@
 
 namespace IR {
 void IRCompiler::visit(const ArgminOperatorNode& node) {
-  FunctionCall argmin_call(Temporary{}, ArgminOperatorNode::operator_name);
+  FunctionCall argmin_call(Value{}, ArgminOperatorNode::operator_name);
   compiled_calls_stack_.push(std::move(argmin_call));
 
   // we allocate 2 temporaries for the sake of ssa
@@ -16,10 +16,10 @@ void IRCompiler::visit(const ArgminOperatorNode& node) {
   result_->children[0] = loop_block;
   result_ = loop_block;
 
-  auto phi_node = std::make_unique<Phi>(asterisk_temporary_);
-  phi_node->result_destination = asterisk_temporary_;
-  phi_node->values.emplace_back(previous, TemporaryOrConstant::constant(0));
-  phi_node->values.emplace_back(loop_block, other_asterisk_temporary);
+  auto phi_node = std::make_unique<Phi>();
+  phi_node->return_value = asterisk_temporary_;
+  phi_node->parents.emplace_back(previous, Value(0, ValueType::CONSTANT));
+  phi_node->parents.emplace_back(loop_block, other_asterisk_temporary);
 
   loop_block->instructions.push_back(std::move(phi_node));
 
@@ -30,7 +30,7 @@ void IRCompiler::visit(const ArgminOperatorNode& node) {
   result_->instructions.insert(
       insert_itr,
       std::make_unique<Addition>(other_asterisk_temporary, asterisk_temporary_,
-                                 TemporaryOrConstant::constant(1)));
+                                 Value(1, ValueType::CONSTANT)));
 
   // returning block
   auto end_block = current_function_->add_block();

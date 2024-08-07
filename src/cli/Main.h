@@ -10,6 +10,7 @@
 #include "passes/liveness/LivenessPass.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
+#include "passes/registers_allocation/RegisterAllocationPass.h"
 
 using Compilation::CompileTreeBuilder;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -149,9 +150,11 @@ class Main {
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
       Passes::PassManager pass_manager(ir);
-      // pass_manager.register_pass<Passes::LivenessPass>();
-      pass_manager.register_pass<Passes::InlinePass>();
-      // pass_manager.register_pass<Passes::PhiEliminationPass>();
+      pass_manager.register_pass<Passes::LivenessPass>();
+      // pass_manager.register_pass<Passes::InlinePass>();
+      pass_manager.register_pass<Passes::PhiEliminationPass>();
+
+      pass_manager.register_pass<Passes::RegisterAllocationPass>();
       pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
       pass_manager.apply();
