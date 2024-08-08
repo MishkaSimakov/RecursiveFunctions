@@ -1,4 +1,3 @@
-add(x, 0) = x;
-add(x, y + 1) = successor(add);
+#include "arithmetics"
 
-add(10000, 10000);
+sqrt(16);

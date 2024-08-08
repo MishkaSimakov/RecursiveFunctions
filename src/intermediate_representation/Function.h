@@ -77,8 +77,6 @@ struct Function {
     // block where temporary is first (and last because of ssa) assigned
     BasicBlock* origin_block;
 
-    std::optional<size_t> index_in_stack;
-
     bool is_escaping() const { return is_used_in_descendants(origin_block); }
 
     bool is_used_in_descendants(const BasicBlock* block) const {
@@ -128,18 +126,6 @@ struct Function {
     }
 
     return temporary_index;
-  }
-
-  size_t get_next_stack_index() const {
-    size_t max_index = 0;
-
-    for (auto& [temp, info] : temporaries_info) {
-      if (info.index_in_stack.has_value()) {
-        max_index = std::max(max_index, info.index_in_stack.value());
-      }
-    }
-
-    return max_index;
   }
 
   void finalize() {

@@ -270,5 +270,7 @@ void Passes::RegisterAllocationPass::apply() {
                      IR::ValueType::CALLEE_SAVED_REGISTER);
 
     apply_transformation(function, vregs_info);
+
+    function.finalize();
   }
 }

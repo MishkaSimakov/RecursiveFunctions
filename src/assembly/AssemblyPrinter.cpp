@@ -2,8 +2,9 @@
 
 #include "InstructionPrinter.h"
 
-void Assembly::AssemblyPrinter::before_function(const IR::Function& function) {
-  std::string name = mangle_function_name(function);
+void Assembly::AssemblyPrinter::before_function(
+    const InstructionContext& context) {
+  std::string name = mangle_function_name(context.function);
 
   // function label
   result.push_back(".p2align 4");
@@ -15,10 +16,30 @@ void Assembly::AssemblyPrinter::before_function(const IR::Function& function) {
   result.push_back("mov x29, sp");
 
   // store callee-saved registers
+  if (context.callee_saved_registers.empty()) {
+    return;
+  }
+
+  size_t sp_offset = context.callee_saved_registers.size();
+  sp_offset += sp_offset % 2;
+  sp_offset *= 8;
+
+  result.push_back(
+      fmt::format("sub sp, sp, {}",
+                  print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
+
+  // TODO: store 2 at once
+  for (size_t i = 0; i < context.callee_saved_registers.size(); ++i) {
+    auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
+    result.push_back(fmt::format("str {}, {}",
+                                 print_value(context.callee_saved_registers[i]),
+                                 print_value(stack_index)));
+  }
 }
 
-void Assembly::AssemblyPrinter::after_function(const IR::Function& function) {
-  if (function.name == function.entrypoint) {
+void Assembly::AssemblyPrinter::after_function(
+    const InstructionContext& context) {
+  if (context.function.name == IR::Function::entrypoint) {
     // print result
     result.push_back("sub sp, sp, #16");
     result.push_back("str x0, [sp]");
@@ -28,6 +49,25 @@ void Assembly::AssemblyPrinter::after_function(const IR::Function& function) {
     result.push_back("bl _printf");
     result.push_back("add sp, sp, #16");
     result.push_back("mov x0, #0");
+  }
+
+  // restore callee-saved registers
+  if (!context.callee_saved_registers.empty()) {
+    size_t sp_offset = context.callee_saved_registers.size();
+    sp_offset += sp_offset % 2;
+    sp_offset *= 8;
+
+    // TODO: load 2 at once
+    for (size_t i = 0; i < context.callee_saved_registers.size(); ++i) {
+      auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
+      result.push_back(fmt::format(
+          "ldr {}, {}", print_value(context.callee_saved_registers[i]),
+          print_value(stack_index)));
+    }
+
+    result.push_back(fmt::format(
+        "add sp, sp, {}",
+        print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
   }
 
   result.push_back("ldp x29, x30, [sp], #16");
@@ -44,29 +84,50 @@ std::string Assembly::AssemblyPrinter::mangle_function_name(
   return "_" + name;
 }
 
+std::string Assembly::AssemblyPrinter::print_value(IR::Value value) {
+  switch (value.type) {
+    case IR::ValueType::CONSTANT:
+      return fmt::format("#{}", value.value);
+    case IR::ValueType::VIRTUAL_REGISTER:
+      throw std::runtime_error("Too late for virtual registers");
+    case IR::ValueType::BASIC_REGISTER:
+      return fmt::format("x{}", value.value);
+    case IR::ValueType::CALLEE_SAVED_REGISTER:
+      return fmt::format("x{}", value.value + 19);
+    case IR::ValueType::STACK_INDEX:
+      return fmt::format("[sp, #{}]", value.value * 8);
+  }
+
+  throw std::runtime_error("Unknown value type");
+}
+
 std::vector<std::string> Assembly::AssemblyPrinter::print() {
   result.clear();
 
   for (auto& function : program_.functions) {
-    before_function(function);
+    InstructionContext context(function);
 
-    std::unordered_map<const IR::BasicBlock*, std::string> labels;
-    std::vector<const IR::BasicBlock*> ordering;
+    for (IR::Value value :
+         context.function.temporaries_info | std::views::keys) {
+      if (value.type == IR::ValueType::CALLEE_SAVED_REGISTER) {
+        context.callee_saved_registers.push_back(value);
+      }
+    }
 
-    function.traverse_blocks(
-        [&ordering, &labels, &function](const IR::BasicBlock* block) {
-          ordering.push_back(block);
-          labels[block] = fmt::format("{}.{}", function.name, ordering.size());
-        });
+    before_function(context);
 
-    InstructionContext context{labels, ordering, 0};
+    function.traverse_blocks([&context](const IR::BasicBlock* block) {
+      context.ordering.push_back(block);
+      context.labels[block] =
+          fmt::format("{}.{}", context.function.name, context.ordering.size());
+    });
 
-    for (size_t i = 0; i < ordering.size(); ++i) {
+    for (size_t i = 0; i < context.ordering.size(); ++i) {
       context.block_index = i;
 
-      const IR::BasicBlock* block = ordering[i];
+      const IR::BasicBlock* block = context.ordering[i];
 
-      result.push_back(labels[block] + ":");
+      result.push_back(context.labels[block] + ":");
 
       for (auto& instruction : block->instructions) {
         auto str = InstructionPrinter().apply(*instruction, context);
@@ -77,7 +138,7 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
       }
 
       if (block->is_end()) {
-        after_function(function);
+        after_function(context);
       }
     }
   }

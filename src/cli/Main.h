@@ -174,6 +174,7 @@ class Main {
 
       for (auto line : assembly) {
         file << line << "\n";
+        std::cout << line << "\n";
       }
 
       file.close();

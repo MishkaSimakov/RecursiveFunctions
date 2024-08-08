@@ -7,10 +7,16 @@
 
 namespace Assembly {
 struct InstructionContext {
-  const std::unordered_map<const IR::BasicBlock*, std::string>& labels;
-  const std::vector<const IR::BasicBlock*>& ordering;
+  std::unordered_map<const IR::BasicBlock*, std::string> labels;
+  std::vector<const IR::BasicBlock*> ordering;
 
+  const IR::Function& function;
   size_t block_index;
+
+  std::vector<IR::Value> callee_saved_registers;
+
+  explicit InstructionContext(const IR::Function& function)
+      : function(function), block_index(0) {}
 
   size_t get_block_index(const IR::BasicBlock* block) const {
     auto itr = std::ranges::find(ordering, block);
@@ -22,14 +28,16 @@ class AssemblyPrinter {
   const IR::Program& program_;
   std::vector<std::string> result;
 
-  void before_function(const IR::Function&);
-  void after_function(const IR::Function&);
+  void before_function(const InstructionContext&);
+  void after_function(const InstructionContext&);
 
  public:
   explicit AssemblyPrinter(const IR::Program& program) : program_(program) {}
 
   static std::string mangle_function_name(const IR::Function&);
   static std::string mangle_function_name(const std::string&);
+
+  static std::string print_value(IR::Value);
 
   std::vector<std::string> print();
 };
