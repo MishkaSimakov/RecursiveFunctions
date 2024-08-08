@@ -1,9 +1,22 @@
 #pragma once
+#include <string>
+#include <unordered_map>
+
 #include "intermediate_representation/Instruction.h"
 
 namespace Assembly {
+struct InstructionContext;
+
 class InstructionPrinter : IR::InstructionVisitor {
   std::string result_;
+  const InstructionContext* context_{nullptr};
+
+  static std::string format(auto&& s, auto... args) {
+    return fmt::format(fmt::runtime(std::forward<decltype(s)>(s)),
+                       print_value(args)...);
+  }
+
+  static std::string print_value(IR::Value);
 
   void visit(const IR::FunctionCall&) override;
   void visit(const IR::Addition&) override;
@@ -16,6 +29,6 @@ class InstructionPrinter : IR::InstructionVisitor {
   void visit(const IR::Store&) override;
 
  public:
-  std::string apply(const IR::BaseInstruction&);
+  std::string apply(const IR::BaseInstruction&, const InstructionContext&);
 };
 }  // namespace Assembly

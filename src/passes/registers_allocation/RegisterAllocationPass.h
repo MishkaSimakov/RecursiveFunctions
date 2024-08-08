@@ -11,7 +11,11 @@
 
 namespace Passes {
 class RegisterAllocationPass : public Pass {
-  constexpr static size_t kMaxRegistersAllowed = 16;
+  static constexpr size_t kMaxRegistersAllowed = 16;
+  static constexpr auto kTemporaryRegister =
+      IR::Value(15, IR::ValueType::BASIC_REGISTER);
+  static constexpr auto kReturnRegister =
+      IR::Value(0, IR::ValueType::BASIC_REGISTER);
 
   struct TemporaryInfo {
     IR::Value virtual_register;

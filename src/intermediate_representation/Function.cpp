@@ -1,7 +1,5 @@
 #include "Function.h"
 
-#include <stack>
-
 std::unordered_set<IR::Value> IR::Function::calculate_escaping_recursively(
     BasicBlock* block, std::unordered_set<Value> used_above,
     std::unordered_set<const BasicBlock*>& used) {
@@ -74,46 +72,4 @@ void IR::Function::calculate_escaping_temporaries() {
 
   std::unordered_set<const BasicBlock*> used_blocks;
   calculate_escaping_recursively(begin_block, {}, used_blocks);
-}
-
-void IR::Function::traverse_blocks(std::function<void(BasicBlock*)> callable) {
-  std::stack<BasicBlock*> blocks_to_process;
-  std::unordered_set<BasicBlock*> visited;
-
-  for (auto block : end_blocks) {
-    visited.insert(block);
-    blocks_to_process.push(block);
-  }
-
-  while (!blocks_to_process.empty()) {
-    BasicBlock* block = blocks_to_process.top();
-
-    bool ready = true;
-    for (auto parent : block->parents) {
-      if (!visited.contains(parent)) {
-        blocks_to_process.push(parent);
-        visited.insert(parent);
-
-        ready = false;
-      }
-    }
-
-    if (!ready) {
-      continue;
-    }
-
-    blocks_to_process.pop();
-    callable(block);
-
-    for (auto child : block->children) {
-      if (child == nullptr) {
-        continue;
-      }
-
-      if (!visited.contains(child)) {
-        blocks_to_process.push(child);
-        visited.insert(child);
-      }
-    }
-  }
 }

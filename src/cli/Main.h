@@ -4,6 +4,7 @@
 
 #include "ExceptionsHandler.h"
 #include "RecursiveFunctions.h"
+#include "assembly/AssemblyPrinter.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
 #include "passes/PassManager.h"
 #include "passes/inline/InlinePass.h"
@@ -155,32 +156,31 @@ class Main {
       pass_manager.register_pass<Passes::PhiEliminationPass>();
 
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
-      pass_manager.register_pass<Passes::PrintPass>(std::cout);
+      // pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
       pass_manager.apply();
 
-      // auto instructions = compiler.get_result();
-      //
-      // // TODO: add -o flag support
-      // if (parser.present("-o")) {
-      //   throw std::runtime_error("not supported yet.");
-      // }
-      //
-      // auto temp_dir = fs::temp_directory_path();
-      // auto output_file = temp_dir / "somestupidassembly.s";
-      //
-      // std::ofstream file(output_file);
-      //
-      // for (auto instruction : instructions) {
-      //   file << instruction.get_string() << "\n";
-      //   cout << instruction.get_string() << "\n";
-      // }
-      //
-      // file.close();
-      //
-      // auto compile_command = fmt::format("g++ {} -o test",
-      // output_file.c_str()); std::system(compile_command.c_str());
-      // std::system("./test");
+      auto assembly = Assembly::AssemblyPrinter(ir).print();
+
+      // TODO: add -o flag support
+      if (parser.present("-o")) {
+        throw std::runtime_error("not supported yet.");
+      }
+
+      auto temp_dir = fs::temp_directory_path();
+      auto output_file = temp_dir / "somestupidassembly.s";
+
+      std::ofstream file(output_file);
+
+      for (auto line : assembly) {
+        file << line << "\n";
+      }
+
+      file.close();
+
+      auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
+      std::system(compile_command.c_str());
+      std::system("./test");
 
       // bool is_debug_enabled = parser.get<bool>("debug");
       //

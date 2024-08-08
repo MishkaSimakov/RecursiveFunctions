@@ -74,7 +74,6 @@ struct Return;
 struct Branch;
 struct Load;
 struct Store;
-struct SwapWithStack;
 
 struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(FunctionCall);
@@ -86,9 +85,8 @@ struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(Branch);
   INSTRUCTION_VISITOR_VISIT(Load);
   INSTRUCTION_VISITOR_VISIT(Store);
-  INSTRUCTION_VISITOR_VISIT(SwapWithStack);
 
-  virtual ~InstructionVisitor();
+  virtual ~InstructionVisitor() = default;
 };
 
 struct BaseInstruction {

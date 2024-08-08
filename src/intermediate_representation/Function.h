@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <list>
+#include <stack>
 #include <unordered_set>
 
 #include "BasicBlock.h"
@@ -17,6 +18,53 @@ struct Function {
   void calculate_end_blocks();
 
   void calculate_escaping_temporaries();
+
+  template <typename T, typename F>
+    requires std::same_as<std::decay_t<T>, Function>
+  static void traverse_blocks_helper(T& function, F&& callable) {
+    using BB =
+        std::conditional_t<std::is_const_v<T>, const BasicBlock*, BasicBlock*>;
+
+    std::stack<BB> blocks_to_process;
+    std::unordered_set<BB> visited;
+
+    for (auto block : function.end_blocks) {
+      visited.insert(block);
+      blocks_to_process.push(block);
+    }
+
+    while (!blocks_to_process.empty()) {
+      BB block = blocks_to_process.top();
+
+      bool ready = true;
+      for (auto parent : block->parents) {
+        if (!visited.contains(parent)) {
+          blocks_to_process.push(parent);
+          visited.insert(parent);
+
+          ready = false;
+        }
+      }
+
+      if (!ready) {
+        continue;
+      }
+
+      blocks_to_process.pop();
+      callable(block);
+
+      for (auto child : block->children) {
+        if (child == nullptr) {
+          continue;
+        }
+
+        if (!visited.contains(child)) {
+          blocks_to_process.push(child);
+          visited.insert(child);
+        }
+      }
+    }
+  }
 
  public:
   static constexpr auto entrypoint = "main";
@@ -104,6 +152,16 @@ struct Function {
   }
 
   // traverse all basic blocks in such order that when one block is calculated
-  void traverse_blocks(std::function<void(BasicBlock*)> callable);
+  template <typename F>
+    requires std::invocable<F, BasicBlock*>
+  void traverse_blocks(F&& callable) {
+    traverse_blocks_helper(*this, callable);
+  }
+
+  template <typename F>
+    requires std::invocable<F, const BasicBlock*>
+  void traverse_blocks(F&& callable) const {
+    traverse_blocks_helper(*this, callable);
+  }
 };
 }  // namespace IR
