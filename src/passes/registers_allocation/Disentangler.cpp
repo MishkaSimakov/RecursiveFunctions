@@ -1,23 +1,33 @@
 #include "Disentangler.h"
 
 #include <algorithm>
-#include <deque>
-#include <unordered_map>
+
+void Passes::Disentangler::disentangle_chains(
+    std::vector<std::pair<IR::Value, IR::Value>>& moves,
+    std::deque<PermutationNode>& permutation_nodes) {
+  for (auto& node : permutation_nodes) {
+    if (node.next != nullptr) {
+      continue;
+    }
+
+    PermutationNode* current = &node;
+
+    while (current->prev != nullptr) {
+      moves.emplace_back(current->prev->value, current->value);
+      current->value = current->prev->value;
+
+      auto* next_current = current->prev;
+      current->prev->next = nullptr;
+      current->prev = nullptr;
+      current = next_current;
+    }
+  }
+}
 
 std::vector<std::pair<IR::Value, IR::Value>> Passes::Disentangler::disentangle(
     const std::vector<std::pair<IR::Value, IR::Value>>& knot,
     IR::Value temporary) {
   std::vector<std::pair<IR::Value, IR::Value>> moves;
-
-  struct PermutationNode {
-    IR::Value value;
-    PermutationNode* next{nullptr};
-    PermutationNode* prev{nullptr};
-
-    PermutationNode() = default;
-
-    explicit PermutationNode(IR::Value value) : value(value) {}
-  };
 
   std::deque<PermutationNode> permutation_nodes;
 
@@ -60,23 +70,33 @@ std::vector<std::pair<IR::Value, IR::Value>> Passes::Disentangler::disentangle(
   }
 
   // first we find and process all chains
-  for (auto& node : permutation_nodes) {
-    if (node.next != nullptr) {
-      continue;
+  disentangle_chains(moves, permutation_nodes);
+
+  // then we move nodes from loop to temporary and repeat
+  bool has_loops;
+  do {
+    has_loops = false;
+
+    for (auto& node : permutation_nodes) {
+      if (node.next == nullptr) {
+        continue;
+      }
+
+      has_loops = true;
+
+      auto temporary_node_index = get_node(temporary);
+      auto& temporary_node = permutation_nodes[temporary_node_index];
+
+      moves.emplace_back(node.value, temporary);
+      temporary_node.next = node.next;
+      node.next->prev = &temporary_node;
+      node.next = nullptr;
+
+      disentangle_chains(moves, permutation_nodes);
+
+      break;
     }
-
-    PermutationNode* current = &node;
-
-    while (current->prev != nullptr) {
-      moves.emplace_back(current->prev->value, current->value);
-      current->value = current->prev->value;
-
-      auto* next_current = current->prev;
-      current->prev->next = nullptr;
-      current->prev = nullptr;
-      current = next_current;
-    }
-  }
+  } while (has_loops);
 
   return moves;
 }

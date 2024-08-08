@@ -171,6 +171,18 @@ void Passes::RegisterAllocationPass::apply() {
       }
     }
 
+    // increase usage count for return values (they must be stored in zero
+    // register)
+    for (auto* basic_block : function.end_blocks) {
+      const auto& return_instr =
+          static_cast<const IR::Return&>(*basic_block->instructions.back());
+      IR::Value return_value = return_instr.arguments[0];
+
+      if (return_value.is_temporary()) {
+        ++vregs_info.at(return_value).registers_usage[0];
+      }
+    }
+
     // then for basic registers we must find preferred registers (because they
     // can be used in function calls and return values)
     for (auto& [temp, info] : vregs_info) {
