@@ -5,9 +5,8 @@
 #include "passes/PassManager.h"
 
 void Passes::LivenessPass::before_function(IR::Function& function) {
-  for (size_t i = 0; i < function.arguments_count; ++i) {
-    storage().add_live(function.begin_block, Position::BEFORE,
-                       IR::Value(i, IR::ValueType::VIRTUAL_REGISTER));
+  for (auto argument : function.arguments) {
+    storage().add_live(function.begin_block, Position::BEFORE, argument);
   }
 }
 
@@ -47,12 +46,10 @@ void Passes::LivenessPass::process_block(IR::Function& function,
   // special case: for function arguments that are not used in program we set
   // last usage to the first instruction in the block
   if (&block == function.begin_block) {
-    for (size_t i = 0; i < function.arguments_count; ++i) {
-      IR::Value temporary(i, IR::ValueType::VIRTUAL_REGISTER);
-
-      auto& info = function.temporaries_info.find(temporary)->second;
-      if (!info.is_escaping() && !last_usage.contains(temporary)) {
-        last_usage[temporary] = block.instructions.front().get();
+    for (auto& argument : function.arguments) {
+      auto& info = function.temporaries_info.at(argument);
+      if (!info.is_escaping() && !last_usage.contains(argument)) {
+        last_usage[argument] = block.instructions.front().get();
       }
     }
   }

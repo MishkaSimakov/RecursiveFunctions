@@ -20,12 +20,10 @@ void Passes::Spiller::spill(IR::Function& function,
   }
 
   // we should store function arguments if they were spilled
-  for (size_t i = 0; i < function.arguments_count; ++i) {
-    auto temp = IR::Value(i, IR::ValueType::VIRTUAL_REGISTER);
-
-    if (stack_indices.contains(temp)) {
+  for (auto argument: function.arguments) {
+    if (stack_indices.contains(argument)) {
       function.begin_block->instructions.push_front(
-          std::make_unique<IR::Store>(temp, stack_indices[temp]));
+          std::make_unique<IR::Store>(argument, stack_indices[argument]));
     }
   }
 

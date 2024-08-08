@@ -29,7 +29,7 @@ void Passes::InlinePass::inline_function_call(
 
   size_t temporary_index = function.get_max_temporary_index();
   for (auto temp : called_function.temporaries_info | std::views::keys) {
-    if (temp.value < called_function.arguments_count) {
+    if (temp.value < called_function.arguments.size()) {
       // treat as argument
       temporaries_mapping[temp] = call.arguments[temp.value];
     } else {

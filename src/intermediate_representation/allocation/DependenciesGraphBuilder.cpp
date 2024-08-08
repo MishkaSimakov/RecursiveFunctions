@@ -46,12 +46,10 @@ void IR::DependenciesGraphBuilder::process_block(const Function& function,
   // special case: for function arguments that are not used in program we set
   // last usage to the first instruction in the block
   if (block == function.begin_block) {
-    for (size_t i = 0; i < function.arguments_count; ++i) {
-      Value temporary(i, ValueType::VIRTUAL_REGISTER);
-
-      auto& info = function.temporaries_info.find(temporary)->second;
-      if (!info.is_escaping() && !last_usage.contains(temporary)) {
-        last_usage[temporary] = block->instructions.front().get();
+    for (auto argument : function.arguments) {
+      auto& info = function.temporaries_info.at(argument);
+      if (!info.is_escaping() && !last_usage.contains(argument)) {
+        last_usage[argument] = block->instructions.front().get();
       }
     }
   }
@@ -128,7 +126,7 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
   // std::cout << "Dependencies for " << function.name << std::endl;
 
   for (const auto& temp : function.temporaries_info | std::views::keys) {
-    if (temp.value < function.arguments_count) {
+    if (temp.value < function.arguments.size()) {
       result_.add_temporary(
           temp, 0,
           std::pair{temp.value, TemporaryDependenciesGraph::kInfinity});
@@ -137,9 +135,8 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
     }
   }
 
-  for (size_t i = 0; i < function.arguments_count; ++i) {
-    storage_.add_live(function.begin_block, Position::BEFORE,
-                      Value(i, ValueType::VIRTUAL_REGISTER));
+  for (auto argument : function.arguments) {
+    storage_.add_live(function.begin_block, Position::BEFORE, argument);
   }
 
   // process each block and register live variables at each program point

@@ -31,7 +31,9 @@ class IRCompiler final : public CompileTreeVisitor {
     requires std::is_invocable_v<Callable>
   {
     Function func(std::move(name));
-    func.arguments_count = arguments_count;
+    for (size_t i = 0; i < arguments_count; ++i) {
+      func.arguments.emplace_back(i, ValueType::VIRTUAL_REGISTER);
+    }
 
     current_temporary_index_ = arguments_count;
     current_function_ = &func;

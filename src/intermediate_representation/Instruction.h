@@ -21,6 +21,11 @@ struct PossiblyEmptyStorage<false, T> {
 
   explicit PossiblyEmptyStorage(T value) : value(value) {}
 
+  T& operator=(const T& other) {
+    value = other;
+    return value;
+  }
+
   bool operator==(const PossiblyEmptyStorage&) const = default;
 
   operator T() { return value; }
@@ -98,7 +103,7 @@ struct BaseInstruction {
         arg = itr->second;
       }
     } else {
-      for (Value value : arg) {
+      for (Value& value : arg) {
         replace_values_helper_helper(mapping, value);
       }
     }
@@ -380,7 +385,7 @@ struct Branch final : Instruction<1, false> {
   explicit Branch(Value condition_value) : Instruction({condition_value}) {}
 
   std::string to_string() const override {
-    return fmt::format("branch", arguments[0]);
+    return fmt::format("branch {} == 0?", arguments[0]);
   }
 
   INSTRUCTION_MEMBERS();

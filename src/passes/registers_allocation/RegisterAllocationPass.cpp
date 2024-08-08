@@ -7,6 +7,8 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "Disentangler.h"
+
 void Passes::RegisterAllocationPass::assign_registers(
     const std::vector<std::pair<IR::Value, TemporaryInfo*>>& temps_info,
     IR::ValueType register_type) const {
@@ -27,9 +29,10 @@ void Passes::RegisterAllocationPass::assign_registers(
       // we must check that this candidate is available
       bool allowed = true;
 
-      for (auto* dep : info->dependencies) {
-        if (dep->assigned_register.has_value() &&
-            dep->assigned_register.value() == value) {
+      for (auto dep : info->dependencies) {
+        auto& dep_info = vregs_info.at(dep);
+        if (dep_info.assigned_register.has_value() &&
+            dep_info.assigned_register.value() == value) {
           allowed = false;
           break;
         }
@@ -50,25 +53,99 @@ void Passes::RegisterAllocationPass::assign_registers(
 void Passes::RegisterAllocationPass::apply_transformation(
     IR::Function& function,
     const std::unordered_map<IR::Value, TemporaryInfo>& temps_info) {
-  // if function arguments were assigned to different registers we must first
-  // move them into correct registers
+  constexpr IR::Value temporary_register =
+      IR::Value(15, IR::ValueType::BASIC_REGISTER);
+
+  std::unordered_map<IR::Value, IR::Value> replacement_map;
+
+  for (auto& [temp, info] : temps_info) {
+    if (!info.assigned_register.has_value()) {
+      throw std::runtime_error(
+          "Register allocation pass failed to assign registers to temporaries");
+    }
+
+    replacement_map[temp] = info.assigned_register.value();
+  }
+
+  // std::cout << function.name << std::endl;
+  for (auto [temp, dest] : replacement_map) {
+    std::cout << fmt::format("{} -> {}\n", temp, dest);
+  }
 
   for (auto& block : function.basic_blocks) {
-    for (auto& instruction : block.instructions) {
+    for (auto itr = block.instructions.begin(); itr != block.instructions.end();
+         ++itr) {
+      auto& instruction = *itr;
+
+      // first, we change every instruction argument
+      instruction->replace_values(replacement_map);
+
+      // then if it is function we must move arguments and return value into
+      // correct registers (from 0, 1, 2, ... to whatever was assigned to them)
+      auto* call = dynamic_cast<IR::FunctionCall*>(instruction.get());
+
+      if (call == nullptr) {
+        continue;
+      }
+
+      // used to resolve loops in permutation
+      std::vector<std::pair<IR::Value, IR::Value>> knot;
+      for (size_t i = 0; i < call->arguments.size(); ++i) {
+        auto required_register = IR::Value(i, IR::ValueType::BASIC_REGISTER);
+        knot.emplace_back(call->arguments[i], required_register);
+
+        call->arguments[i] = required_register;
+      }
+
+      auto moves = Disentangler().disentangle(knot, temporary_register);
+
+      for (auto [from, to] : moves) {
+        block.instructions.insert(itr, std::make_unique<IR::Move>(to, from));
+      }
+
+      constexpr auto return_register =
+          IR::Value(0, IR::ValueType::BASIC_REGISTER);
+
+      if (call->return_value != return_register) {
+        block.instructions.insert(
+            std::next(itr),
+            std::make_unique<IR::Move>(call->return_value, return_register));
+
+        call->return_value = return_register;
+      }
     }
+  }
+
+  // we must disentangle function arguments
+  std::vector<std::pair<IR::Value, IR::Value>> knot;
+  for (auto& argument : function.arguments) {
+    IR::Value argument_copy = argument;
+    argument.type = IR::ValueType::BASIC_REGISTER;
+    knot.emplace_back(argument, replacement_map.at(argument_copy));
+  }
+
+  auto moves = Disentangler().disentangle(knot, temporary_register);
+
+  auto first_instruction_itr = function.begin_block->instructions.begin();
+  for (auto [from, to] : moves) {
+    function.begin_block->instructions.insert(
+        first_instruction_itr, std::make_unique<IR::Move>(to, from));
   }
 }
 
 void Passes::RegisterAllocationPass::apply() {
   for (auto& function : manager_.program.functions) {
-    // std::cout << function.name << std::endl;
+    vregs_info.clear();
+
+    std::cout << function.name << std::endl;
 
     // first we determine which temporaries are basic and which are
     // callee-saved:
-    std::unordered_map<IR::Value, TemporaryInfo> calls;
-
     for (auto temp : function.temporaries_info | std::views::keys) {
-      calls.emplace(temp, TemporaryInfo{});
+      TemporaryInfo info;
+      info.virtual_register = temp;
+
+      vregs_info.emplace(temp, std::move(info));
 
       for (auto& basic_block : function.basic_blocks) {
         for (auto& instruction : basic_block.instructions) {
@@ -84,11 +161,11 @@ void Passes::RegisterAllocationPass::apply() {
           }
 
           if (before.contains(temp) && after.contains(temp)) {
-            calls[temp].inside_lifetime.push_back(call);
+            vregs_info.at(temp).inside_lifetime.push_back(call);
           }
 
           if (before.contains(temp) || after.contains(temp)) {
-            calls[temp].on_lifetime_edge.push_back(call);
+            vregs_info.at(temp).on_lifetime_edge.push_back(call);
           }
         }
       }
@@ -96,13 +173,13 @@ void Passes::RegisterAllocationPass::apply() {
 
     // then for basic registers we must find preferred registers (because they
     // can be used in function calls and return values)
-    for (auto& [temp, info] : calls) {
+    for (auto& [temp, info] : vregs_info) {
       if (!info.is_basic()) {
         continue;
       }
 
       // for function argument we increase usage count for appropriate register
-      if (temp.value < function.arguments_count) {
+      if (temp.value < function.arguments.size()) {
         ++info.registers_usage[temp.value];
       }
 
@@ -126,6 +203,16 @@ void Passes::RegisterAllocationPass::apply() {
     // }
 
     // find dependencies between temporaries
+    auto create_dependencies =
+        [this](const std::unordered_set<IR::Value>& tmps) {
+          for (auto s = tmps.begin(); s != tmps.end(); ++s) {
+            for (auto e = std::next(s); e != tmps.end(); ++e) {
+              vregs_info.at(*s).dependencies.insert(*e);
+              vregs_info.at(*e).dependencies.insert(*s);
+            }
+          }
+        };
+
     for (auto& basic_block : function.basic_blocks) {
       for (auto& instruction : basic_block.instructions) {
         auto& before = manager_.live_storage.get_live(
@@ -133,25 +220,25 @@ void Passes::RegisterAllocationPass::apply() {
         auto& after = manager_.live_storage.get_live(
             instruction.get(), LiveTemporariesStorage::Position::AFTER);
 
-        auto create_dependencies =
-            [&calls](const std::unordered_set<IR::Value>& tmps) {
-              for (auto s = tmps.begin(); s != tmps.end(); ++s) {
-                for (auto e = std::next(s); e != tmps.end(); ++e) {
-                  calls[*s].dependencies.insert(&calls[*e]);
-                }
-              }
-            };
-
         create_dependencies(before);
         create_dependencies(after);
       }
+    }
+
+    std::cout << "dependencies" << std::endl;
+    for (auto& [temp, info] : vregs_info) {
+      std::cout << temp.to_string() << ":\n";
+      for (auto dep : info.dependencies) {
+        std::cout << dep.to_string() << " ";
+      }
+      std::cout << std::endl;
     }
 
     // then we must find best suitable registers for basic case
     std::vector<std::pair<IR::Value, TemporaryInfo*>> basic_tmps_info;
     std::vector<std::pair<IR::Value, TemporaryInfo*>> callee_saved_tmps_info;
 
-    for (auto& [temp, info] : calls) {
+    for (auto& [temp, info] : vregs_info) {
       if (info.is_basic()) {
         basic_tmps_info.emplace_back(temp, &info);
       } else {
@@ -171,6 +258,6 @@ void Passes::RegisterAllocationPass::apply() {
     //             << std::endl;
     // }
 
-    apply_transformation(function, calls);
+    apply_transformation(function, vregs_info);
   }
 }

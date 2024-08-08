@@ -67,8 +67,8 @@ void IR::Function::calculate_end_blocks() {
 }
 
 void IR::Function::calculate_escaping_temporaries() {
-  for (size_t i = 0; i < arguments_count; ++i) {
-    temporaries_info.emplace(Value(i, ValueType::VIRTUAL_REGISTER),
+  for (auto argument : arguments) {
+    temporaries_info.emplace(argument,
                              TemporariesInfo{{begin_block}, begin_block});
   }
 

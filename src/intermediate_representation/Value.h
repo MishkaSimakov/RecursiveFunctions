@@ -21,8 +21,12 @@ struct Value {
   ValueType type{ValueType::CONSTANT};
 
   Value() = default;
+  Value(const Value&) = default;
 
-  Value(int value, ValueType value_type) : value(value), type(value_type) {}
+  constexpr Value(int value, ValueType value_type)
+      : value(value), type(value_type) {}
+
+  Value& operator=(const Value&) = default;
 
   bool is_temporary() const { return type == ValueType::VIRTUAL_REGISTER; }
 

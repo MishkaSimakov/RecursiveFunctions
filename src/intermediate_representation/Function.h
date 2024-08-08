@@ -47,7 +47,7 @@ struct Function {
   std::string name;
   std::list<BasicBlock> basic_blocks;
   BasicBlock* begin_block;
-  size_t arguments_count;
+  std::vector<Value> arguments;
   std::vector<BasicBlock*> end_blocks;
   bool is_recursive;
 
@@ -55,7 +55,7 @@ struct Function {
   std::unordered_map<Value, TemporariesInfo> temporaries_info;
 
   explicit Function(std::string name)
-      : name(std::move(name)), begin_block(nullptr), arguments_count(0) {}
+      : name(std::move(name)), begin_block(nullptr) {}
 
   Function(Function&&) = default;
 

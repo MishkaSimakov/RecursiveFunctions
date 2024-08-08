@@ -34,15 +34,8 @@ void Passes::PrintPass::process_block(IR::Function& function,
 void Passes::PrintPass::before_function(IR::Function& function) {
   indices_.clear();
 
-  os_ << function.name << "(";
-
-  auto arguments =
-      std::views::iota(0) | std::views::take(function.arguments_count) |
-      std::views::transform([](size_t index) {
-        return IR::Value(index, IR::ValueType::VIRTUAL_REGISTER).to_string();
-      });
-
-  os_ << fmt::format("{}", fmt::join(arguments, ", ")) << "):\n";
+  os_ << fmt::format("{}({}):\n", function.name,
+                     fmt::join(function.arguments, ", "));
 }
 
 void Passes::PrintPass::after_function(IR::Function& function) { os_ << "\n"; }
