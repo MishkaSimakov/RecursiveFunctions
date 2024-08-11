@@ -186,13 +186,6 @@ struct Instruction : BaseInstruction {
     }
 
     auto& casted = static_cast<const Instruction&>(other);
-
-    if constexpr (use_return) {
-      if (casted.return_value != return_value) {
-        return false;
-      }
-    }
-
     return casted.arguments == arguments;
   }
 
@@ -259,13 +252,6 @@ struct VariadicInstruction : BaseInstruction {
     }
 
     auto& casted = static_cast<const VariadicInstruction&>(other);
-
-    if constexpr (use_return) {
-      if (casted.return_value != return_value) {
-        return false;
-      }
-    }
-
     return casted.arguments == arguments;
   }
 
@@ -347,7 +333,7 @@ struct Phi final : BaseInstruction {
       return false;
     }
 
-    return return_value == other_phi->return_value;
+    return parents == other_phi->parents;
   }
 
   std::vector<Value> filter_arguments(ValueType type) const override {

@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "Disentangler.h"
+#include "passes/analysis/liveness/LivenessAnalysis.h"
 
 void Passes::RegisterAllocationPass::assign_registers(
     const std::vector<std::pair<IR::Value, TemporaryInfo*>>& temps_info,
@@ -146,6 +147,9 @@ void Passes::RegisterAllocationPass::apply() {
 
     // std::cout << function.name << std::endl;
 
+    auto liveness_info =
+        manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
+
     // first we determine which temporaries are basic and which are
     // callee-saved:
     for (auto temp : function.temporaries_info | std::views::keys) {
@@ -156,9 +160,9 @@ void Passes::RegisterAllocationPass::apply() {
 
       for (auto& basic_block : function.basic_blocks) {
         for (auto& instruction : basic_block.instructions) {
-          auto& before = manager_.live_storage.get_live(
+          auto& before = liveness_info.get_live(
               instruction.get(), LiveTemporariesStorage::Position::BEFORE);
-          auto& after = manager_.live_storage.get_live(
+          auto& after = liveness_info.get_live(
               instruction.get(), LiveTemporariesStorage::Position::AFTER);
 
           auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
@@ -234,9 +238,9 @@ void Passes::RegisterAllocationPass::apply() {
 
     for (auto& basic_block : function.basic_blocks) {
       for (auto& instruction : basic_block.instructions) {
-        auto& before = manager_.live_storage.get_live(
+        auto& before = liveness_info.get_live(
             instruction.get(), LiveTemporariesStorage::Position::BEFORE);
-        auto& after = manager_.live_storage.get_live(
+        auto& after = liveness_info.get_live(
             instruction.get(), LiveTemporariesStorage::Position::AFTER);
 
         create_dependencies(before);

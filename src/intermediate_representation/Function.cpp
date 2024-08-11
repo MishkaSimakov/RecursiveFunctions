@@ -73,3 +73,12 @@ void IR::Function::calculate_escaping_temporaries() {
   std::unordered_set<const BasicBlock*> used_blocks;
   calculate_escaping_recursively(begin_block, {}, used_blocks);
 }
+
+void IR::Function::replace_values(
+    const std::unordered_map<Value, Value>& mapping) const {
+  for (auto& block : basic_blocks) {
+    for (auto& instruction : block.instructions) {
+      instruction->replace_values(mapping);
+    }
+  }
+}

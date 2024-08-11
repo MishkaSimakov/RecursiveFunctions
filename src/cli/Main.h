@@ -7,8 +7,7 @@
 #include "assembly/AssemblyPrinter.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
 #include "passes/PassManager.h"
-#include "passes/inline/InlinePass.h"
-#include "passes/liveness/LivenessPass.h"
+#include "passes/common_elimination/CommonElimination.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
 #include "passes/registers_allocation/RegisterAllocationPass.h"
@@ -151,12 +150,13 @@ class Main {
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
       Passes::PassManager pass_manager(ir);
-      pass_manager.register_pass<Passes::LivenessPass>();
       // pass_manager.register_pass<Passes::InlinePass>();
+      pass_manager.register_pass<Passes::CommonElimination>();
       pass_manager.register_pass<Passes::PhiEliminationPass>();
 
-      pass_manager.register_pass<Passes::RegisterAllocationPass>();
       // pass_manager.register_pass<Passes::PrintPass>(std::cout);
+
+      pass_manager.register_pass<Passes::RegisterAllocationPass>();
 
       pass_manager.apply();
 

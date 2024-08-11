@@ -105,6 +105,8 @@ struct Function {
 
   Function(Function&&) = default;
 
+  void replace_values(const std::unordered_map<Value, Value>&) const;
+
   template <typename... Args>
   BasicBlock* set_begin_block(Args&&... args) {
     begin_block = add_block(std::forward<Args>(args)...);

@@ -1,28 +1,34 @@
-#include "LivenessPass.h"
+#include "LivenessAnalysis.h"
 
-#include "Constants.h"
-#include "intermediate_representation/Function.h"
-#include "passes/PassManager.h"
+void Passes::LivenessAnalysis::perform_analysis(const IR::Program& program) {
+  for (auto& function : program.functions) {
+    before_function(function);
 
-void Passes::LivenessPass::before_function(IR::Function& function) {
-  for (auto argument : function.arguments) {
-    storage().add_live(function.begin_block, Position::BEFORE, argument);
+    function.traverse_blocks([this, &function](const IR::BasicBlock* block) {
+      process_block(function, *block);
+    });
   }
 }
 
-void Passes::LivenessPass::process_block(IR::Function& function,
-                                         IR::BasicBlock& block) {
+void Passes::LivenessAnalysis::before_function(const IR::Function& function) {
+  for (auto argument : function.arguments) {
+    live_storage.add_live(function.begin_block, Position::BEFORE, argument);
+  }
+}
+
+void Passes::LivenessAnalysis::process_block(const IR::Function& function,
+                                             const IR::BasicBlock& block) {
   const auto& instructions = block.instructions;
 
   // transfer from parents only those temporaries that are used in this block
   // (or in blocks below)
   for (auto parent : block.parents) {
-    auto live = storage().get_live(parent, Position::AFTER);
+    auto live = live_storage.get_live(parent, Position::AFTER);
 
     for (IR::Value temp : live) {
       const auto& info = function.temporaries_info.find(temp)->second;
       if (info.using_blocks.contains(&block)) {
-        storage().add_live(&block, Position::BEFORE, temp);
+        live_storage.add_live(&block, Position::BEFORE, temp);
       }
     }
   }
@@ -58,10 +64,10 @@ void Passes::LivenessPass::process_block(IR::Function& function,
   for (auto itr = instructions.begin(); itr != instructions.end(); ++itr) {
     // transfer from previous instruction
     if (itr != instructions.begin()) {
-      storage().transfer_live(std::prev(itr)->get(), itr->get());
+      live_storage.transfer_live(std::prev(itr)->get(), itr->get());
     }
 
-    auto live_temporaries = storage().get_live(itr->get(), Position::BEFORE);
+    auto live_temporaries = live_storage.get_live(itr->get(), Position::BEFORE);
 
     // remove dead temporaries
     std::erase_if(live_temporaries, [&last_usage, itr](IR::Value temp) {
@@ -77,6 +83,6 @@ void Passes::LivenessPass::process_block(IR::Function& function,
     }
 
     // save result after instruction
-    storage().add_live(itr->get(), Position::AFTER, live_temporaries);
+    live_storage.add_live(itr->get(), Position::AFTER, live_temporaries);
   }
 }

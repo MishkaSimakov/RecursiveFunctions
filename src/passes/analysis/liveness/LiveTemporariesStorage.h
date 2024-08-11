@@ -4,8 +4,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "intermediate_representation/Instruction.h"
 #include "intermediate_representation/BasicBlock.h"
+#include "intermediate_representation/Instruction.h"
 
 namespace Passes {
 struct LiveTemporariesStorage {
@@ -24,7 +24,7 @@ struct LiveTemporariesStorage {
   }
 
   const std::unordered_set<IR::Value>& get_live(const IR::BasicBlock* block,
-                                                    Position position) const {
+                                                Position position) const {
     if (position == Position::BEFORE) {
       return instructions_live_temporaries[{block->instructions.front().get(),
                                             Position::BEFORE}];
@@ -66,7 +66,8 @@ struct LiveTemporariesStorage {
     });
   }
 
-  void transfer_live(const IR::BaseInstruction* from, const IR::BaseInstruction* to) {
+  void transfer_live(const IR::BaseInstruction* from,
+                     const IR::BaseInstruction* to) {
     instructions_live_temporaries[{to, Position::BEFORE}] =
         instructions_live_temporaries[{from, Position::AFTER}];
   }
