@@ -11,4 +11,4 @@ fibonacci_internal(0) = fib_pair(1, 0);
 fibonacci_internal(n + 1) = fibonacci_step(fibonacci_internal, sqrt(fibonacci_internal));
 fibonacci(n) = fib_left(fibonacci_internal(n));
 
-fibonacci(11);
+fibonacci(12);

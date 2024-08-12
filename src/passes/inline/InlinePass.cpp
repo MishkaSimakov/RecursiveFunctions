@@ -1,9 +1,9 @@
 #include "InlinePass.h"
 
 #include <algorithm>
-#include <iostream>
 
 #include "passes/PassManager.h"
+#include "passes/analysis/dominators/DominatorsAnalysis.h"
 
 void Passes::InlinePass::inline_function_call(
     IR::Function& function, IR::BasicBlock& block,
@@ -57,14 +57,15 @@ void Passes::InlinePass::inline_function_call(
 
   for (auto itr = std::next(new_blocks_start); itr != blocks.end(); ++itr) {
     auto& current_block = *itr;
+
     for (auto& child : current_block.children) {
       if (child != nullptr) {
-        child = blocks_mapping[child];
+        child = blocks_mapping.at(child);
       }
     }
 
     for (auto& parent : current_block.parents) {
-      parent = blocks_mapping[parent];
+      parent = blocks_mapping.at(parent);
     }
 
     for (auto& instruction : current_block.instructions) {
@@ -75,7 +76,7 @@ void Passes::InlinePass::inline_function_call(
       }
 
       for (auto& origin : phi_node->parents | std::views::keys) {
-        origin = blocks_mapping[origin];
+        origin = blocks_mapping.at(origin);
       }
     }
   }
@@ -87,7 +88,7 @@ void Passes::InlinePass::inline_function_call(
   }
 
   for (const auto end_block : called_function.end_blocks) {
-    auto inserted_block = blocks_mapping[end_block];
+    auto inserted_block = blocks_mapping.at(end_block);
     auto return_value =
         static_cast<IR::Return*>(inserted_block->instructions.back().get())
             ->arguments[0];
@@ -134,8 +135,7 @@ void Passes::InlinePass::join_blocks_recursive(
   }
 
   auto& first_child = *block->children[0];
-  if (block->children[1] == nullptr &&
-      block->children[0]->parents.size() == 1) {
+  if (block->has_one_child() && first_child.has_one_parent()) {
     for (auto& instruciton : first_child.instructions) {
       block->instructions.push_back(std::move(instruciton));
     }
@@ -143,7 +143,7 @@ void Passes::InlinePass::join_blocks_recursive(
     block->children = std::move(first_child.children);
 
     // preserve parents in correct state
-    for (auto child : block->children) {
+    for (auto child : first_child.children) {
       if (child == nullptr) {
         continue;
       }
@@ -170,23 +170,48 @@ void Passes::InlinePass::join_blocks_recursive(
 }
 
 void Passes::InlinePass::apply() {
-  for (auto& function : manager_.program.functions) {
-    for (auto& block : function.basic_blocks) {
-      for (auto itr = block.instructions.begin();
-           itr != block.instructions.end(); ++itr) {
-        auto* call_ptr = dynamic_cast<IR::FunctionCall*>(itr->get());
-        if (call_ptr == nullptr) {
-          continue;
+  auto dominators = manager_.get_analysis<DominatorsAnalysis>();
+
+  bool was_changed;
+
+  do {
+    was_changed = false;
+
+    for (auto& function : manager_.program.functions) {
+      bool was_function_changed = false;
+
+      for (auto& block : function.basic_blocks) {
+        size_t inline_threshold = 10 * (1);
+
+        for (auto itr = block.instructions.begin();
+             itr != block.instructions.end(); ++itr) {
+          auto* call_ptr = dynamic_cast<IR::FunctionCall*>(itr->get());
+          if (call_ptr == nullptr) {
+            continue;
+          }
+
+          if (manager_.program.get_function(call_ptr->name).is_recursive) {
+            continue;
+          }
+
+          if (manager_.program.get_function(call_ptr->name).size() <=
+              inline_threshold) {
+            inline_function_call(function, block, itr);
+            was_changed = true;
+            was_function_changed = true;
+
+            break;
+          }
         }
 
-        if (manager_.program.get_function(call_ptr->name).is_recursive) {
-          continue;
+        if (was_function_changed) {
+          break;
         }
-
-        inline_function_call(function, block, itr);
-
-        return;
       }
     }
-  }
+
+    if (was_changed) {
+      manager_.invalidate();
+    }
+  } while (was_changed);
 }

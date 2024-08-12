@@ -56,11 +56,9 @@ void Assembly::InstructionPrinter::visit(const IR::Return& instruction) {}
 
 void Assembly::InstructionPrinter::visit(const IR::Branch& instruction) {
   const auto* current_block = context_->ordering[context_->block_index];
-  size_t left_index = context_->get_block_index(current_block->children[0]);
-  size_t right_index = context_->get_block_index(current_block->children[1]);
 
-  bool is_left_next = left_index == context_->block_index + 1;
-  bool is_right_next = right_index == context_->block_index + 1;
+  bool is_left_next = context_->is_next(current_block->children[0]);
+  bool is_right_next = context_->is_next(current_block->children[0]);
 
   if (is_left_next) {
     result_ = fmt::format("cbnz {}, {}", print_value(instruction.arguments[0]),

@@ -8,9 +8,12 @@
 #include "intermediate_representation/compiler/IRCompiler.h"
 #include "passes/PassManager.h"
 #include "passes/common_elimination/CommonElimination.h"
+#include "passes/inline/InlinePass.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
 #include "passes/registers_allocation/RegisterAllocationPass.h"
+#include "passes/unused_elimination/UnusedFunctionsEliminationPass.h"
+#include "passes/unused_elimination/UnusedTemporariesEliminationPass.h"
 
 using Compilation::CompileTreeBuilder;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -150,13 +153,16 @@ class Main {
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
 
       Passes::PassManager pass_manager(ir);
-      // pass_manager.register_pass<Passes::InlinePass>();
+
+      pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
+      pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
+
+      pass_manager.register_pass<Passes::InlinePass>();
       pass_manager.register_pass<Passes::CommonElimination>();
       pass_manager.register_pass<Passes::PhiEliminationPass>();
 
-      // pass_manager.register_pass<Passes::PrintPass>(std::cout);
-
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
+      pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
       pass_manager.apply();
 
@@ -179,22 +185,9 @@ class Main {
 
       file.close();
 
-      auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
-      std::system(compile_command.c_str());
+      auto compile_command = fmt::format("g++ {} -o test",
+      output_file.c_str()); std::system(compile_command.c_str());
       std::system("./test");
-
-      // bool is_debug_enabled = parser.get<bool>("debug");
-      //
-      // ValueT result;
-      // if (is_debug_enabled) {
-      //   DebugBytecodeExecutor executor(std::move(bytecode));
-      //   result = executor.execute();
-      // } else {
-      //   BytecodeExecutor executor;
-      //   result = executor.execute(bytecode);
-      // }
-      //
-      // cout << result.as_value() << endl;
     });
   }
 };

@@ -66,13 +66,6 @@ struct Function {
     }
   }
 
-  //
-  size_t index_{0};
-
-  void tie_to_program(size_t index) { index_ = index; }
-
-  friend struct Program;
-
  public:
   static constexpr auto entrypoint = "main";
 
@@ -98,7 +91,9 @@ struct Function {
   };
 
   std::string name;
-  std::deque<BasicBlock> basic_blocks;
+
+  // list because in inline pass pointers must not be invalidated after erase
+  std::list<BasicBlock> basic_blocks;
   BasicBlock* begin_block;
   std::vector<Value> arguments;
   std::vector<BasicBlock*> end_blocks;
@@ -111,6 +106,7 @@ struct Function {
       : name(std::move(name)), begin_block(nullptr) {}
 
   Function(Function&&) = default;
+  Function& operator=(Function&&) = default;
 
   void replace_values(const std::unordered_map<Value, Value>&) const;
 
@@ -157,6 +153,15 @@ struct Function {
     requires std::invocable<F, const BasicBlock*>
   void postorder_traversal(F&& callable) const {
     postorder_traversal_helper(*this, callable);
+  }
+
+  size_t size() const {
+    size_t result = 0;
+    for (auto& block : basic_blocks) {
+      result += block.instructions.size();
+    }
+
+    return result;
   }
 };
 }  // namespace IR

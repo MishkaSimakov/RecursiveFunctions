@@ -22,6 +22,14 @@ struct InstructionContext {
     auto itr = std::ranges::find(ordering, block);
     return itr - ordering.begin();
   }
+
+  size_t is_next(const IR::BasicBlock* block) const {
+    if (block_index + 1 == ordering.size()) {
+      return false;
+    }
+
+    return ordering[block_index + 1] == block;
+  }
 };
 
 class AssemblyPrinter {

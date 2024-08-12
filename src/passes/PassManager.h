@@ -40,7 +40,7 @@ class PassManager {
 
     if (itr == analysers.end()) {
       std::tie(itr, std::ignore) =
-          analysers.emplace(typeid(T), std::make_unique<T>(*this));
+          analysers.emplace(typeid(T), std::make_unique<T>());
     }
 
     itr->second->analyse(program);

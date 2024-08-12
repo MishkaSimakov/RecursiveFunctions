@@ -28,12 +28,21 @@ void Assembly::AssemblyPrinter::before_function(
       fmt::format("sub sp, sp, {}",
                   print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
 
-  // TODO: store 2 at once
-  for (size_t i = 0; i < context.callee_saved_registers.size(); ++i) {
+  size_t callee_saved_count = context.callee_saved_registers.size();
+  for (size_t i = 0; i < callee_saved_count; i += 1) {
     auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
-    result.push_back(fmt::format("str {}, {}",
-                                 print_value(context.callee_saved_registers[i]),
-                                 print_value(stack_index)));
+
+    if (i + 1 < callee_saved_count) {
+      // store two at once
+      result.push_back(fmt::format(
+          "stp {}, {}, {}", print_value(context.callee_saved_registers[i]),
+          print_value(context.callee_saved_registers[i + 1]),
+          print_value(stack_index)));
+    } else {
+      result.push_back(fmt::format(
+          "str {}, {}", print_value(context.callee_saved_registers[i]),
+          print_value(stack_index)));
+    }
   }
 }
 
@@ -135,6 +144,11 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
         if (!str.empty()) {
           result.push_back(std::move(str));
         }
+      }
+
+      if (block->has_one_child() && !context.is_next(block->children[0])) {
+        result.push_back(
+            fmt::format("b {}", context.labels.at(block->children[0])));
       }
 
       if (block->is_end()) {

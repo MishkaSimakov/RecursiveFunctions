@@ -16,7 +16,7 @@ class PrintPass : public ParentsFirstPass {
 
   void after_function(IR::Function&) override;
 
-  size_t get_block_index(const IR::BasicBlock&);
+  std::string get_block_name(const IR::BasicBlock&);
 
  public:
   PrintPass(PassManager&, std::ostream&);

@@ -143,6 +143,8 @@ struct BaseInstruction {
 
   virtual bool has_return_value() const = 0;
 
+  bool is_control_flow_instruction() const;
+
   virtual Value get_return_value() const = 0;
 
   virtual std::unique_ptr<BaseInstruction> clone() const = 0;
@@ -404,4 +406,9 @@ struct Store final : Instruction<2, false> {
 
   INSTRUCTION_MEMBERS();
 };
+
+inline bool BaseInstruction::is_control_flow_instruction() const {
+  return is_of_type<Branch>() || is_of_type<Return>();
+}
+
 }  // namespace IR

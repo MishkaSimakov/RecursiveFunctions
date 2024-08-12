@@ -5,7 +5,7 @@
 # fib_left(p) = sqrt(p);
 
 # fib_pair_sum(p, p_sqrt) = monus(p, multiply(p_sqrt, p_sqrt));
-# fibonacci_step(p, p_sqrt) = fib_pair(fib_pair_sum(p, p_sqrt), p_sqrt);
+# fibonac ci_step(p, p_sqrt) = fib_pair(fib_pair_sum(p, p_sqrt), p_sqrt);
 
 # fibonacci_internal(0) = fib_pair(1, 0);
 # fibonacci_internal(n + 1) = fibonacci_step(fibonacci_internal, sqrt(fibonacci_internal));

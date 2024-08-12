@@ -28,6 +28,14 @@ struct BasicBlock {
 
   bool is_full() const { return !is_begin() && !is_end(); }
 
+  bool has_one_child() const {
+    return children[0] != nullptr && children[1] == nullptr;
+  }
+
+  bool has_one_parent() const {
+    return parents.size() == 1;
+  }
+
   BasicBlock copy_instructions() const {
     BasicBlock copy;
 
