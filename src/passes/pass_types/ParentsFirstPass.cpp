@@ -9,7 +9,7 @@ void Passes::ParentsFirstPass::apply() {
   for (auto& function : functions) {
     before_function(function);
 
-    function.traverse_blocks([this, &function](IR::BasicBlock* block) {
+    function.postorder_traversal([this, &function](IR::BasicBlock* block) {
       process_block(function, *block);
     });
 

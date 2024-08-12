@@ -21,7 +21,7 @@ struct Function {
 
   template <typename T, typename F>
     requires std::same_as<std::decay_t<T>, Function>
-  static void traverse_blocks_helper(T& function, F&& callable) {
+  static void postorder_traversal_helper(T& function, F&& callable) {
     using BB =
         std::conditional_t<std::is_const_v<T>, const BasicBlock*, BasicBlock*>;
 
@@ -66,6 +66,13 @@ struct Function {
     }
   }
 
+  //
+  size_t index_{0};
+
+  void tie_to_program(size_t index) { index_ = index; }
+
+  friend struct Program;
+
  public:
   static constexpr auto entrypoint = "main";
 
@@ -91,11 +98,11 @@ struct Function {
   };
 
   std::string name;
-  std::list<BasicBlock> basic_blocks;
+  std::deque<BasicBlock> basic_blocks;
   BasicBlock* begin_block;
   std::vector<Value> arguments;
   std::vector<BasicBlock*> end_blocks;
-  bool is_recursive;
+  bool is_recursive{false};
 
   // it is guaranteed that ALL temporaries are contained inside the variable
   std::unordered_map<Value, TemporariesInfo> temporaries_info;
@@ -142,14 +149,14 @@ struct Function {
   // traverse all basic blocks in such order that when one block is calculated
   template <typename F>
     requires std::invocable<F, BasicBlock*>
-  void traverse_blocks(F&& callable) {
-    traverse_blocks_helper(*this, callable);
+  void postorder_traversal(F&& callable) {
+    postorder_traversal_helper(*this, callable);
   }
 
   template <typename F>
     requires std::invocable<F, const BasicBlock*>
-  void traverse_blocks(F&& callable) const {
-    traverse_blocks_helper(*this, callable);
+  void postorder_traversal(F&& callable) const {
+    postorder_traversal_helper(*this, callable);
   }
 };
 }  // namespace IR

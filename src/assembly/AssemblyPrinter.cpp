@@ -116,7 +116,7 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
 
     before_function(context);
 
-    function.traverse_blocks([&context](const IR::BasicBlock* block) {
+    function.postorder_traversal([&context](const IR::BasicBlock* block) {
       context.ordering.push_back(block);
       context.labels[block] =
           fmt::format("{}.{}", context.function.name, context.ordering.size());

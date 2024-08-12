@@ -8,7 +8,18 @@
 
 namespace IR {
 struct Program {
+ private:
   std::vector<Function> functions;
+
+ public:
+  std::span<Function> get_functions() { return functions; }
+
+  void add_function(auto&&... args) {
+    Function& function =
+        functions.emplace_back(std::forward<decltype(args)>(args)...);
+
+    function.tie_to_program(functions.size() - 1);
+  }
 
   Function& get_function(const std::string& name) {
     auto itr = std::ranges::find_if(

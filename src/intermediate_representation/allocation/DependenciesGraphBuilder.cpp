@@ -140,7 +140,7 @@ IR::TemporaryDependenciesGraph IR::DependenciesGraphBuilder::operator()(
   }
 
   // process each block and register live variables at each program point
-  function.traverse_blocks([this, &function](const BasicBlock* block) {
+  function.postorder_traversal([this, &function](const BasicBlock* block) {
     process_block(function, block);
   });
 

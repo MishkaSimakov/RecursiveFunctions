@@ -5,6 +5,8 @@
 namespace Passes {
 class LivenessAnalysis final : public Analyser {
  public:
+  using Analyser::Analyser;
+
   const LiveTemporariesStorage& get_liveness_info() const {
     return live_storage;
   }

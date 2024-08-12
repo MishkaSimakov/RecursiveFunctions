@@ -4,7 +4,7 @@ void Passes::LivenessAnalysis::perform_analysis(const IR::Program& program) {
   for (auto& function : program.functions) {
     before_function(function);
 
-    function.traverse_blocks([this, &function](const IR::BasicBlock* block) {
+    function.postorder_traversal([this, &function](const IR::BasicBlock* block) {
       process_block(function, *block);
     });
   }
