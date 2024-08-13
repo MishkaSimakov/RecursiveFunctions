@@ -63,10 +63,10 @@ void Passes::RegisterAllocationPass::apply_transformation(
     replacement_map[temp] = info.assigned_register.value();
   }
 
-  // std::cout << function.name << std::endl;
-  // for (auto [temp, dest] : replacement_map) {
-  // std::cout << fmt::format("{} -> {}\n", temp, dest);
-  // }
+  std::cout << function.name << std::endl;
+  for (auto [temp, dest] : replacement_map) {
+    std::cout << fmt::format("{} -> {}\n", temp, dest);
+  }
 
   for (auto& block : function.basic_blocks) {
     for (auto itr = block.instructions.begin(); itr != block.instructions.end();
@@ -142,13 +142,41 @@ void Passes::RegisterAllocationPass::apply_transformation(
 }
 
 void Passes::RegisterAllocationPass::apply() {
+  auto liveness_info =
+      manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
+
   for (auto& function : manager_.program.functions) {
     vregs_info.clear();
 
-    // std::cout << function.name << std::endl;
+    for (auto& basic_block : function.basic_blocks) {
+      for (auto& instruction : basic_block.instructions) {
+        auto& before = liveness_info.get_live(
+            instruction.get(), LiveTemporariesStorage::Position::BEFORE);
+        auto& after = liveness_info.get_live(
+            instruction.get(), LiveTemporariesStorage::Position::AFTER);
 
-    auto liveness_info =
-        manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
+        auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
+
+        if (call == nullptr) {
+          continue;
+        }
+
+        std::cout << "Processing call: " << std::endl;
+        std::cout << call->to_string() << std::endl;
+
+        std::cout << "before: ";
+        for (auto value : before) {
+          std::cout << value.to_string() << " ";
+        }
+        std::cout << "\n";
+
+        std::cout << "after: ";
+        for (auto value : after) {
+          std::cout << value.to_string() << " ";
+        }
+        std::cout << "\n";
+      }
+    }
 
     // first we determine which temporaries are basic and which are
     // callee-saved:

@@ -1,6 +1,7 @@
 #include "InlinePass.h"
 
 #include <algorithm>
+#include <iostream>
 
 #include "passes/PassManager.h"
 #include "passes/analysis/dominators/DominatorsAnalysis.h"
@@ -21,6 +22,13 @@ void Passes::InlinePass::inline_function_call(
     second_part.instructions.push_back(std::move(*move_itr));
     move_itr = first_part.instructions.erase(move_itr);
   }
+
+  second_part.children = std::move(first_part.children);
+  first_part.children = {&second_part, nullptr};
+
+  std::unordered_map<const IR::BasicBlock*, IR::BasicBlock*> mapping;
+  mapping.emplace(&first_part, &second_part);
+  function.replace_phi_parents(mapping);
 
   // insert basic blocks
   auto new_blocks_start = std::prev(blocks.end());
@@ -68,17 +76,7 @@ void Passes::InlinePass::inline_function_call(
       parent = blocks_mapping.at(parent);
     }
 
-    for (auto& instruction : current_block.instructions) {
-      auto* phi_node = dynamic_cast<IR::Phi*>(instruction.get());
-
-      if (phi_node == nullptr) {
-        continue;
-      }
-
-      for (auto& origin : phi_node->parents | std::views::keys) {
-        origin = blocks_mapping.at(origin);
-      }
-    }
+    function.replace_phi_parents(blocks_mapping);
   }
 
   if (should_insert_phi) {
@@ -153,7 +151,27 @@ void Passes::InlinePass::join_blocks_recursive(
           parent = block;
         }
       }
+
+      // update phi nodes
+      for (auto& instruction : child->instructions) {
+        auto* phi_ptr = dynamic_cast<IR::Phi*>(instruction.get());
+
+        if (phi_ptr == nullptr) {
+          continue;
+        }
+
+        for (auto& phi_parent : phi_ptr->parents | std::views::keys) {
+          if (phi_parent == &first_child) {
+            phi_parent = block;
+          }
+        }
+      }
     }
+
+    // preserve phi nodes in correct state
+    std::unordered_map<const IR::BasicBlock*, IR::BasicBlock*> mapping;
+    mapping.emplace(&first_child, block);
+    function.replace_phi_parents(mapping);
 
     std::erase_if(
         function.basic_blocks,

@@ -29,7 +29,7 @@ void Assembly::AssemblyPrinter::before_function(
                   print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
 
   size_t callee_saved_count = context.callee_saved_registers.size();
-  for (size_t i = 0; i < callee_saved_count; i += 1) {
+  for (size_t i = 0; i < callee_saved_count; i += 2) {
     auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
 
     if (i + 1 < callee_saved_count) {

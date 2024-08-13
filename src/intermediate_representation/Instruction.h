@@ -72,6 +72,7 @@ struct Move;
 struct Phi;
 struct Return;
 struct Branch;
+struct Jump;
 struct Load;
 struct Store;
 
@@ -83,6 +84,7 @@ struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(Phi);
   INSTRUCTION_VISITOR_VISIT(Return);
   INSTRUCTION_VISITOR_VISIT(Branch);
+  INSTRUCTION_VISITOR_VISIT(Jump);
   INSTRUCTION_VISITOR_VISIT(Load);
   INSTRUCTION_VISITOR_VISIT(Store);
 
@@ -320,9 +322,12 @@ struct Phi final : BaseInstruction {
   auto values_view() const { return parents | std::views::elements<1>; }
 
   std::string to_string() const override {
-    auto arguments = values_view() | std::views::transform([](Value value) {
-                       return value.to_string();
-                     });
+    auto arguments =
+        parents |
+        std::views::transform([](const std::pair<BasicBlock*, Value>& pair) {
+          return fmt::format("({}, {})", pair.second,
+                             static_cast<const void*>(pair.first));
+        });
 
     return fmt::format("{} = phi [{}]", return_value,
                        fmt::join(arguments, ", "));
@@ -377,6 +382,14 @@ struct Branch final : Instruction<1, false> {
   INSTRUCTION_MEMBERS();
 };
 
+struct Jump final : Instruction<0, false> {
+  explicit Jump() : Instruction({}) {}
+
+  std::string to_string() const override { return fmt::format("jump"); }
+
+  INSTRUCTION_MEMBERS();
+};
+
 struct Load final : Instruction<1, true> {
   Load(Value return_value, Value stack_index)
       : Instruction(return_value, {stack_index}) {
@@ -408,7 +421,7 @@ struct Store final : Instruction<2, false> {
 };
 
 inline bool BaseInstruction::is_control_flow_instruction() const {
-  return is_of_type<Branch>() || is_of_type<Return>();
+  return is_of_type<Branch>() || is_of_type<Return>() || is_of_type<Jump>();
 }
 
 }  // namespace IR

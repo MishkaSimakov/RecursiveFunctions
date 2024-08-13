@@ -1,12 +1,17 @@
 #include "LivenessAnalysis.h"
 
+#include <iostream>
+
 void Passes::LivenessAnalysis::perform_analysis(const IR::Program& program) {
+  live_storage.clear();
+
   for (auto& function : program.functions) {
     before_function(function);
 
-    function.postorder_traversal([this, &function](const IR::BasicBlock* block) {
-      process_block(function, *block);
-    });
+    function.postorder_traversal(
+        [this, &function](const IR::BasicBlock* block) {
+          process_block(function, *block);
+        });
   }
 }
 
@@ -20,13 +25,18 @@ void Passes::LivenessAnalysis::process_block(const IR::Function& function,
                                              const IR::BasicBlock& block) {
   const auto& instructions = block.instructions;
 
+  if (instructions.empty()) {
+    throw std::runtime_error(
+        "Empty blocks are not supported by LivenessAnalysisPass.");
+  }
+
   // transfer from parents only those temporaries that are used in this block
   // (or in blocks below)
   for (auto parent : block.parents) {
     auto live = live_storage.get_live(parent, Position::AFTER);
 
     for (IR::Value temp : live) {
-      const auto& info = function.temporaries_info.find(temp)->second;
+      const auto& info = function.temporaries_info.at(temp);
       if (info.using_blocks.contains(&block)) {
         live_storage.add_live(&block, Position::BEFORE, temp);
       }
@@ -39,9 +49,8 @@ void Passes::LivenessAnalysis::process_block(const IR::Function& function,
   for (auto& instruction : instructions | std::views::reverse) {
     for (auto temporary :
          instruction->filter_arguments(IR::ValueType::VIRTUAL_REGISTER)) {
-      auto itr = function.temporaries_info.find(temporary);
-
-      if (itr->second.is_used_in_descendants(&block)) {
+      if (function.temporaries_info.at(temporary).is_used_in_descendants(
+              &block)) {
         continue;
       }
 

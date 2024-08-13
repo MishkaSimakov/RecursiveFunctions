@@ -138,9 +138,18 @@ struct Function {
     end_blocks.clear();
     is_recursive = false;
 
+    for (auto& block : basic_blocks) {
+      block.parents.clear();
+    }
+
     calculate_end_blocks();
     calculate_escaping_temporaries();
+    process_empty_blocks();
   }
+
+  void process_empty_blocks();
+
+  void replace_phi_parents(const std::unordered_map<const BasicBlock*, BasicBlock*>&);
 
   // traverse all basic blocks in such order that when one block is calculated
   template <typename F>

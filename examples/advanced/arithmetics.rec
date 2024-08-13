@@ -20,7 +20,8 @@ is_positive(0) = 0;
 is_positive(x + 1) = 1;
 
 # "logic part, 1 is true, 0 is false, other values causes UB"
-not(x) = monus(1, x);
+not(0) = 1;
+not(x + 1) = 0;
 
 or(x, y) = is_positive(add(x, y));
 and(x, y) = not(or(not(x), not(y)));

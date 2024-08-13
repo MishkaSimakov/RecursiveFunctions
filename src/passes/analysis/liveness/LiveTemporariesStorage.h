@@ -71,5 +71,7 @@ struct LiveTemporariesStorage {
     instructions_live_temporaries[{to, Position::BEFORE}] =
         instructions_live_temporaries[{from, Position::AFTER}];
   }
+
+  void clear() { instructions_live_temporaries.clear(); }
 };
 }  // namespace Passes

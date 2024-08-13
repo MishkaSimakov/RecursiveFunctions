@@ -159,7 +159,9 @@ class Main {
 
       pass_manager.register_pass<Passes::InlinePass>();
       pass_manager.register_pass<Passes::CommonElimination>();
+
       pass_manager.register_pass<Passes::PhiEliminationPass>();
+      pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
       pass_manager.register_pass<Passes::PrintPass>(std::cout);

@@ -73,6 +73,7 @@ void Assembly::InstructionPrinter::visit(const IR::Branch& instruction) {
         fmt::format("\nb {}", context_->labels.at(current_block->children[0]));
   }
 }
+void Assembly::InstructionPrinter::visit(const IR::Jump&) {}
 
 void Assembly::InstructionPrinter::visit(const IR::Load& instruction) {
   result_ =

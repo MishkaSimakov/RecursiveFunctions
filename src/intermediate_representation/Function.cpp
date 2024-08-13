@@ -82,3 +82,32 @@ void IR::Function::replace_values(
     }
   }
 }
+
+void IR::Function::process_empty_blocks() {
+  for (auto& block: basic_blocks) {
+    if (block.instructions.empty()) {
+      block.instructions.push_back(std::make_unique<Jump>());
+    }
+  }
+}
+
+void IR::Function::replace_phi_parents(
+    const std::unordered_map<const BasicBlock*, BasicBlock*>& mapping) {
+  for (auto& block : basic_blocks) {
+    for (auto& instruction : block.instructions) {
+      auto* phi_node = dynamic_cast<IR::Phi*>(instruction.get());
+
+      if (phi_node == nullptr) {
+        continue;
+      }
+
+      for (auto& origin : phi_node->parents | std::views::keys) {
+        auto itr = mapping.find(origin);
+
+        if (itr != mapping.end()) {
+          origin = itr->second;
+        }
+      }
+    }
+  }
+}

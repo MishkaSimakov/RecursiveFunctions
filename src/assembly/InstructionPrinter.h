@@ -25,6 +25,7 @@ class InstructionPrinter : IR::InstructionVisitor {
   void visit(const IR::Phi&) override;
   void visit(const IR::Return&) override;
   void visit(const IR::Branch&) override;
+  void visit(const IR::Jump&) override;
   void visit(const IR::Load&) override;
   void visit(const IR::Store&) override;
 
