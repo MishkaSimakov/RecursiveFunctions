@@ -148,39 +148,9 @@ void Passes::RegisterAllocationPass::apply() {
   for (auto& function : manager_.program.functions) {
     vregs_info.clear();
 
-    for (auto& basic_block : function.basic_blocks) {
-      for (auto& instruction : basic_block.instructions) {
-        auto& before = liveness_info.get_live(
-            instruction.get(), LiveTemporariesStorage::Position::BEFORE);
-        auto& after = liveness_info.get_live(
-            instruction.get(), LiveTemporariesStorage::Position::AFTER);
-
-        auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
-
-        if (call == nullptr) {
-          continue;
-        }
-
-        std::cout << "Processing call: " << std::endl;
-        std::cout << call->to_string() << std::endl;
-
-        std::cout << "before: ";
-        for (auto value : before) {
-          std::cout << value.to_string() << " ";
-        }
-        std::cout << "\n";
-
-        std::cout << "after: ";
-        for (auto value : after) {
-          std::cout << value.to_string() << " ";
-        }
-        std::cout << "\n";
-      }
-    }
-
     // first we determine which temporaries are basic and which are
     // callee-saved:
-    for (auto temp : function.temporaries_info | std::views::keys) {
+    for (auto temp : function.temporaries) {
       TemporaryInfo info;
       info.virtual_register = temp;
 

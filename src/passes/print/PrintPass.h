@@ -28,6 +28,6 @@ class PrintPass : public ParentsFirstPass {
   void after_function(IR::Function&) override;
 
  public:
-  PrintPass(PassManager&, std::ostream&, PrintPassConfig = {});
+  PrintPass(PassManager&, std::ostream&, const PrintPassConfig& = {});
 };
 }  // namespace Passes

@@ -39,6 +39,9 @@ class AssemblyPrinter {
   void before_function(const InstructionContext&);
   void after_function(const InstructionContext&);
 
+  enum class CalleeSavedOperationType { LOAD, STORE };
+  void print_callee_saved_registers(CalleeSavedOperationType, const InstructionContext&);
+
  public:
   explicit AssemblyPrinter(const IR::Program& program) : program_(program) {}
 

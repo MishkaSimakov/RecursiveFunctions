@@ -157,14 +157,17 @@ class Main {
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
 
-      pass_manager.register_pass<Passes::InlinePass>();
       pass_manager.register_pass<Passes::CommonElimination>();
+      pass_manager.register_pass<Passes::InlinePass>();
 
       pass_manager.register_pass<Passes::PhiEliminationPass>();
-      pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
+      pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
+      pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
+
+      auto config = Passes::PrintPassConfig{false, false};
+      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
-      pass_manager.register_pass<Passes::PrintPass>(std::cout);
 
       pass_manager.apply();
 

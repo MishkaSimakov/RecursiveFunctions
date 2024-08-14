@@ -30,7 +30,7 @@ void Passes::DominatorsAnalysis::perform_analysis(const IR::Program& program) {
 void Passes::DominatorsAnalysis::find_dominators(const IR::Function& function) {
   std::unordered_map<const IR::BasicBlock*, DynamicBitset> temp;
 
-  function.postorder_traversal([this](const IR::BasicBlock* block) {
+  function.reversed_postorder_traversal([this](const IR::BasicBlock* block) {
     auto& dominators = blocks_info[block].dominators;
 
     if (block->parents.empty()) {

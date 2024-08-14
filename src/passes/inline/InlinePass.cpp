@@ -36,7 +36,7 @@ void Passes::InlinePass::inline_function_call(
   std::unordered_map<IR::Value, IR::Value> temporaries_mapping;
 
   size_t temporary_index = function.get_max_temporary_index();
-  for (auto temp : called_function.temporaries_info | std::views::keys) {
+  for (auto temp : called_function.temporaries) {
     if (temp.value < called_function.arguments.size()) {
       // treat as argument
       temporaries_mapping[temp] = call.arguments[temp.value];
@@ -134,6 +134,9 @@ void Passes::InlinePass::join_blocks_recursive(
 
   auto& first_child = *block->children[0];
   if (block->has_one_child() && first_child.has_one_parent()) {
+    // remove jump instruction
+    block->instructions.pop_back();
+
     for (auto& instruciton : first_child.instructions) {
       block->instructions.push_back(std::move(instruciton));
     }
@@ -149,21 +152,6 @@ void Passes::InlinePass::join_blocks_recursive(
       for (auto& parent : child->parents) {
         if (parent == &first_child) {
           parent = block;
-        }
-      }
-
-      // update phi nodes
-      for (auto& instruction : child->instructions) {
-        auto* phi_ptr = dynamic_cast<IR::Phi*>(instruction.get());
-
-        if (phi_ptr == nullptr) {
-          continue;
-        }
-
-        for (auto& phi_parent : phi_ptr->parents | std::views::keys) {
-          if (phi_parent == &first_child) {
-            phi_parent = block;
-          }
         }
       }
     }
@@ -208,7 +196,7 @@ void Passes::InlinePass::apply() {
             continue;
           }
 
-          if (manager_.program.get_function(call_ptr->name).is_recursive) {
+          if (manager_.program.get_function(call_ptr->name).is_recursive()) {
             continue;
           }
 

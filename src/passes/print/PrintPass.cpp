@@ -8,7 +8,7 @@
 #include "passes/analysis/liveness/LivenessAnalysis.h"
 
 Passes::PrintPass::PrintPass(PassManager& manager, std::ostream& os,
-                             PrintPassConfig config)
+                             const PrintPassConfig& config)
     : ParentsFirstPass(manager), os_(os), config_(config) {}
 
 void Passes::PrintPass::process_block(IR::Function& function,

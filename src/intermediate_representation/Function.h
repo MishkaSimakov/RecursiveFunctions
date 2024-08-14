@@ -11,17 +11,9 @@
 namespace IR {
 struct Function {
  private:
-  std::unordered_set<Value> calculate_escaping_recursively(
-      BasicBlock* block, std::unordered_set<Value> used_above,
-      std::unordered_set<const BasicBlock*>& used);
-
-  void calculate_end_blocks();
-
-  void calculate_escaping_temporaries();
-
   template <typename T, typename F>
     requires std::same_as<std::decay_t<T>, Function>
-  static void postorder_traversal_helper(T& function, F&& callable) {
+  static void reversed_postorder_traversal_helper(T& function, F&& callable) {
     using BB =
         std::conditional_t<std::is_const_v<T>, const BasicBlock*, BasicBlock*>;
 
@@ -97,10 +89,11 @@ struct Function {
   BasicBlock* begin_block;
   std::vector<Value> arguments;
   std::vector<BasicBlock*> end_blocks;
-  bool is_recursive{false};
+
+  std::unordered_set<std::string> calls;
 
   // it is guaranteed that ALL temporaries are contained inside the variable
-  std::unordered_map<Value, TemporariesInfo> temporaries_info;
+  std::unordered_set<Value> temporaries;
 
   explicit Function(std::string name)
       : name(std::move(name)), begin_block(nullptr) {}
@@ -124,7 +117,7 @@ struct Function {
 
   size_t get_max_temporary_index() const {
     size_t temporary_index = 0;
-    for (const auto& temp : temporaries_info | std::views::keys) {
+    for (const auto& temp : temporaries) {
       if (temp.value > temporary_index) {
         temporary_index = temp.value;
       }
@@ -133,35 +126,26 @@ struct Function {
     return temporary_index;
   }
 
-  void finalize() {
-    temporaries_info.clear();
-    end_blocks.clear();
-    is_recursive = false;
+  void finalize();
 
-    for (auto& block : basic_blocks) {
-      block.parents.clear();
-    }
+  bool is_recursive() const { return calls.contains(name); }
 
-    calculate_end_blocks();
-    calculate_escaping_temporaries();
-    process_empty_blocks();
-  }
+  bool is_leaf() const { return calls.empty(); }
 
-  void process_empty_blocks();
-
-  void replace_phi_parents(const std::unordered_map<const BasicBlock*, BasicBlock*>&);
+  void replace_phi_parents(
+      const std::unordered_map<const BasicBlock*, BasicBlock*>&);
 
   // traverse all basic blocks in such order that when one block is calculated
   template <typename F>
     requires std::invocable<F, BasicBlock*>
-  void postorder_traversal(F&& callable) {
-    postorder_traversal_helper(*this, callable);
+  void reversed_postorder_traversal(F&& callable) {
+    reversed_postorder_traversal_helper(*this, callable);
   }
 
   template <typename F>
     requires std::invocable<F, const BasicBlock*>
-  void postorder_traversal(F&& callable) const {
-    postorder_traversal_helper(*this, callable);
+  void reversed_postorder_traversal(F&& callable) const {
+    reversed_postorder_traversal_helper(*this, callable);
   }
 
   size_t size() const {

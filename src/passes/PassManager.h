@@ -12,6 +12,11 @@
 #include "intermediate_representation/Program.h"
 
 namespace Passes {
+template <typename T>
+struct capture {
+  T value;
+};
+
 class PassManager {
  private:
   using PassFactoryT = std::function<std::unique_ptr<Pass>(PassManager&)>;
@@ -26,10 +31,10 @@ class PassManager {
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<Pass, T> &&
-             std::is_constructible_v<T, PassManager&, Args...>
-  void register_pass(Args&&... args) {
+             std::is_constructible_v<T, PassManager&, Args&...>
+  void register_pass(Args&... args) {
     pass_factories_.push_back([&args...](PassManager& manager) {
-      return std::make_unique<T>(manager, std::forward<Args>(args)...);
+      return std::make_unique<T>(manager, args...);
     });
   }
 

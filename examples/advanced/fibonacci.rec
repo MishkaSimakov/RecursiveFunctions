@@ -11,6 +11,14 @@ fibonacci_internal(0) = fib_pair(1, 0);
 fibonacci_internal(n + 1) = fibonacci_step(fibonacci_internal, sqrt(fibonacci_internal));
 fibonacci(n) = fib_left(fibonacci_internal(n));
 
-is_prime(n) = argmin(not(is_divisible(n, add(*, 2))));
+is_prime(n) = conditional(
+    is_greater(n, 1),
+    is_equal(add(
+        argmin(not(is_divisible(n, add(*, 2)))),
+        2
+    ), n),
+    0
+);
+ceil_with_prime(n) = add(argmin(not(is_prime(add(*, n)))), n);
 
-is_prime(101);
+ceil_with_prime(200);

@@ -12,38 +12,12 @@ void Assembly::AssemblyPrinter::before_function(
   result.push_back(name + ":");
 
   // save frame and link registers
-  result.push_back("stp x29, x30, [sp, #-16]!");
-  result.push_back("mov x29, sp");
-
-  // store callee-saved registers
-  if (context.callee_saved_registers.empty()) {
-    return;
+  if (!context.function.is_leaf()) {
+    result.push_back("stp x29, x30, [sp, #-16]!");
+    result.push_back("mov x29, sp");
   }
 
-  size_t sp_offset = context.callee_saved_registers.size();
-  sp_offset += sp_offset % 2;
-  sp_offset *= 8;
-
-  result.push_back(
-      fmt::format("sub sp, sp, {}",
-                  print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
-
-  size_t callee_saved_count = context.callee_saved_registers.size();
-  for (size_t i = 0; i < callee_saved_count; i += 2) {
-    auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
-
-    if (i + 1 < callee_saved_count) {
-      // store two at once
-      result.push_back(fmt::format(
-          "stp {}, {}, {}", print_value(context.callee_saved_registers[i]),
-          print_value(context.callee_saved_registers[i + 1]),
-          print_value(stack_index)));
-    } else {
-      result.push_back(fmt::format(
-          "str {}, {}", print_value(context.callee_saved_registers[i]),
-          print_value(stack_index)));
-    }
-  }
+  print_callee_saved_registers(CalleeSavedOperationType::STORE, context);
 }
 
 void Assembly::AssemblyPrinter::after_function(
@@ -60,27 +34,61 @@ void Assembly::AssemblyPrinter::after_function(
     result.push_back("mov x0, #0");
   }
 
-  // restore callee-saved registers
-  if (!context.callee_saved_registers.empty()) {
-    size_t sp_offset = context.callee_saved_registers.size();
-    sp_offset += sp_offset % 2;
-    sp_offset *= 8;
+  print_callee_saved_registers(CalleeSavedOperationType::LOAD, context);
 
-    // TODO: load 2 at once
-    for (size_t i = 0; i < context.callee_saved_registers.size(); ++i) {
-      auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
-      result.push_back(fmt::format(
-          "ldr {}, {}", print_value(context.callee_saved_registers[i]),
-          print_value(stack_index)));
+  if (!context.function.is_leaf()) {
+    result.push_back("ldp x29, x30, [sp], #16");
+  }
+
+  result.push_back("ret");
+}
+
+void Assembly::AssemblyPrinter::print_callee_saved_registers(
+    CalleeSavedOperationType operation, const InstructionContext& context) {
+  // store callee-saved registers
+  if (context.callee_saved_registers.empty()) {
+    return;
+  }
+
+  auto reg_pair_action =
+      operation == CalleeSavedOperationType::STORE ? "stp" : "ldp";
+  auto reg_action =
+      operation == CalleeSavedOperationType::STORE ? "str" : "ldr";
+
+  size_t sp_offset = context.callee_saved_registers.size();
+  sp_offset += sp_offset % 2;
+  sp_offset *= 8;
+
+  if (operation == CalleeSavedOperationType::STORE) {
+    result.push_back(fmt::format(
+        "sub sp, sp, {}",
+        print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
+  }
+
+  size_t callee_saved_count = context.callee_saved_registers.size();
+  for (size_t i = 0; i < callee_saved_count; i += 2) {
+    auto stack_index = IR::Value(i, IR::ValueType::STACK_INDEX);
+
+    if (i + 1 < callee_saved_count) {
+      // process two at once
+      result.push_back(
+          fmt::format("{} {}, {}, {}", reg_pair_action,
+                      print_value(context.callee_saved_registers[i]),
+                      print_value(context.callee_saved_registers[i + 1]),
+                      print_value(stack_index)));
+    } else {
+      result.push_back(
+          fmt::format("{} {}, {}", reg_action,
+                      print_value(context.callee_saved_registers[i]),
+                      print_value(stack_index)));
     }
+  }
 
+  if (operation == CalleeSavedOperationType::LOAD) {
     result.push_back(fmt::format(
         "add sp, sp, {}",
         print_value(IR::Value(sp_offset, IR::ValueType::CONSTANT))));
   }
-
-  result.push_back("ldp x29, x30, [sp], #16");
-  result.push_back("ret");
 }
 
 std::string Assembly::AssemblyPrinter::mangle_function_name(
@@ -116,8 +124,7 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
   for (auto& function : program_.functions) {
     InstructionContext context(function);
 
-    for (IR::Value value :
-         context.function.temporaries_info | std::views::keys) {
+    for (IR::Value value : context.function.temporaries) {
       if (value.type == IR::ValueType::CALLEE_SAVED_REGISTER) {
         context.callee_saved_registers.push_back(value);
       }
@@ -125,7 +132,7 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
 
     before_function(context);
 
-    function.postorder_traversal([&context](const IR::BasicBlock* block) {
+    function.reversed_postorder_traversal([&context](const IR::BasicBlock* block) {
       context.ordering.push_back(block);
       context.labels[block] =
           fmt::format("{}.{}", context.function.name, context.ordering.size());
