@@ -20,8 +20,16 @@ void IR::Function::simplify_blocks_recursive(
     // remove jump instruction
     block->instructions.pop_back();
 
-    for (auto& instruciton : first_child.instructions) {
-      block->instructions.push_back(std::move(instruciton));
+    for (auto& instruction : first_child.instructions) {
+      // TODO: this line filtering out phi instructions with only one parent.
+      // Move this part into some other pass
+      if (instruction->is_of_type<Phi>()) {
+        auto& phi = static_cast<const Phi&>(*instruction);
+        block->instructions.push_back(
+            std::make_unique<Move>(phi.return_value, phi.parents[0].second));
+      } else {
+        block->instructions.push_back(std::move(instruction));
+      }
     }
 
     block->children = std::move(first_child.children);

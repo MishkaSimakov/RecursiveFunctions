@@ -157,10 +157,10 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
 
     for (auto& basic_block : function.basic_blocks) {
       for (auto& instruction : basic_block.instructions) {
-        auto& before = liveness_info.get_live(
-            instruction.get(), LiveTemporariesStorage::Position::BEFORE);
-        auto& after = liveness_info.get_live(
-            instruction.get(), LiveTemporariesStorage::Position::AFTER);
+        auto& before =
+            liveness_info.get_data(instruction.get(), Position::BEFORE);
+        auto& after =
+            liveness_info.get_data(instruction.get(), Position::AFTER);
 
         auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
 
@@ -223,21 +223,30 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
   // }
 
   // find dependencies between temporaries
-  auto create_dependencies = [this](const std::unordered_set<IR::Value>& tmps) {
-    for (auto s = tmps.begin(); s != tmps.end(); ++s) {
-      for (auto e = std::next(s); e != tmps.end(); ++e) {
-        vregs_info.at(*s).dependencies.insert(*e);
-        vregs_info.at(*e).dependencies.insert(*s);
-      }
-    }
-  };
+  auto create_dependencies =
+      [this](
+          const std::unordered_map<IR::Value, TemporaryLivenessState>& tmps) {
+        for (auto s = tmps.begin(); s != tmps.end(); ++s) {
+          if (s->second != TemporaryLivenessState::LIVE) {
+            continue;
+          }
+
+          for (auto e = std::next(s); e != tmps.end(); ++e) {
+            if (e->second != TemporaryLivenessState::LIVE) {
+              continue;
+            }
+
+            vregs_info.at(s->first).dependencies.insert(e->first);
+            vregs_info.at(e->first).dependencies.insert(s->first);
+          }
+        }
+      };
 
   for (auto& basic_block : function.basic_blocks) {
     for (auto& instruction : basic_block.instructions) {
-      auto& before = liveness_info.get_live(
-          instruction.get(), LiveTemporariesStorage::Position::BEFORE);
-      auto& after = liveness_info.get_live(
-          instruction.get(), LiveTemporariesStorage::Position::AFTER);
+      auto& before =
+          liveness_info.get_data(instruction.get(), Position::BEFORE);
+      auto& after = liveness_info.get_data(instruction.get(), Position::AFTER);
 
       create_dependencies(before);
       create_dependencies(after);

@@ -1,41 +1,67 @@
-add(b0, b1):
+add(%0, %1):
+entryblock: bb.0
 bb.0:
-	b2 = b1
-	b1 = #0
-	b3 = b2
+%4
 	jump
-	children: bb.3 null
-
-# first loop
-bb.3:
-    b2 = b1
-    b1 = add b2 #1
-    branch b3 == 0?
-    children: bb.5 bb.4
-bb.4:
-	b0 = sub b3 #1
-	b3 = b0
-	jump
-	children: bb.3 null
-
-bb.5:
-    b1 = b3
-    b3 = b0
-    b0 = b2
-    jump
-    children: bb.2 null
-
-# second loop
+%4
+	children: bb.1 null
 bb.2:
-	branch b0 == 0?
-	children: bb.6 bb.1
-bb.1:
-	b0 = sub b0 #1
-	b2 = add b1 #1
-	b1 = b2
+%4
+	%2 = sub %5 #1
+%4
+%4
 	jump
-	children: bb.2 null
-
+%4
+	children: bb.1 null
+bb.1:
+%4
+	%6 = phi [(#0, 0x107002db0), (%7, 0x107000f10)]
+%4
+%4
+	%7 = add %6 #1
+%4
+%4
+	%5 = phi [(%1, 0x107002db0), (%2, 0x107000f10)]
+%4
+%4
+	branch %5 == 0?
+%4
+	children: bb.3 bb.2
+bb.3:
+%4
+	jump
+%4
+	children: bb.4 null
+bb.4:
+%4
+	%8 = phi [(%0, 0x107000f80)]
+%4
+%4
+	jump
+%4
+	children: bb.5 null
 bb.6:
-	b0 = b2
-	return b0
+
+	%10 = sub %9 #1
+
+
+	%4 = add %11 #1
+%4
+%4
+	jump
+%4
+	children: bb.5 null
+bb.5:
+%4
+	%11 = phi [(%8, 0x107002d40), (%4, 0x107002e20)]
+%4
+%4
+	%9 = phi [(%6, 0x107002d40), (%10, 0x107002e20)]
+%4
+%4
+	branch %9 == 0?
+%4
+	children: bb.7 bb.6
+bb.7:
+%4
+	return %4

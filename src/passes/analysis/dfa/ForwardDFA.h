@@ -2,49 +2,13 @@
 #include <span>
 #include <unordered_set>
 
+#include "DFAStorage.h"
 #include "intermediate_representation/Function.h"
 #include "intermediate_representation/Instruction.h"
 
 namespace Passes {
-enum class Position { BEFORE, AFTER };
-
-template <typename T>
-struct DFAStorage {
-  using DataT = T;
-
-  std::unordered_map<std::pair<const IR::BaseInstruction*, Position>, T> data;
-
-  T& get_data(const IR::BaseInstruction* instruction, Position position) {
-    return data[std::pair{instruction, position}];
-  }
-
-  T& get_data(const IR::BasicBlock* block, Position position) {
-    if (position == Position::BEFORE) {
-      return get_data(block->instructions.front().get(), Position::BEFORE);
-    }
-
-    return get_data(block->instructions.back().get(), Position::AFTER);
-  }
-
-  const T& get_data(const IR::BaseInstruction* instruction,
-                    Position position) const {
-    return data.at(std::pair{instruction, position});
-  }
-
-  const T& get_data(const IR::BasicBlock* block, Position position) const {
-    if (position == Position::BEFORE) {
-      return get_data(block->instructions.front().get(), Position::BEFORE);
-    }
-
-    return get_data(block->instructions.back().get(), Position::AFTER);
-  }
-
-  void clear() { data.clear(); }
-};
-
 template <typename T>
 class ForwardDFA {
- private:
   bool transfer_through_block(const IR::BasicBlock& block);
 
  protected:
@@ -55,8 +19,7 @@ class ForwardDFA {
   virtual T meet(std::span<T> parents) const = 0;
   virtual T transfer(const T& before,
                      const IR::BaseInstruction& instruction) const = 0;
-
-  virtual void init() = 0;
+  virtual void init(const IR::Function&) = 0;
 
   void start_dfa(const IR::Function& function);
 
@@ -91,7 +54,7 @@ bool ForwardDFA<T>::transfer_through_block(const IR::BasicBlock& block) {
 template <typename T>
 void ForwardDFA<T>::start_dfa(const IR::Function& function) {
   storage_.clear();
-  init();
+  init(function);
 
   std::unordered_set<const IR::BasicBlock*> worklist;
   worklist.insert(function.begin_block);

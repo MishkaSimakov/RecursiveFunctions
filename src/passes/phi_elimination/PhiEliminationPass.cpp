@@ -1,5 +1,6 @@
 #include "PhiEliminationPass.h"
 
+#include <iostream>
 #include "intermediate_representation/Function.h"
 #include "passes/PassManager.h"
 
@@ -19,12 +20,10 @@ bool Passes::PhiEliminationPass::apply(IR::Function& function) {
 
       auto phi_temporary = function.allocate_vreg();
 
+      std::cout << phi_node->to_string() << " " << phi_temporary.to_string() << std::endl;
+
       for (auto [parent, value] : phi_node->parents) {
-        auto insert_itr = parent->instructions.end();
-        if (!parent->instructions.empty() &&
-            parent->instructions.back()->is_control_flow_instruction()) {
-          insert_itr = std::prev(insert_itr);
-        }
+        auto insert_itr = std::prev(parent->instructions.end());
 
         parent->instructions.insert(
             insert_itr, std::make_unique<IR::Move>(phi_temporary, value));

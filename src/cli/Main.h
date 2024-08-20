@@ -165,15 +165,16 @@ class Main {
       pass_manager.register_pass<Passes::CommonElimination>();
       pass_manager.register_pass<Passes::RecursionToLoopPass>();
 
+
+      auto config = Passes::PrintPassConfig{false, true};
+  pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
+
       pass_manager.register_pass<Passes::InlinePass>();
 
       pass_manager.register_pass<Passes::SSAMoveErasure>();
       pass_manager.register_pass<Passes::ReplaceBranchWithSelect>();
 
       pass_manager.register_pass<Passes::PhiEliminationPass>();
-
-      auto config = Passes::PrintPassConfig{true, false};
-      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
@@ -183,7 +184,7 @@ class Main {
       pass_manager.register_pass<Passes::SillyMoveErasurePass>();
 
       pass_manager.apply();
-
+      //
       auto assembly = Assembly::AssemblyPrinter(ir).print();
 
       // TODO: add -o flag support

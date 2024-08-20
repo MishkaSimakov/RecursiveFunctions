@@ -22,4 +22,4 @@ is_prime(n) = conditional(
 
 ceil_with_prime(n) = add(argmin(not(is_prime(add(*, n)))), n);
 
-add(10, 10);
+add(2, 2);

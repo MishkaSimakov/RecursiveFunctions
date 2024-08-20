@@ -183,15 +183,15 @@ bool Passes::RecursionToLoopPass::apply(IR::Function& function) {
                                .arguments[0];
   after_recursion_block->instructions.pop_back();
 
-  return_block->instructions.push_back(
-      std::make_unique<IR::Return>(return_value));
-
   // add phi node for resulting value
   auto another_phi = std::make_unique<IR::Phi>();
 
   another_phi->parents.emplace_back(new_block, return_value_phi_return_value);
   another_phi->parents.emplace_back(after_recursion_block, return_value);
   another_phi->return_value = function.allocate_vreg();
+
+  return_block->instructions.push_back(
+      std::make_unique<IR::Return>(another_phi->return_value));
 
   std::unordered_map<IR::Value, IR::Value> recursive_call_result_mapping;
   recursive_call_result_mapping.emplace(recursive_call_destination,

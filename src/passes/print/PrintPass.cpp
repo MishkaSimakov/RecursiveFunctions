@@ -18,13 +18,11 @@ bool Passes::PrintPass::apply(IR::Function& function, IR::BasicBlock& block) {
   os_ << get_block_name(block) << ":\n";
 
   for (const auto& instruction : block.instructions) {
-    print_live_info(liveness.get_live(
-        instruction.get(), LiveTemporariesStorage::Position::BEFORE));
+    print_live_info(liveness.get_data(instruction.get(), Position::BEFORE));
 
     os_ << "\t" << instruction->to_string() << "\n";
 
-    print_live_info(liveness.get_live(instruction.get(),
-                                      LiveTemporariesStorage::Position::AFTER));
+    print_live_info(liveness.get_data(instruction.get(), Position::AFTER));
   }
 
   if (block.is_end()) {
@@ -67,13 +65,15 @@ std::string Passes::PrintPass::get_block_name(
 }
 
 void Passes::PrintPass::print_live_info(
-    const std::unordered_set<IR::Value>& live) {
+    const std::unordered_map<IR::Value, TemporaryLivenessState>& live) {
   if (!config_.print_live_info) {
     return;
   }
 
-  for (auto value : live) {
-    os_ << value.to_string() << " ";
+  for (auto [value, state] : live) {
+    if (value.value == 4 && state == TemporaryLivenessState::LIVE) {
+      os_ << value.to_string() << " ";
+    }
   }
   os_ << "\n";
 }
