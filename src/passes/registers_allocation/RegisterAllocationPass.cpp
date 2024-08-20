@@ -141,98 +141,19 @@ void Passes::RegisterAllocationPass::apply_transformation(
   }
 }
 
-void Passes::RegisterAllocationPass::apply() {
+bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
   auto liveness_info =
       manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
 
-  for (auto& function : manager_.program.functions) {
-    vregs_info.clear();
+  vregs_info.clear();
 
-    // first we determine which temporaries are basic and which are
-    // callee-saved:
-    for (auto temp : function.temporaries) {
-      TemporaryInfo info;
-      info.virtual_register = temp;
+  // first we determine which temporaries are basic and which are
+  // callee-saved:
+  for (auto temp : function.temporaries) {
+    TemporaryInfo info;
+    info.virtual_register = temp;
 
-      vregs_info.emplace(temp, std::move(info));
-
-      for (auto& basic_block : function.basic_blocks) {
-        for (auto& instruction : basic_block.instructions) {
-          auto& before = liveness_info.get_live(
-              instruction.get(), LiveTemporariesStorage::Position::BEFORE);
-          auto& after = liveness_info.get_live(
-              instruction.get(), LiveTemporariesStorage::Position::AFTER);
-
-          auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
-
-          if (call == nullptr) {
-            continue;
-          }
-
-          if (before.contains(temp) && after.contains(temp)) {
-            vregs_info.at(temp).inside_lifetime.push_back(call);
-          }
-
-          if (before.contains(temp) || after.contains(temp)) {
-            vregs_info.at(temp).on_lifetime_edge.push_back(call);
-          }
-        }
-      }
-    }
-
-    // increase usage count for return values (they must be stored in zero
-    // register)
-    for (auto* basic_block : function.end_blocks) {
-      const auto& return_instr =
-          static_cast<const IR::Return&>(*basic_block->instructions.back());
-      IR::Value return_value = return_instr.arguments[0];
-
-      if (return_value.is_temporary()) {
-        ++vregs_info.at(return_value).registers_usage[kReturnRegister.value];
-      }
-    }
-
-    // then for basic registers we must find preferred registers (because they
-    // can be used in function calls and return values)
-    for (auto& [temp, info] : vregs_info) {
-      if (!info.is_basic()) {
-        continue;
-      }
-
-      // for function argument we increase usage count for appropriate register
-      if (temp.value < function.arguments.size()) {
-        ++info.registers_usage[temp.value];
-      }
-
-      for (auto call : info.on_lifetime_edge) {
-        if (call->return_value == temp) {
-          ++info.registers_usage[kReturnRegister.value];
-          continue;
-        }
-
-        for (size_t i = 0; i < call->arguments.size(); ++i) {
-          if (call->arguments[i] == temp) {
-            ++info.registers_usage[i];
-          }
-        }
-      }
-    }
-
-    // for (auto& [temp, info] : calls) {
-    //   std::cout << temp.to_string() << " "
-    //             << (info.is_basic() ? "basic" : "callee-saved") << std::endl;
-    // }
-
-    // find dependencies between temporaries
-    auto create_dependencies =
-        [this](const std::unordered_set<IR::Value>& tmps) {
-          for (auto s = tmps.begin(); s != tmps.end(); ++s) {
-            for (auto e = std::next(s); e != tmps.end(); ++e) {
-              vregs_info.at(*s).dependencies.insert(*e);
-              vregs_info.at(*e).dependencies.insert(*s);
-            }
-          }
-        };
+    vregs_info.emplace(temp, std::move(info));
 
     for (auto& basic_block : function.basic_blocks) {
       for (auto& instruction : basic_block.instructions) {
@@ -241,38 +162,114 @@ void Passes::RegisterAllocationPass::apply() {
         auto& after = liveness_info.get_live(
             instruction.get(), LiveTemporariesStorage::Position::AFTER);
 
-        create_dependencies(before);
-        create_dependencies(after);
+        auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
+
+        if (call == nullptr) {
+          continue;
+        }
+
+        if (before.contains(temp) && after.contains(temp)) {
+          vregs_info.at(temp).inside_lifetime.push_back(call);
+        }
+
+        if (before.contains(temp) || after.contains(temp)) {
+          vregs_info.at(temp).on_lifetime_edge.push_back(call);
+        }
       }
     }
-
-    // std::cout << "dependencies" << std::endl;
-    // for (auto& [temp, info] : vregs_info) {
-    // std::cout << temp.to_string() << ":\n";
-    // for (auto dep : info.dependencies) {
-    // std::cout << dep.to_string() << " ";
-    // }
-    // std::cout << std::endl;
-    // }
-
-    // then we must find best suitable registers for basic case
-    std::vector<std::pair<IR::Value, TemporaryInfo*>> basic_tmps_info;
-    std::vector<std::pair<IR::Value, TemporaryInfo*>> callee_saved_tmps_info;
-
-    for (auto& [temp, info] : vregs_info) {
-      if (info.is_basic()) {
-        basic_tmps_info.emplace_back(temp, &info);
-      } else {
-        callee_saved_tmps_info.emplace_back(temp, &info);
-      }
-    }
-
-    assign_registers(basic_tmps_info, IR::ValueType::BASIC_REGISTER);
-    assign_registers(callee_saved_tmps_info,
-                     IR::ValueType::CALLEE_SAVED_REGISTER);
-
-    apply_transformation(function, vregs_info);
-
-    function.finalize();
   }
+
+  // increase usage count for return values (they must be stored in zero
+  // register)
+  for (auto* basic_block : function.end_blocks) {
+    const auto& return_instr =
+        static_cast<const IR::Return&>(*basic_block->instructions.back());
+    IR::Value return_value = return_instr.arguments[0];
+
+    if (return_value.is_temporary()) {
+      ++vregs_info.at(return_value).registers_usage[kReturnRegister.value];
+    }
+  }
+
+  // then for basic registers we must find preferred registers (because they
+  // can be used in function calls and return values)
+  for (auto& [temp, info] : vregs_info) {
+    if (!info.is_basic()) {
+      continue;
+    }
+
+    // for function argument we increase usage count for appropriate register
+    if (temp.value < function.arguments.size()) {
+      ++info.registers_usage[temp.value];
+    }
+
+    for (auto call : info.on_lifetime_edge) {
+      if (call->return_value == temp) {
+        ++info.registers_usage[kReturnRegister.value];
+        continue;
+      }
+
+      for (size_t i = 0; i < call->arguments.size(); ++i) {
+        if (call->arguments[i] == temp) {
+          ++info.registers_usage[i];
+        }
+      }
+    }
+  }
+
+  // for (auto& [temp, info] : calls) {
+  //   std::cout << temp.to_string() << " "
+  //             << (info.is_basic() ? "basic" : "callee-saved") << std::endl;
+  // }
+
+  // find dependencies between temporaries
+  auto create_dependencies = [this](const std::unordered_set<IR::Value>& tmps) {
+    for (auto s = tmps.begin(); s != tmps.end(); ++s) {
+      for (auto e = std::next(s); e != tmps.end(); ++e) {
+        vregs_info.at(*s).dependencies.insert(*e);
+        vregs_info.at(*e).dependencies.insert(*s);
+      }
+    }
+  };
+
+  for (auto& basic_block : function.basic_blocks) {
+    for (auto& instruction : basic_block.instructions) {
+      auto& before = liveness_info.get_live(
+          instruction.get(), LiveTemporariesStorage::Position::BEFORE);
+      auto& after = liveness_info.get_live(
+          instruction.get(), LiveTemporariesStorage::Position::AFTER);
+
+      create_dependencies(before);
+      create_dependencies(after);
+    }
+  }
+
+  // std::cout << "dependencies" << std::endl;
+  // for (auto& [temp, info] : vregs_info) {
+  // std::cout << temp.to_string() << ":\n";
+  // for (auto dep : info.dependencies) {
+  // std::cout << dep.to_string() << " ";
+  // }
+  // std::cout << std::endl;
+  // }
+
+  // then we must find best suitable registers for basic case
+  std::vector<std::pair<IR::Value, TemporaryInfo*>> basic_tmps_info;
+  std::vector<std::pair<IR::Value, TemporaryInfo*>> callee_saved_tmps_info;
+
+  for (auto& [temp, info] : vregs_info) {
+    if (info.is_basic()) {
+      basic_tmps_info.emplace_back(temp, &info);
+    } else {
+      callee_saved_tmps_info.emplace_back(temp, &info);
+    }
+  }
+
+  assign_registers(basic_tmps_info, IR::ValueType::BASIC_REGISTER);
+  assign_registers(callee_saved_tmps_info,
+                   IR::ValueType::CALLEE_SAVED_REGISTER);
+
+  apply_transformation(function, vregs_info);
+
+  return true;
 }

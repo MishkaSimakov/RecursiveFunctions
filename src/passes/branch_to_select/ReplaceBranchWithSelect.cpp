@@ -64,51 +64,55 @@ bool Passes::ReplaceBranchWithSelect::can_apply_to_phi(
   return true;
 }
 
-void Passes::ReplaceBranchWithSelect::apply() {
-  for (auto& function : manager_.program.functions) {
-    for (auto& block : function.basic_blocks) {
-      for (auto itr = block.instructions.begin();
-           itr != block.instructions.end(); ++itr) {
-        auto& instr = *itr;
-        // we search for phi instruction
-        if (!instr->is_of_type<IR::Phi>()) {
-          continue;
-        }
+bool Passes::ReplaceBranchWithSelect::apply(IR::Function& function) {
+  bool was_changed = false;
 
-        auto& phi = static_cast<const IR::Phi&>(*instr);
-
-        if (!can_apply_to_phi(block, phi)) {
-          break;
-        }
-
-        auto granny = phi.parents.front().first->parents.front();
-
-        // remove branch instruction
-        auto condition_value =
-            static_cast<const IR::Branch*>(granny->instructions.back().get())
-                ->arguments[0];
-        granny->instructions.pop_back();
-
-        // we should remove jumps from parents and move parents code into granny
-        for (auto [parent, value] : phi.parents) {
-          parent->instructions.pop_back();
-          parent->children = {nullptr, nullptr};
-
-          granny->instructions.splice(granny->instructions.end(),
-                                      parent->instructions);
-        }
-
-        granny->children = {&block, nullptr};
-
-        // replace phi with select
-        instr = std::make_unique<IR::Select>(phi.return_value, condition_value,
-                                             phi.parents[0].second,
-                                             phi.parents[1].second);
-
-        function.finalize();
+  for (auto& block : function.basic_blocks) {
+    for (auto itr = block.instructions.begin(); itr != block.instructions.end();
+         ++itr) {
+      auto& instr = *itr;
+      // we search for phi instruction
+      if (!instr->is_of_type<IR::Phi>()) {
+        continue;
       }
-    }
 
-    function.simplify_blocks();
+      auto& phi = static_cast<const IR::Phi&>(*instr);
+
+      if (!can_apply_to_phi(block, phi)) {
+        break;
+      }
+
+      was_changed = true;
+
+      auto granny = phi.parents.front().first->parents.front();
+
+      // remove branch instruction
+      auto condition_value =
+          static_cast<const IR::Branch*>(granny->instructions.back().get())
+              ->arguments[0];
+      granny->instructions.pop_back();
+
+      // we should remove jumps from parents and move parents code into granny
+      for (auto [parent, value] : phi.parents) {
+        parent->instructions.pop_back();
+        parent->children = {nullptr, nullptr};
+
+        granny->instructions.splice(granny->instructions.end(),
+                                    parent->instructions);
+      }
+
+      granny->children = {&block, nullptr};
+
+      // replace phi with select
+      instr = std::make_unique<IR::Select>(phi.return_value, condition_value,
+                                           phi.parents[0].second,
+                                           phi.parents[1].second);
+
+      function.finalize();
+    }
   }
+
+  function.simplify_blocks();
+
+  return was_changed;
 }

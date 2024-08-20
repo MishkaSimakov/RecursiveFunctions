@@ -19,7 +19,7 @@ struct capture {
 
 class PassManager {
  private:
-  using PassFactoryT = std::function<std::unique_ptr<Pass>(PassManager&)>;
+  using PassFactoryT = std::function<std::unique_ptr<BasePass>(PassManager&)>;
   std::vector<PassFactoryT> pass_factories_;
 
   std::unordered_map<std::type_index, std::unique_ptr<Analyser>> analysers;
@@ -30,7 +30,7 @@ class PassManager {
   PassManager(IR::Program& program) : program(program) {}
 
   template <typename T, typename... Args>
-    requires std::is_base_of_v<Pass, T> &&
+    requires std::is_base_of_v<BasePass, T> &&
              std::is_constructible_v<T, PassManager&, Args&...>
   void register_pass(Args&... args) {
     pass_factories_.push_back([&args...](PassManager& manager) {

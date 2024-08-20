@@ -11,7 +11,7 @@ class LivenessAnalysis final : public Analyser {
     return live_storage;
   }
 
- // protected:
+  // protected:
   LiveTemporariesStorage live_storage;
 
   struct BlockInfo {

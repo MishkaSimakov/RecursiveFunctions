@@ -1,16 +1,16 @@
 #pragma once
 #include "intermediate_representation/Function.h"
-#include "passes/Pass.h"
+#include "passes/pass_types/ModuleLevelPass.h"
 
 namespace Passes {
-class UnusedFunctionsEliminationPass : public Pass {
+class UnusedFunctionsEliminationPass : public ModuleLevelPass {
  public:
-  using Pass::Pass;
+  using ModuleLevelPass::ModuleLevelPass;
 
-  void apply() override;
-
- private:
+ protected:
   std::unordered_set<std::string> used_;
+
+  bool apply(IR::Program& program) override;
 
   void find_used_recursively(const IR::Function&);
 };

@@ -13,6 +13,7 @@
 #include "passes/inline/InlinePass.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
+#include "passes/recursion_to_loop/RecursionToLoopPass.h"
 #include "passes/registers_allocation/RegisterAllocationPass.h"
 #include "passes/silly_move_erasure/SSAMoveErasure.h"
 #include "passes/silly_move_erasure/SillyMoveErasurePass.h"
@@ -162,6 +163,8 @@ class Main {
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
 
       pass_manager.register_pass<Passes::CommonElimination>();
+      pass_manager.register_pass<Passes::RecursionToLoopPass>();
+
       pass_manager.register_pass<Passes::InlinePass>();
 
       pass_manager.register_pass<Passes::SSAMoveErasure>();
@@ -169,15 +172,15 @@ class Main {
 
       pass_manager.register_pass<Passes::PhiEliminationPass>();
 
+      auto config = Passes::PrintPassConfig{true, false};
+      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
+
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
 
-      auto config = Passes::PrintPassConfig{false, false};
-      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
-
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
 
-      // pass_manager.register_pass<Passes::SillyMoveErasurePass>();
+      pass_manager.register_pass<Passes::SillyMoveErasurePass>();
 
       pass_manager.apply();
 

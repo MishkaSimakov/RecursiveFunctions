@@ -2,30 +2,24 @@
 
 #include "passes/PassManager.h"
 
-void Passes::UnusedTemporariesEliminationPass::apply() {
-  for (auto& function : manager_.program.functions) {
-    auto used = find_used_in_function(function);
-    bool was_changed = false;
+bool Passes::UnusedTemporariesEliminationPass::apply(IR::Function& function) {
+  auto used = find_used_in_function(function);
+  bool was_changed = false;
 
-    for (auto& bb : function.basic_blocks) {
-      size_t count = std::erase_if(
-          bb.instructions,
-          [&used](const std::unique_ptr<IR::BaseInstruction>& instruction) {
-            return instruction->has_return_value() &&
-                   !used.contains(instruction->get_return_value());
-          });
+  for (auto& bb : function.basic_blocks) {
+    size_t count = std::erase_if(
+        bb.instructions,
+        [&used](const std::unique_ptr<IR::BaseInstruction>& instruction) {
+          return instruction->has_return_value() &&
+                 !used.contains(instruction->get_return_value());
+        });
 
-      if (count != 0) {
-        was_changed = true;
-      }
-    }
-
-    if (was_changed) {
-      function.finalize();
+    if (count != 0) {
+      was_changed = true;
     }
   }
 
-  manager_.invalidate();
+  return was_changed;
 }
 
 std::unordered_set<IR::Value>

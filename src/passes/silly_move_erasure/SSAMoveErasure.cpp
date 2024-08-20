@@ -2,12 +2,15 @@
 
 #include "passes/PassManager.h"
 
-void Passes::SSAMoveErasure::process_block(IR::Function& function,
-                                           IR::BasicBlock& block) {
+bool Passes::SSAMoveErasure::apply(IR::Function& function,
+                                   IR::BasicBlock& block) {
+  bool was_changed = false;
   replacements_.clear();
 
   for (auto& instruction : block.instructions) {
-    instruction->replace_values(replacements_);
+    if (instruction->replace_values(replacements_)) {
+      was_changed = true;
+    }
 
     if (instruction->is_of_type<IR::Move>()) {
       auto& move = static_cast<const IR::Move&>(*instruction);
@@ -17,4 +20,6 @@ void Passes::SSAMoveErasure::process_block(IR::Function& function,
       }
     }
   }
+
+  return was_changed;
 }

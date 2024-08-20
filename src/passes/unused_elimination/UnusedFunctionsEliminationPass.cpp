@@ -5,16 +5,18 @@
 #include "intermediate_representation/Function.h"
 #include "passes/PassManager.h"
 
-void Passes::UnusedFunctionsEliminationPass::apply() {
-  auto& entrypoint = manager_.program.get_function(IR::Function::entrypoint);
+bool Passes::UnusedFunctionsEliminationPass::apply(IR::Program& program) {
+  auto& entrypoint = program.get_function(IR::Function::entrypoint);
   used_.insert(IR::Function::entrypoint);
 
   find_used_recursively(entrypoint);
 
-  std::erase_if(manager_.program.functions,
-                [this](const IR::Function& function) {
-                  return !used_.contains(function.name);
-                });
+  size_t erased_count = std::erase_if(manager_.program.functions,
+                                      [this](const IR::Function& function) {
+                                        return !used_.contains(function.name);
+                                      });
+
+  return erased_count != 0;
 }
 
 void Passes::UnusedFunctionsEliminationPass::find_used_recursively(

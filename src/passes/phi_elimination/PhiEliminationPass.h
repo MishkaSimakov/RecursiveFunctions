@@ -1,12 +1,12 @@
 #pragma once
-#include "passes/pass_types/RandomOrderPass.h"
+#include "passes/pass_types/FunctionLevelPass.h"
 
 namespace Passes {
-class PhiEliminationPass : public RandomOrderPass {
- protected:
-  void process_block(IR::Function&, IR::BasicBlock&) override;
-
+class PhiEliminationPass : public FunctionLevelPass<> {
  public:
-  using RandomOrderPass::RandomOrderPass;
+  using FunctionLevelPass::FunctionLevelPass;
+
+ protected:
+  bool apply(IR::Function& function) override;
 };
 }  // namespace Passes

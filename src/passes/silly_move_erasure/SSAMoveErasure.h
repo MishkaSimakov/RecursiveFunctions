@@ -1,15 +1,15 @@
 #pragma once
-#include "passes/Pass.h"
-#include "passes/pass_types/ParentsFirstPass.h"
+#include "passes/pass_types/BasicBlockLevelPass.h"
 
 namespace Passes {
-class SSAMoveErasure : public ParentsFirstPass {
+class SSAMoveErasure
+    : public BasicBlockLevelPass<ReversedPostBasicBlocksOrder> {
  public:
-  using ParentsFirstPass::ParentsFirstPass;
+  using BasicBlockLevelPass::BasicBlockLevelPass;
 
  protected:
   std::unordered_map<IR::Value, IR::Value> replacements_;
 
-  void process_block(IR::Function&, IR::BasicBlock&) override;
+  bool apply(IR::Function& function, IR::BasicBlock& block) override;
 };
 }  // namespace Passes

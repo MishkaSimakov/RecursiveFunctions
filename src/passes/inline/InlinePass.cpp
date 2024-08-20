@@ -115,15 +115,14 @@ void Passes::InlinePass::inline_function_call(
   function.simplify_blocks();
 }
 
-void Passes::InlinePass::apply() {
-  auto dominators = manager_.get_analysis<DominatorsAnalysis>();
-
-  bool was_changed;
+bool Passes::InlinePass::apply(IR::Program& program) {
+  bool was_changed = false;
+  bool was_changed_on_current_iteration;
 
   do {
-    was_changed = false;
+    was_changed_on_current_iteration = false;
 
-    for (auto& function : manager_.program.functions) {
+    for (auto& function : program.functions) {
       bool was_function_changed = false;
 
       for (auto& block : function.basic_blocks) {
@@ -143,8 +142,9 @@ void Passes::InlinePass::apply() {
           if (manager_.program.get_function(call_ptr->name).size() <=
               inline_threshold) {
             inline_function_call(function, block, itr);
-            was_changed = true;
+            was_changed_on_current_iteration = true;
             was_function_changed = true;
+            was_changed = true;
 
             break;
           }
@@ -156,8 +156,10 @@ void Passes::InlinePass::apply() {
       }
     }
 
-    if (was_changed) {
+    if (was_changed_on_current_iteration) {
       manager_.invalidate();
     }
-  } while (was_changed);
+  } while (was_changed_on_current_iteration);
+
+  return was_changed;
 }

@@ -96,18 +96,27 @@ struct InstructionVisitor {
 struct BaseInstruction {
  private:
   template <typename T>
-  static void replace_values_helper_helper(
+  static bool replace_values_helper_helper(
       const std::unordered_map<Value, Value>& mapping, T& arg) {
     if constexpr (std::is_same_v<Value, T>) {
       auto itr = mapping.find(arg);
 
       if (itr != mapping.end()) {
         arg = itr->second;
+
+        return true;
       }
+
+      return false;
     } else {
+      bool was_changed = false;
       for (Value& value : arg) {
-        replace_values_helper_helper(mapping, value);
+        if (replace_values_helper_helper(mapping, value)) {
+          was_changed = true;
+        }
       }
+
+      return was_changed;
     }
   }
 
@@ -127,9 +136,11 @@ struct BaseInstruction {
   }
 
   template <typename... Args>
-  static void replace_values_helper(
+  static bool replace_values_helper(
       const std::unordered_map<Value, Value>& mapping, Args&&... args) {
-    (replace_values_helper_helper(mapping, args), ...);
+    auto not_lazy_or = [](auto... args) { return (args || ...); };
+
+    return not_lazy_or(replace_values_helper_helper(mapping, args)...);
   }
 
  public:
@@ -156,7 +167,7 @@ struct BaseInstruction {
   virtual std::unique_ptr<BaseInstruction> clone() const = 0;
   virtual void accept(InstructionVisitor& visitor) const = 0;
 
-  virtual void replace_values(
+  virtual bool replace_values(
       const std::unordered_map<Value, Value>& mapping) = 0;
 
   virtual ~BaseInstruction() = default;
@@ -179,7 +190,7 @@ struct Instruction : BaseInstruction {
     return filter_arguments_helper(arguments, type);
   }
 
-  void replace_values(
+  bool replace_values(
       const std::unordered_map<Value, Value>& mapping) override {
     if constexpr (use_return) {
       return replace_values_helper(mapping, return_value.value, arguments);
@@ -246,7 +257,7 @@ struct VariadicInstruction : BaseInstruction {
     return filter_arguments_helper(arguments, type);
   }
 
-  void replace_values(
+  bool replace_values(
       const std::unordered_map<Value, Value>& mapping) override {
     if constexpr (use_return) {
       return replace_values_helper(mapping, return_value.value, arguments);
@@ -371,9 +382,9 @@ struct Phi final : BaseInstruction {
     return filter_arguments_helper(values_view(), type);
   }
 
-  void replace_values(
+  bool replace_values(
       const std::unordered_map<Value, Value>& mapping) override {
-    replace_values_helper(mapping, return_value, values_view());
+    return replace_values_helper(mapping, return_value, values_view());
   }
 
   bool has_return_value() const override { return true; }

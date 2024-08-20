@@ -4,12 +4,16 @@
 
 #include "intermediate_representation/Function.h"
 
-void Passes::CommonElimination::process_block(IR::Function& function,
-                                              IR::BasicBlock& block) {
+bool Passes::CommonElimination::apply(IR::Function& function,
+                                      IR::BasicBlock& block) {
+  bool was_changed = false;
+
   auto& instr = block.instructions;
   for (auto first = instr.begin(); first != instr.end(); ++first) {
     for (auto second = std::next(first); second != instr.end();) {
       if (**first == **second) {
+        was_changed = true;
+
         IR::Value return_value = (*second)->get_return_value();
         IR::Value original_return_value = (*first)->get_return_value();
 
@@ -23,4 +27,6 @@ void Passes::CommonElimination::process_block(IR::Function& function,
       }
     }
   }
+
+  return was_changed;
 }

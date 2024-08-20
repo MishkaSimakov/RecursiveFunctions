@@ -43,37 +43,42 @@ class EqualityStorage {
   }
 };
 
-void Passes::SillyMoveErasurePass::apply() {
-  for (auto& function : manager_.program.functions) {
-    for (auto& basic_block : function.basic_blocks) {
-      EqualityStorage equalities;
-      auto& instructions = basic_block.instructions;
+bool Passes::SillyMoveErasurePass::apply(IR::Function& function,
+                                         IR::BasicBlock& block) {
+  bool was_changed = false;
 
-      for (auto itr = instructions.begin(); itr != instructions.end();) {
-        auto& instr = **itr;
+  EqualityStorage equalities;
+  auto& instructions = block.instructions;
 
-        if (instr.is_of_type<IR::FunctionCall>()) {
-          equalities.clear();
-          ++itr;
-          continue;
-        }
+  for (auto itr = instructions.begin(); itr != instructions.end();) {
+    auto& instr = **itr;
 
-        if (instr.has_return_value()) {
-          IR::Value return_value = instr.get_return_value();
-          equalities.remove(return_value);
-        }
-
-        if (instr.is_of_type<IR::Move>()) {
-          const auto& move = static_cast<const IR::Move&>(instr);
-
-          if (equalities.is_equal(move.return_value, move.arguments[0])) {
-            itr = instructions.erase(itr);
-            continue;
-          }
-        }
-
-        ++itr;
-      }
+    if (instr.is_of_type<IR::FunctionCall>()) {
+      equalities.clear();
+      ++itr;
+      continue;
     }
+
+    if (instr.has_return_value()) {
+      IR::Value return_value = instr.get_return_value();
+      equalities.remove(return_value);
+    }
+
+    if (instr.is_of_type<IR::Move>()) {
+      const auto& move = static_cast<const IR::Move&>(instr);
+
+      if (equalities.is_equal(move.return_value, move.arguments[0])) {
+        was_changed = true;
+
+        itr = instructions.erase(itr);
+        continue;
+      }
+
+      equalities.set_equal(move.return_value, move.arguments[0]);
+    }
+
+    ++itr;
   }
+
+  return was_changed;
 }

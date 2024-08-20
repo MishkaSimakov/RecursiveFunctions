@@ -3,15 +3,15 @@
 namespace Passes {
 class PassManager;
 
-class Pass {
+class BasePass {
  protected:
   PassManager& manager_;
 
  public:
-  explicit Pass(PassManager& manager) : manager_(manager) {}
+  explicit BasePass(PassManager& manager) : manager_(manager) {}
 
   virtual void apply() = 0;
 
-  virtual ~Pass() = default;
+  virtual ~BasePass() = default;
 };
 }  // namespace Passes

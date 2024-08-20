@@ -1,5 +1,6 @@
 #include "AssemblyPrinter.h"
 
+#include "GreedyBlocksOrdering.h"
 #include "InstructionPrinter.h"
 
 void Assembly::AssemblyPrinter::before_function(
@@ -18,6 +19,11 @@ void Assembly::AssemblyPrinter::before_function(
   }
 
   print_callee_saved_registers(CalleeSavedOperationType::STORE, context);
+
+  auto begin_block = context.function.begin_block;
+  if (context.ordering.front() != begin_block) {
+    result.push_back("b " + context.labels.at(begin_block));
+  }
 }
 
 void Assembly::AssemblyPrinter::after_function(
@@ -130,14 +136,14 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
       }
     }
 
-    before_function(context);
+    context.ordering = GreedyBlocksOrdering().get_order(function);
 
-    function.reversed_postorder_traversal(
-        [&context](const IR::BasicBlock* block) {
-          context.ordering.push_back(block);
-          context.labels[block] = fmt::format("{}.{}", context.function.name,
-                                              context.ordering.size());
-        });
+    for (size_t i = 0; i < context.ordering.size(); ++i) {
+      context.labels[context.ordering[i]] =
+          fmt::format("{}.{}", context.function.name, i);
+    }
+
+    before_function(context);
 
     for (size_t i = 0; i < context.ordering.size(); ++i) {
       context.block_index = i;

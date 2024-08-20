@@ -1,16 +1,15 @@
 #pragma once
-#include <Constants.h>
 
 #include <array>
 #include <optional>
 #include <unordered_set>
 #include <vector>
 
-#include "passes/Pass.h"
 #include "passes/PassManager.h"
+#include "passes/pass_types/FunctionLevelPass.h"
 
 namespace Passes {
-class RegisterAllocationPass : public Pass {
+class RegisterAllocationPass : public FunctionLevelPass<> {
   static constexpr size_t kMaxRegistersAllowed = 16;
   static constexpr auto kTemporaryRegister =
       IR::Value(15, IR::ValueType::BASIC_REGISTER);
@@ -46,8 +45,9 @@ class RegisterAllocationPass : public Pass {
       IR::Function&, const std::unordered_map<IR::Value, TemporaryInfo>&);
 
  public:
-  using Pass::Pass;
+  using FunctionLevelPass::FunctionLevelPass;
 
-  void apply() override;
+ protected:
+  bool apply(IR::Function& function) override;
 };
 }  // namespace Passes

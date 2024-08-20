@@ -9,10 +9,9 @@
 
 Passes::PrintPass::PrintPass(PassManager& manager, std::ostream& os,
                              const PrintPassConfig& config)
-    : ParentsFirstPass(manager), os_(os), config_(config) {}
+    : BasicBlockLevelPass(manager), os_(os), config_(config) {}
 
-void Passes::PrintPass::process_block(IR::Function& function,
-                                      IR::BasicBlock& block) {
+bool Passes::PrintPass::apply(IR::Function& function, IR::BasicBlock& block) {
   auto& liveness =
       manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
 
@@ -29,7 +28,7 @@ void Passes::PrintPass::process_block(IR::Function& function,
   }
 
   if (block.is_end()) {
-    return;
+    return false;
   }
 
   // some branches should be printed
@@ -38,20 +37,25 @@ void Passes::PrintPass::process_block(IR::Function& function,
     os_ << " " << (child == nullptr ? "null" : get_block_name(*child));
   }
   os_ << "\n";
+
+  return false;
 }
 
-void Passes::PrintPass::before_function(IR::Function& function) {
+void Passes::PrintPass::before_function(const IR::Function& function) const {
   indices_.clear();
 
-    os_ << fmt::format("{}({}):\n", function.name,
-                       fmt::join(function.arguments, ", "));
+  os_ << fmt::format("{}({}):\n", function.name,
+                     fmt::join(function.arguments, ", "));
 
   os_ << "entryblock: " << get_block_name(*function.begin_block) << std::endl;
 }
 
-void Passes::PrintPass::after_function(IR::Function& function) { os_ << "\n"; }
+void Passes::PrintPass::after_function(const IR::Function& function) const {
+  os_ << "\n";
+}
 
-std::string Passes::PrintPass::get_block_name(const IR::BasicBlock& block) {
+std::string Passes::PrintPass::get_block_name(
+    const IR::BasicBlock& block) const {
   auto [itr, was_inserted] = indices_.emplace(&block, indices_.size());
 
   if (config_.print_blocks_addresses) {

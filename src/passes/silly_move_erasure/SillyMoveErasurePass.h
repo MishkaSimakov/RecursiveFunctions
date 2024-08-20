@@ -1,5 +1,5 @@
 #pragma once
-#include "passes/Pass.h"
+#include "passes/pass_types/BasicBlockLevelPass.h"
 
 // After register allocation pass many virtual registers are mapped into one
 // register. Sometimes instructions like
@@ -7,11 +7,11 @@
 // Aim of this pass is to remove instructions like this.
 
 namespace Passes {
-class SillyMoveErasurePass: public Pass {
-
+class SillyMoveErasurePass : public BasicBlockLevelPass<> {
  public:
-  using Pass::Pass;
+  using BasicBlockLevelPass::BasicBlockLevelPass;
 
-  void apply() override;
+ protected:
+  bool apply(IR::Function& function, IR::BasicBlock& block) override;
 };
 }  // namespace Passes
