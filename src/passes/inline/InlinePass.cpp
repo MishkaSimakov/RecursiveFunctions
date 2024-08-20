@@ -112,67 +112,7 @@ void Passes::InlinePass::inline_function_call(
   block.instructions.erase(call_itr);
 
   function.finalize();
-  std::unordered_set<const IR::BasicBlock*> visited;
-  join_blocks_recursive(function, function.begin_block, visited);
-  function.finalize();
-}
-
-void Passes::InlinePass::join_blocks_recursive(
-    IR::Function& function, IR::BasicBlock* block,
-    std::unordered_set<const IR::BasicBlock*>& visited) {
-  if (block == nullptr) {
-    return;
-  }
-
-  if (block->is_end()) {
-    return;
-  }
-
-  if (visited.contains(block)) {
-    return;
-  }
-
-  auto& first_child = *block->children[0];
-  if (block->has_one_child() && first_child.has_one_parent()) {
-    // remove jump instruction
-    block->instructions.pop_back();
-
-    for (auto& instruciton : first_child.instructions) {
-      block->instructions.push_back(std::move(instruciton));
-    }
-
-    block->children = std::move(first_child.children);
-
-    // preserve parents in correct state
-    for (auto child : first_child.children) {
-      if (child == nullptr) {
-        continue;
-      }
-
-      for (auto& parent : child->parents) {
-        if (parent == &first_child) {
-          parent = block;
-        }
-      }
-    }
-
-    // preserve phi nodes in correct state
-    std::unordered_map<const IR::BasicBlock*, IR::BasicBlock*> mapping;
-    mapping.emplace(&first_child, block);
-    function.replace_phi_parents(mapping);
-
-    std::erase_if(
-        function.basic_blocks,
-        [&first_child](const IR::BasicBlock& b) { return &b == &first_child; });
-
-    join_blocks_recursive(function, block, visited);
-  }
-
-  visited.insert(block);
-
-  for (auto child : block->children) {
-    join_blocks_recursive(function, child, visited);
-  }
+  function.simplify_blocks();
 }
 
 void Passes::InlinePass::apply() {

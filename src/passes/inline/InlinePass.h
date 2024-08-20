@@ -8,7 +8,6 @@ class InlinePass : public Pass {
   void inline_function_call(IR::Function&, IR::BasicBlock&,
                             IR::BasicBlock::InstructionsListT::iterator);
 
-  static void join_blocks_recursive(IR::Function&, IR::BasicBlock*, std::unordered_set<const IR::BasicBlock*>&);
  public:
   using Pass::Pass;
 

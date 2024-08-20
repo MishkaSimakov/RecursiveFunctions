@@ -1,5 +1,63 @@
 #include "Function.h"
 
+void IR::Function::simplify_blocks_recursive(
+    BasicBlock* block, std::unordered_set<const BasicBlock*>& visited) {
+  if (block == nullptr) {
+    return;
+  }
+
+  if (block->is_end()) {
+    visited.insert(block);
+    return;
+  }
+
+  if (visited.contains(block)) {
+    return;
+  }
+
+  auto& first_child = *block->children[0];
+  if (block->has_one_child() && first_child.has_one_parent()) {
+    // remove jump instruction
+    block->instructions.pop_back();
+
+    for (auto& instruciton : first_child.instructions) {
+      block->instructions.push_back(std::move(instruciton));
+    }
+
+    block->children = std::move(first_child.children);
+
+    // preserve parents in correct state
+    for (auto child : first_child.children) {
+      if (child == nullptr) {
+        continue;
+      }
+
+      for (auto& parent : child->parents) {
+        if (parent == &first_child) {
+          parent = block;
+        }
+      }
+    }
+
+    // preserve phi nodes in correct state
+    std::unordered_map<const BasicBlock*, BasicBlock*> mapping;
+    mapping.emplace(&first_child, block);
+    replace_phi_parents(mapping);
+
+    std::erase_if(basic_blocks, [&first_child](const BasicBlock& b) {
+      return &b == &first_child;
+    });
+
+    simplify_blocks_recursive(block, visited);
+  }
+
+  visited.insert(block);
+
+  for (auto child : block->children) {
+    simplify_blocks_recursive(child, visited);
+  }
+}
+
 void IR::Function::replace_values(
     const std::unordered_map<Value, Value>& mapping) const {
   for (auto& block : basic_blocks) {
@@ -7,6 +65,14 @@ void IR::Function::replace_values(
       instruction->replace_values(mapping);
     }
   }
+}
+
+IR::Value IR::Function::allocate_vreg() {
+  size_t index = get_max_temporary_index() + 1;
+  auto temp = Value(index, ValueType::VIRTUAL_REGISTER);
+  temporaries.insert(temp);
+
+  return temp;
 }
 
 void IR::Function::finalize() {
@@ -59,6 +125,18 @@ void IR::Function::finalize() {
       }
     }
   }
+}
+
+void IR::Function::simplify_blocks() {
+  std::unordered_set<const BasicBlock*> visited;
+
+  simplify_blocks_recursive(begin_block, visited);
+
+  std::erase_if(basic_blocks, [&visited](const BasicBlock& block) {
+    return !visited.contains(&block);
+  });
+
+  finalize();
 }
 
 void IR::Function::replace_phi_parents(

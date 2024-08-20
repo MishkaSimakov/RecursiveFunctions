@@ -132,11 +132,12 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
 
     before_function(context);
 
-    function.reversed_postorder_traversal([&context](const IR::BasicBlock* block) {
-      context.ordering.push_back(block);
-      context.labels[block] =
-          fmt::format("{}.{}", context.function.name, context.ordering.size());
-    });
+    function.reversed_postorder_traversal(
+        [&context](const IR::BasicBlock* block) {
+          context.ordering.push_back(block);
+          context.labels[block] = fmt::format("{}.{}", context.function.name,
+                                              context.ordering.size());
+        });
 
     for (size_t i = 0; i < context.ordering.size(); ++i) {
       context.block_index = i;
@@ -146,10 +147,12 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
       result.push_back(context.labels[block] + ":");
 
       for (auto& instruction : block->instructions) {
-        auto str = InstructionPrinter().apply(*instruction, context);
+        auto instr = InstructionPrinter().apply(*instruction, context);
 
-        if (!str.empty()) {
-          result.push_back(std::move(str));
+        if (!instr.empty()) {
+          std::copy(std::make_move_iterator(instr.begin()),
+                    std::make_move_iterator(instr.end()),
+                    std::back_inserter(result));
         }
       }
 

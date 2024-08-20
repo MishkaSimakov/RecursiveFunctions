@@ -75,6 +75,7 @@ struct Branch;
 struct Jump;
 struct Load;
 struct Store;
+struct Select;
 
 struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(FunctionCall);
@@ -87,6 +88,7 @@ struct InstructionVisitor {
   INSTRUCTION_VISITOR_VISIT(Jump);
   INSTRUCTION_VISITOR_VISIT(Load);
   INSTRUCTION_VISITOR_VISIT(Store);
+  INSTRUCTION_VISITOR_VISIT(Select);
 
   virtual ~InstructionVisitor() = default;
 };
@@ -142,6 +144,8 @@ struct BaseInstruction {
   virtual bool operator==(const BaseInstruction& other) const = 0;
 
   virtual std::vector<Value> filter_arguments(ValueType type) const = 0;
+
+  virtual bool use_value(IR::Value value) const = 0;
 
   virtual bool has_return_value() const = 0;
 
@@ -202,6 +206,16 @@ struct Instruction : BaseInstruction {
     }
   }
 
+  bool use_value(Value value) const override {
+    for (auto argument : arguments) {
+      if (argument == value) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   bool has_return_value() const override { return use_return; }
 };
 
@@ -257,6 +271,16 @@ struct VariadicInstruction : BaseInstruction {
 
     auto& casted = static_cast<const VariadicInstruction&>(other);
     return casted.arguments == arguments;
+  }
+
+  bool use_value(Value value) const override {
+    for (auto argument : arguments) {
+      if (argument == value) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   bool has_return_value() const override { return use_return; }
@@ -354,6 +378,8 @@ struct Phi final : BaseInstruction {
 
   bool has_return_value() const override { return true; }
 
+  bool use_value(Value value) const override { return false; }
+
   INSTRUCTION_MEMBERS()
 
   Value get_return_value() const override { return return_value; }
@@ -415,6 +441,19 @@ struct Store final : Instruction<2, false> {
 
   std::string to_string() const override {
     return fmt::format("store {} into {}", arguments[0], arguments[1]);
+  }
+
+  INSTRUCTION_MEMBERS();
+};
+
+struct Select final : Instruction<3, true> {
+  Select(Value result, Value condition_value, Value zero_branch,
+         Value nonzero_branch)
+      : Instruction(result, {condition_value, zero_branch, nonzero_branch}) {}
+
+  std::string to_string() const override {
+    return fmt::format("{} = {} == 0 ? {} : {}", return_value, arguments[0],
+                       arguments[1], arguments[2]);
   }
 
   INSTRUCTION_MEMBERS();

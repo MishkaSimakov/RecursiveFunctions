@@ -1,4 +1,5 @@
 #pragma once
+#include <list>
 #include <string>
 #include <unordered_map>
 
@@ -8,7 +9,7 @@ namespace Assembly {
 struct InstructionContext;
 
 class InstructionPrinter : IR::InstructionVisitor {
-  std::string result_;
+  std::list<std::string> result_;
   const InstructionContext* context_{nullptr};
 
   static std::string format(auto&& s, auto... args) {
@@ -28,8 +29,10 @@ class InstructionPrinter : IR::InstructionVisitor {
   void visit(const IR::Jump&) override;
   void visit(const IR::Load&) override;
   void visit(const IR::Store&) override;
+  void visit(const IR::Select&) override;
 
  public:
-  std::string apply(const IR::BaseInstruction&, const InstructionContext&);
+  std::list<std::string> apply(const IR::BaseInstruction&,
+                               const InstructionContext&);
 };
 }  // namespace Assembly

@@ -58,6 +58,7 @@ struct Value {
   }
 
   bool operator==(const Value&) const = default;
+  std::strong_ordering operator<=>(const Value&) const = default;
 };
 }  // namespace IR
 

@@ -58,6 +58,8 @@ struct Function {
     }
   }
 
+  void simplify_blocks_recursive(BasicBlock*, std::unordered_set<const BasicBlock*>&);
+
  public:
   static constexpr auto entrypoint = "main";
 
@@ -115,6 +117,8 @@ struct Function {
     return &basic_blocks.back();
   }
 
+  Value allocate_vreg();
+
   size_t get_max_temporary_index() const {
     size_t temporary_index = 0;
     for (const auto& temp : temporaries) {
@@ -127,6 +131,8 @@ struct Function {
   }
 
   void finalize();
+
+  void simplify_blocks();
 
   bool is_recursive() const { return calls.contains(name); }
 

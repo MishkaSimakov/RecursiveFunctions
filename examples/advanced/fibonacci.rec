@@ -19,6 +19,7 @@ is_prime(n) = conditional(
     ), n),
     0
 );
+
 ceil_with_prime(n) = add(argmin(not(is_prime(add(*, n)))), n);
 
-ceil_with_prime(200);
+ceil_with_prime(500);

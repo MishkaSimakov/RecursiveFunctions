@@ -7,11 +7,15 @@
 #include "assembly/AssemblyPrinter.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
 #include "passes/PassManager.h"
+#include "passes/branch_to_select/ReplaceBranchWithSelect.h"
 #include "passes/common_elimination/CommonElimination.h"
+#include "passes/constant_propagation/ConstantPropagationPass.h"
 #include "passes/inline/InlinePass.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
 #include "passes/registers_allocation/RegisterAllocationPass.h"
+#include "passes/silly_move_erasure/SSAMoveErasure.h"
+#include "passes/silly_move_erasure/SillyMoveErasurePass.h"
 #include "passes/unused_elimination/UnusedFunctionsEliminationPass.h"
 #include "passes/unused_elimination/UnusedTemporariesEliminationPass.h"
 
@@ -160,6 +164,9 @@ class Main {
       pass_manager.register_pass<Passes::CommonElimination>();
       pass_manager.register_pass<Passes::InlinePass>();
 
+      pass_manager.register_pass<Passes::SSAMoveErasure>();
+      pass_manager.register_pass<Passes::ReplaceBranchWithSelect>();
+
       pass_manager.register_pass<Passes::PhiEliminationPass>();
 
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
@@ -167,7 +174,10 @@ class Main {
 
       auto config = Passes::PrintPassConfig{false, false};
       pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
+
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
+
+      // pass_manager.register_pass<Passes::SillyMoveErasurePass>();
 
       pass_manager.apply();
 
@@ -190,8 +200,8 @@ class Main {
 
       file.close();
 
-      auto compile_command = fmt::format("g++ {} -o test",
-      output_file.c_str()); std::system(compile_command.c_str());
+      auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
+      std::system(compile_command.c_str());
       std::system("./test");
     });
   }
