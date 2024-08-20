@@ -20,8 +20,6 @@ bool Passes::PhiEliminationPass::apply(IR::Function& function) {
 
       auto phi_temporary = function.allocate_vreg();
 
-      std::cout << phi_node->to_string() << " " << phi_temporary.to_string() << std::endl;
-
       for (auto [parent, value] : phi_node->parents) {
         auto insert_itr = std::prev(parent->instructions.end());
 

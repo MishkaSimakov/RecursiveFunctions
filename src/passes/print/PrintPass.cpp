@@ -71,7 +71,7 @@ void Passes::PrintPass::print_live_info(
   }
 
   for (auto [value, state] : live) {
-    if (value.value == 4 && state == TemporaryLivenessState::LIVE) {
+    if (state == TemporaryLivenessState::LIVE) {
       os_ << value.to_string() << " ";
     }
   }

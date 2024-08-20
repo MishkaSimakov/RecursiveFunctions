@@ -165,10 +165,6 @@ class Main {
       pass_manager.register_pass<Passes::CommonElimination>();
       pass_manager.register_pass<Passes::RecursionToLoopPass>();
 
-
-      auto config = Passes::PrintPassConfig{false, true};
-  pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
-
       pass_manager.register_pass<Passes::InlinePass>();
 
       pass_manager.register_pass<Passes::SSAMoveErasure>();
@@ -178,6 +174,10 @@ class Main {
 
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
+
+
+      auto config = Passes::PrintPassConfig{true, false};
+  pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
 

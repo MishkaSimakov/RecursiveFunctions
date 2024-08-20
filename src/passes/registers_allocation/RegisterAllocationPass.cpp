@@ -63,7 +63,6 @@ void Passes::RegisterAllocationPass::apply_transformation(
     replacement_map[temp] = info.assigned_register.value();
   }
 
-  std::cout << function.name << std::endl;
   for (auto [temp, dest] : replacement_map) {
     std::cout << fmt::format("{} -> {}\n", temp, dest);
   }
@@ -142,6 +141,8 @@ void Passes::RegisterAllocationPass::apply_transformation(
 }
 
 bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
+  std::cout << function.name << std::endl;
+
   auto liveness_info =
       manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
 
@@ -157,22 +158,25 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
 
     for (auto& basic_block : function.basic_blocks) {
       for (auto& instruction : basic_block.instructions) {
-        auto& before =
-            liveness_info.get_data(instruction.get(), Position::BEFORE);
-        auto& after =
-            liveness_info.get_data(instruction.get(), Position::AFTER);
-
         auto* call = dynamic_cast<const IR::FunctionCall*>(instruction.get());
 
         if (call == nullptr) {
           continue;
         }
 
-        if (before.contains(temp) && after.contains(temp)) {
+        auto& before =
+            liveness_info.get_data(instruction.get(), Position::BEFORE);
+        auto& after =
+            liveness_info.get_data(instruction.get(), Position::AFTER);
+
+        bool live_before = before.at(temp) == TemporaryLivenessState::LIVE;
+        bool live_after = after.at(temp) == TemporaryLivenessState::LIVE;
+
+        if (live_before && live_after) {
           vregs_info.at(temp).inside_lifetime.push_back(call);
         }
 
-        if (before.contains(temp) || after.contains(temp)) {
+        if (live_before || live_after) {
           vregs_info.at(temp).on_lifetime_edge.push_back(call);
         }
       }
@@ -217,10 +221,10 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
     }
   }
 
-  // for (auto& [temp, info] : calls) {
-  //   std::cout << temp.to_string() << " "
-  //             << (info.is_basic() ? "basic" : "callee-saved") << std::endl;
-  // }
+  for (auto& [temp, info] : vregs_info) {
+    std::cout << temp.to_string() << " "
+              << (info.is_basic() ? "basic" : "callee-saved") << std::endl;
+  }
 
   // find dependencies between temporaries
   auto create_dependencies =
