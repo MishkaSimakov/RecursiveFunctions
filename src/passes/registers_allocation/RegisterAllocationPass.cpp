@@ -63,9 +63,9 @@ void Passes::RegisterAllocationPass::apply_transformation(
     replacement_map[temp] = info.assigned_register.value();
   }
 
-  for (auto [temp, dest] : replacement_map) {
-    std::cout << fmt::format("{} -> {}\n", temp, dest);
-  }
+  // for (auto [temp, dest] : replacement_map) {
+  //   std::cout << fmt::format("{} -> {}\n", temp, dest);
+  // }
 
   for (auto& block : function.basic_blocks) {
     for (auto itr = block.instructions.begin(); itr != block.instructions.end();
@@ -141,7 +141,7 @@ void Passes::RegisterAllocationPass::apply_transformation(
 }
 
 bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
-  std::cout << function.name << std::endl;
+  // std::cout << function.name << std::endl;
 
   auto liveness_info =
       manager_.get_analysis<LivenessAnalysis>().get_liveness_info();

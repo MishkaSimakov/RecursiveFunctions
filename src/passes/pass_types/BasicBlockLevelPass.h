@@ -56,6 +56,7 @@ class BasicBlockLevelPass : public BasePass {
           if (was_changed) {
             // TODO: make better, invalidate only this block analysis
             manager_.invalidate();
+            function.simplify_blocks();
             function.finalize();
           }
         } while (was_changed && repeat);

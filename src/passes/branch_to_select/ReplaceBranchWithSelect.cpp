@@ -112,7 +112,9 @@ bool Passes::ReplaceBranchWithSelect::apply(IR::Function& function) {
     }
   }
 
+  if (was_changed) {
   function.simplify_blocks();
+  }
 
   return was_changed;
 }

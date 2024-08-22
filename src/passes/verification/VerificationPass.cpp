@@ -34,7 +34,9 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
 
           if (phi.parents.size() != block.parents.size()) {
             throw std::runtime_error(
-                "Each phi instruction must contain all block parents");
+                fmt::format("In function \"{}\" phi instruction \"{}\" doesn't "
+                            "enumerate all parents",
+                            function.name, instruction->to_string()));
           }
 
           std::unordered_set<const IR::BasicBlock*> phi_parents;

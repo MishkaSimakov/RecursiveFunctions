@@ -11,7 +11,7 @@ bool Passes::LoopRotationPass::apply(IR::Function& function) {
     return false;
   }
 
-  const auto& loop = loops.front();
+  auto loop = loops.front();
 
   // loop must have only one exit in header block
   if (loop.exit_blocks.size() != 1 || !loop.exit_blocks.contains(loop.header)) {
@@ -27,14 +27,16 @@ bool Passes::LoopRotationPass::apply(IR::Function& function) {
 
   // one of header's children exits loop and the other goes into loop
   IR::BasicBlock* loop_new_header = nullptr;
+  IR::BasicBlock* loop_outer_block = nullptr;
   for (auto child : loop.header->children) {
     if (loop.blocks.contains(child)) {
       loop_new_header = child;
-      break;
+    } else {
+      loop_outer_block = child;
     }
   }
 
-  if (loop_new_header == nullptr) {
+  if (loop_new_header == nullptr || loop_outer_block == nullptr) {
     throw std::runtime_error("Something strange in LoopRotationPass.");
   }
 
@@ -50,6 +52,10 @@ bool Passes::LoopRotationPass::apply(IR::Function& function) {
     auto copy = function.add_block(loop.header->copy_instructions());
     copy->children = loop.header->children;
 
+    if (loop.blocks.contains(parent)) {
+      loop.blocks.insert(copy);
+    }
+
     std::unordered_map<IR::Value, IR::Value> replacements;
 
     for (auto& instruction : loop.header->instructions) {
@@ -62,28 +68,56 @@ bool Passes::LoopRotationPass::apply(IR::Function& function) {
       }
     }
 
-    for (auto itr = copy->instructions.begin();
-         itr != copy->instructions.end();) {
-      (*itr)->replace_values(replacements);
-
-      if ((*itr)->is_of_type<IR::Phi>()) {
-        auto& phi = static_cast<const IR::Phi&>(**itr);
+    for (auto& instruction : copy->instructions) {
+      if (instruction->is_of_type<IR::Phi>()) {
+        auto& phi = static_cast<const IR::Phi&>(*instruction);
 
         for (auto [phi_parent, phi_value] : phi.parents) {
           if (phi_parent == parent) {
-            *itr = std::make_unique<IR::Move>(phi.return_value, phi_value);
+            auto move = std::make_unique<IR::Move>(phi.return_value, phi_value);
+
+            if (replacements.contains(move->return_value)) {
+              move->return_value = replacements[move->return_value];
+            }
+
+            instruction = std::move(move);
             break;
           }
         }
+      } else {
+        instruction->replace_values(replacements);
       }
-
-      ++itr;
     }
 
     for (auto& child : parent->children) {
       if (child == loop.header) {
         child = copy;
       }
+    }
+  }
+
+  // we must insert phi instruction in the first block outside of loop
+  std::unordered_map<IR::Value, IR::Value> loop_header_values_replacements;
+  for (auto& [value, replacements] : header_values_replacements) {
+    auto new_value = function.allocate_vreg();
+
+    auto phi = std::make_unique<IR::Phi>();
+
+    phi->return_value = new_value;
+    phi->parents = replacements;
+
+    loop_header_values_replacements.emplace(value, new_value);
+
+    loop_outer_block->instructions.push_front(std::move(phi));
+  }
+
+  for (auto& block : function.basic_blocks) {
+    if (loop.blocks.contains(&block)) {
+      continue;
+    }
+
+    for (auto& instruction : block.instructions) {
+      instruction->replace_values(loop_header_values_replacements);
     }
   }
 

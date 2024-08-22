@@ -166,53 +166,59 @@ class Main {
       pass_manager.register_pass<Passes::CommonElimination>();
 
       pass_manager.register_pass<Passes::RecursionToLoopPass>();
-      auto config = Passes::PrintPassConfig{true, false, false};
+
+      auto config = Passes::PrintPassConfig{false, true, false};
+
       pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
-      // pass_manager.register_pass<Passes::LoopRotationPass>();
-
+      pass_manager.register_pass<Passes::LoopRotationPass>();
       pass_manager.register_pass<Passes::ConstantPropagationPass>();
-
-      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
       pass_manager.register_pass<Passes::InlinePass>();
 
-      pass_manager.register_pass<Passes::SSAMoveErasure>();
-      pass_manager.register_pass<Passes::ReplaceBranchWithSelect>();
 
-      pass_manager.register_pass<Passes::PhiEliminationPass>();
+      pass_manager.register_pass<Passes::SSAMoveErasure>();
+      pass_manager.register_pass<Passes::ConstantPropagationPass>();
+      pass_manager.register_pass<Passes::SSAMoveErasure>();
+
+      pass_manager.register_pass<Passes::ReplaceBranchWithSelect>();
 
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
 
+      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
+
+      pass_manager.register_pass<Passes::PhiEliminationPass>();
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
 
       pass_manager.register_pass<Passes::SillyMoveErasurePass>();
+      pass_manager.register_pass<Passes::ConstantPropagationPass>();
 
       pass_manager.apply();
+
+
+      // auto assembly = Assembly::AssemblyPrinter(ir).print();
       //
-      auto assembly = Assembly::AssemblyPrinter(ir).print();
-
-      // TODO: add -o flag support
-      if (parser.present("-o")) {
-        throw std::runtime_error("not supported yet.");
-      }
-
-      auto temp_dir = fs::temp_directory_path();
-      auto output_file = temp_dir / "somestupidassembly.s";
-
-      std::ofstream file(output_file);
-
-      for (auto line : assembly) {
-        file << line << "\n";
-        std::cout << line << "\n";
-      }
-
-      file.close();
-
-      auto compile_command = fmt::format("g++ {} -o test", output_file.c_str());
-      std::system(compile_command.c_str());
-      std::system("./test");
+      // // TODO: add -o flag support
+      // if (parser.present("-o")) {
+      //   throw std::runtime_error("not supported yet.");
+      // }
+      //
+      // auto temp_dir = fs::temp_directory_path();
+      // auto output_file = temp_dir / "somestupidassembly.s";
+      //
+      // std::ofstream file(output_file);
+      //
+      // for (auto line : assembly) {
+      //   file << line << "\n";
+      //   std::cout << line << "\n";
+      // }
+      //
+      // file.close();
+      //
+      // auto compile_command = fmt::format("g++ {} -o test",
+      // output_file.c_str()); std::system(compile_command.c_str());
+      // std::system("./test");
     });
   }
 };

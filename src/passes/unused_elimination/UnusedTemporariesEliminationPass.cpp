@@ -5,6 +5,7 @@
 
 bool Passes::UnusedTemporariesEliminationPass::apply(IR::Function& function) {
   bool was_changed = false;
+
   const auto& live =
       manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
 
