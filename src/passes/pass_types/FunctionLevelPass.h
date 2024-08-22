@@ -28,14 +28,19 @@ class FunctionLevelPass : public BasePass {
     auto& program = manager_.program;
     auto ordering = order_(program);
 
-    for (IR::Function* function : ordering) {
-      bool was_changed = apply(*function);
+    bool repeat = get_info().repeat_while_changing;
 
-      if (was_changed) {
-        // TODO: make better, invalidate only this function analysis
-        manager_.invalidate();
-        function->finalize();
-      }
+    for (IR::Function* function : ordering) {
+      bool was_changed;
+      do {
+        was_changed = apply(*function);
+
+        if (was_changed) {
+          // TODO: make better, invalidate only this function analysis
+          manager_.invalidate();
+          function->finalize();
+        }
+      } while (was_changed && repeat);
     }
   }
 

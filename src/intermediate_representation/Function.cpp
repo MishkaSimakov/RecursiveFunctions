@@ -99,10 +99,8 @@ void IR::Function::finalize() {
   }
 
   for (auto& block : basic_blocks) {
-    for (auto child : block.children) {
-      if (child != nullptr) {
-        child->parents.push_back(&block);
-      }
+    for (auto child : block.nonnull_children()) {
+      child->parents.push_back(&block);
     }
 
     // fill end blocks data

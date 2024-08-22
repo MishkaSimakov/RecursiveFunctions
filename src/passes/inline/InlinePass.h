@@ -9,7 +9,8 @@ class InlinePass : public ModuleLevelPass {
                             IR::BasicBlock::InstructionsListT::iterator);
 
  public:
-  using ModuleLevelPass::ModuleLevelPass;
+  InlinePass(PassManager& manager)
+      : ModuleLevelPass(manager, {"Functions inline", false}) {}
 
  protected:
   bool apply(IR::Program& program) override;

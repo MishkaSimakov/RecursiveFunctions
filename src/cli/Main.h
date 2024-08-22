@@ -11,6 +11,7 @@
 #include "passes/common_elimination/CommonElimination.h"
 #include "passes/constant_propagation/ConstantPropagationPass.h"
 #include "passes/inline/InlinePass.h"
+#include "passes/loop_rotation/LoopRotationPass.h"
 #include "passes/phi_elimination/PhiEliminationPass.h"
 #include "passes/print/PrintPass.h"
 #include "passes/recursion_to_loop/RecursionToLoopPass.h"
@@ -163,7 +164,16 @@ class Main {
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
 
       pass_manager.register_pass<Passes::CommonElimination>();
+
       pass_manager.register_pass<Passes::RecursionToLoopPass>();
+      auto config = Passes::PrintPassConfig{true, false, false};
+      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
+
+      // pass_manager.register_pass<Passes::LoopRotationPass>();
+
+      pass_manager.register_pass<Passes::ConstantPropagationPass>();
+
+      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
       pass_manager.register_pass<Passes::InlinePass>();
 
@@ -174,10 +184,6 @@ class Main {
 
       pass_manager.register_pass<Passes::UnusedFunctionsEliminationPass>();
       pass_manager.register_pass<Passes::UnusedTemporariesEliminationPass>();
-
-
-      auto config = Passes::PrintPassConfig{true, false};
-  pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
 

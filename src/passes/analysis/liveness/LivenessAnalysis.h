@@ -20,15 +20,20 @@ class LivenessAnalysis final
   const auto& get_liveness_info() const { return storage_; }
 
  protected:
+  std::unordered_map<std::pair<IR::Value, const IR::BasicBlock*>,
+                     const IR::BasicBlock*>
+      phi_values;
+
   void perform_analysis(const IR::Program&) override;
 
   std::unordered_map<IR::Value, TemporaryLivenessState> meet(
-      std::vector<const std::unordered_map<IR::Value, TemporaryLivenessState>*>
-          children) const override;
+      std::span<IR::BasicBlock* const> children,
+      const IR::BasicBlock& current) override;
 
   std::unordered_map<IR::Value, TemporaryLivenessState> transfer(
       const std::unordered_map<IR::Value, TemporaryLivenessState>& after,
-      const IR::BaseInstruction& instruction) const override;
+      const IR::BaseInstruction& instruction,
+      const IR::BasicBlock& current) override;
 
   void init(const IR::Function& function) override;
 };

@@ -45,7 +45,8 @@ class RegisterAllocationPass : public FunctionLevelPass<> {
       IR::Function&, const std::unordered_map<IR::Value, TemporaryInfo>&);
 
  public:
-  using FunctionLevelPass::FunctionLevelPass;
+  RegisterAllocationPass(PassManager& manager)
+      : FunctionLevelPass(manager, {"Register allocation", false}) {}
 
  protected:
   bool apply(IR::Function& function) override;

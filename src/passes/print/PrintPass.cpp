@@ -5,11 +5,14 @@
 
 #include "intermediate_representation/Function.h"
 #include "passes/PassManager.h"
+#include "passes/analysis/dominators/DominatorsAnalysis.h"
 #include "passes/analysis/liveness/LivenessAnalysis.h"
 
 Passes::PrintPass::PrintPass(PassManager& manager, std::ostream& os,
                              const PrintPassConfig& config)
-    : BasicBlockLevelPass(manager), os_(os), config_(config) {}
+    : BasicBlockLevelPass(manager, {"Print", false}),
+      os_(os),
+      config_(config) {}
 
 bool Passes::PrintPass::apply(IR::Function& function, IR::BasicBlock& block) {
   auto& liveness =
@@ -46,6 +49,20 @@ void Passes::PrintPass::before_function(const IR::Function& function) const {
                      fmt::join(function.arguments, ", "));
 
   os_ << "entryblock: " << get_block_name(*function.begin_block) << std::endl;
+
+  if (config_.print_loops_info) {
+    std::cout << "loops:" << std::endl;
+    auto& doms = manager_.get_analysis<DominatorsAnalysis>();
+
+    for (auto& loop : doms.get_loops(function)) {
+      std::cout << "header: " << get_block_name(*loop.header) << "; ";
+      for (auto block : loop.blocks) {
+        std::cout << get_block_name(*block) << " ";
+      }
+
+      std::cout << "\n";
+    }
+  }
 }
 
 void Passes::PrintPass::after_function(const IR::Function& function) const {

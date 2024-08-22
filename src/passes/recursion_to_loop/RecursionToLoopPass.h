@@ -14,6 +14,7 @@ class RecursionToLoopPass : public FunctionLevelPass<> {
                                         std::unordered_set<IR::BasicBlock*>&);
 
  public:
-  using FunctionLevelPass::FunctionLevelPass;
+  RecursionToLoopPass(PassManager& manager)
+      : FunctionLevelPass(manager, {"Recursion to loop", false}) {}
 };
 }  // namespace Passes

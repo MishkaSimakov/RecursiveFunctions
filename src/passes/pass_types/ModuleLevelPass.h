@@ -10,11 +10,16 @@ class ModuleLevelPass : public BasePass {
 
  private:
   void apply() override {
-    bool was_changed = apply(manager_.program);
+    bool repeat = get_info().repeat_while_changing;
 
-    if (was_changed) {
-      manager_.invalidate();
-    }
+    bool was_changed;
+
+    do {
+      was_changed = apply(manager_.program);
+      if (was_changed) {
+        manager_.invalidate();
+      }
+    } while (was_changed && repeat);
   }
 
  protected:

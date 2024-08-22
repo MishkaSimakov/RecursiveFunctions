@@ -8,7 +8,8 @@ class ReplaceBranchWithSelect : public FunctionLevelPass<> {
   bool can_apply_to_phi(const IR::BasicBlock&, const IR::Phi&) const;
 
  public:
-  using FunctionLevelPass::FunctionLevelPass;
+  ReplaceBranchWithSelect(PassManager& manager)
+      : FunctionLevelPass(manager, {"Replace branch with select", false}) {}
 
  protected:
   bool apply(IR::Function& function) override;

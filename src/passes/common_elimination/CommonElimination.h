@@ -4,7 +4,9 @@
 namespace Passes {
 class CommonElimination final : public BasicBlockLevelPass<> {
  public:
-  using BasicBlockLevelPass::BasicBlockLevelPass;
+  CommonElimination(PassManager& manager)
+      : BasicBlockLevelPass(manager,
+                            {"Common expressions elimination", false}) {}
 
  protected:
   bool apply(IR::Function& function, IR::BasicBlock& block) override;

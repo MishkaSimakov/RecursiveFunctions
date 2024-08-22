@@ -10,6 +10,7 @@ namespace Passes {
 struct PrintPassConfig {
   bool print_live_info = false;
   bool print_blocks_addresses = false;
+  bool print_loops_info = false;
 };
 
 class PrintPass : public BasicBlockLevelPass<ReversedPostBasicBlocksOrder> {

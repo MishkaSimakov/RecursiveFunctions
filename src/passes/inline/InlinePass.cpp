@@ -66,10 +66,8 @@ void Passes::InlinePass::inline_function_call(
   for (auto itr = std::next(new_blocks_start); itr != blocks.end(); ++itr) {
     auto& current_block = *itr;
 
-    for (auto& child : current_block.children) {
-      if (child != nullptr) {
-        child = blocks_mapping.at(child);
-      }
+    for (auto& child : current_block.nonnull_children()) {
+      child = blocks_mapping.at(child);
     }
 
     for (auto& parent : current_block.parents) {
@@ -126,7 +124,7 @@ bool Passes::InlinePass::apply(IR::Program& program) {
       bool was_function_changed = false;
 
       for (auto& block : function.basic_blocks) {
-        size_t inline_threshold = 10 * (1);
+        size_t inline_threshold = 10;
 
         for (auto itr = block.instructions.begin();
              itr != block.instructions.end(); ++itr) {

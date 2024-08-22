@@ -22,9 +22,11 @@ class BackwardDFA {
 
   DFAStorage<T> storage_;
 
-  virtual T meet(std::vector<const T*> children) const = 0;
-  virtual T transfer(const T& after,
-                     const IR::BaseInstruction& instruction) const = 0;
+  virtual T meet(std::span<IR::BasicBlock* const> children,
+                 const IR::BasicBlock& current) = 0;
+
+  virtual T transfer(const T& after, const IR::BaseInstruction& instruction,
+                     const IR::BasicBlock& current) = 0;
   virtual void init(const IR::Function&) = 0;
 
   void start_dfa(const IR::Program& program);
@@ -41,7 +43,7 @@ bool BackwardDFA<T>::transfer_through_block(const IR::BasicBlock& block,
     auto& before = storage_.get_data(itr->get(), Position::BEFORE);
     const auto& after = storage_.get_data(itr->get(), Position::AFTER);
 
-    auto new_result = transfer(after, **itr);
+    auto new_result = transfer(after, **itr, block);
 
     if (new_result == before && stop_on_unchanged) {
       return false;
@@ -65,14 +67,7 @@ void BackwardDFA<T>::process_one_block(
   worklist.erase(&block);
 
   if (!block.is_end()) {
-    std::vector<const T*> children_data;
-    for (auto child : block.children) {
-      if (child != nullptr) {
-        children_data.push_back(&storage_.get_data(child, Position::BEFORE));
-      }
-    }
-
-    auto meet_result = meet(children_data);
+    auto meet_result = meet(block.nonnull_children(), block);
     auto& after = storage_.get_data(&block, Position::AFTER);
 
     if (meet_result == after && stop_on_unchanged) {

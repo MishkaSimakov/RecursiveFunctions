@@ -221,10 +221,10 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
     }
   }
 
-  for (auto& [temp, info] : vregs_info) {
-    std::cout << temp.to_string() << " "
-              << (info.is_basic() ? "basic" : "callee-saved") << std::endl;
-  }
+  // for (auto& [temp, info] : vregs_info) {
+  //   std::cout << temp.to_string() << " "
+  //             << (info.is_basic() ? "basic" : "callee-saved") << std::endl;
+  // }
 
   // find dependencies between temporaries
   auto create_dependencies =
@@ -259,11 +259,11 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
 
   // std::cout << "dependencies" << std::endl;
   // for (auto& [temp, info] : vregs_info) {
-  // std::cout << temp.to_string() << ":\n";
-  // for (auto dep : info.dependencies) {
-  // std::cout << dep.to_string() << " ";
-  // }
-  // std::cout << std::endl;
+  //   std::cout << temp.to_string() << ":\n";
+  //   for (auto dep : info.dependencies) {
+  //     std::cout << dep.to_string() << " ";
+  //   }
+  //   std::cout << std::endl;
   // }
 
   // then we must find best suitable registers for basic case

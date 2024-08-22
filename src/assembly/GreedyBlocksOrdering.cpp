@@ -7,8 +7,8 @@
 const IR::BasicBlock* Assembly::GreedyBlocksOrdering::choose_next(
     const IR::BasicBlock* current,
     const std::unordered_set<const IR::BasicBlock*>& unvisited) const {
-  for (auto child : current->children) {
-    if (child != nullptr && unvisited.contains(child)) {
+  for (auto child : current->nonnull_children()) {
+    if (unvisited.contains(child)) {
       return child;
     }
   }

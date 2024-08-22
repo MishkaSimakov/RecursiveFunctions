@@ -5,7 +5,8 @@ namespace Passes {
 class SSAMoveErasure
     : public BasicBlockLevelPass<ReversedPostBasicBlocksOrder> {
  public:
-  using BasicBlockLevelPass::BasicBlockLevelPass;
+  SSAMoveErasure(PassManager& manager)
+      : BasicBlockLevelPass(manager, {"SSA move erasure", false}) {}
 
  protected:
   std::unordered_map<IR::Value, IR::Value> replacements_;

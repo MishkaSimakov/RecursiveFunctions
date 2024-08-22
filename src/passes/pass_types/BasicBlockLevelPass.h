@@ -39,6 +39,7 @@ class BasicBlockLevelPass : public BasePass {
   [[no_unique_address]] Order order_;
 
   void apply() override {
+    bool repeat = get_info().repeat_while_changing;
     auto& program = manager_.program;
 
     for (auto& function : program.functions) {
@@ -47,13 +48,17 @@ class BasicBlockLevelPass : public BasePass {
       auto ordering = order_(function);
 
       for (IR::BasicBlock* block : ordering) {
-        bool was_changed = apply(function, *block);
+        bool was_changed;
 
-        if (was_changed) {
-          // TODO: make better, invalidate only this block analysis
-          manager_.invalidate();
-          function.finalize();
-        }
+        do {
+          was_changed = apply(function, *block);
+
+          if (was_changed) {
+            // TODO: make better, invalidate only this block analysis
+            manager_.invalidate();
+            function.finalize();
+          }
+        } while (was_changed && repeat);
       }
 
       after_function(function);

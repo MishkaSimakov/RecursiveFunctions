@@ -2,10 +2,10 @@
 #include "passes/pass_types/FunctionLevelPass.h"
 
 namespace Passes {
-class PhiEliminationPass : public FunctionLevelPass<> {
+class LoopRotationPass : public FunctionLevelPass<> {
  public:
-  PhiEliminationPass(PassManager& manager)
-      : FunctionLevelPass(manager, {"Phi elimination", false}) {}
+  LoopRotationPass(PassManager& manager)
+      : FunctionLevelPass(manager, {"Loop rotation", false}) {}
 
  protected:
   bool apply(IR::Function& function) override;

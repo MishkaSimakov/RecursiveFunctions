@@ -7,16 +7,10 @@
 namespace Passes {
 class UnusedTemporariesEliminationPass : public FunctionLevelPass<> {
  public:
-  using FunctionLevelPass::FunctionLevelPass;
+  UnusedTemporariesEliminationPass(PassManager& manager)
+      : FunctionLevelPass(manager, {"Unused temporaries elimination", true}) {}
 
  protected:
   bool apply(IR::Function& function) override;
-
-  std::unordered_set<IR::Value> find_used_in_function(
-      const IR::Function&) const;
-
-  void mark_used_recursively(IR::Value,
-                             const std::vector<std::vector<IR::Value>>&,
-                             std::unordered_set<IR::Value>&) const;
 };
 }  // namespace Passes
