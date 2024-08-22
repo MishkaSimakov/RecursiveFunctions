@@ -6,7 +6,13 @@ namespace Passes {
 class UnusedFunctionsEliminationPass : public ModuleLevelPass {
  public:
   UnusedFunctionsEliminationPass(PassManager& manager)
-      : ModuleLevelPass(manager, {"Unused functions elimination", true}) {}
+      : ModuleLevelPass(manager) {
+    info_.name = "Unused functions elimination";
+    info_.repeat_while_changing = true;
+
+    info_.preserve_ssa = true;
+    info_.require_ssa = false;
+  }
 
  protected:
   std::unordered_set<std::string> used_;

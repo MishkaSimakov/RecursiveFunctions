@@ -4,6 +4,10 @@
 
 bool Passes::VerificationPass::apply(IR::Program& program) {
   for (auto& function : program.functions) {
+    if (manager_.is_in_ssa()) {
+      check_ssa(function);
+    }
+
     for (auto& block : function.basic_blocks) {
       // if there is only one child it must be the first one in pair
       if (block.children[0] == nullptr && block.children[1] != nullptr) {
@@ -80,4 +84,31 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
   }
 
   return false;
+}
+
+void Passes::VerificationPass::check_ssa(const IR::Function& function) {
+  std::unordered_set<IR::Value> defined;
+
+  auto define_value_with_check = [&defined, &function](IR::Value value) {
+    auto [itr, was_inserted] = defined.emplace(value);
+
+    if (!was_inserted) {
+      throw std::runtime_error(fmt::format(
+          "In function \"{}\" SSA form is not satisfied. Value {} has more "
+          "than one definition.",
+          function.name, value));
+    }
+  };
+
+  for (auto& argument : function.arguments) {
+    define_value_with_check(argument);
+  }
+
+  for (auto& block : function.basic_blocks) {
+    for (auto& instruction : block.instructions) {
+      if (instruction->has_return_value()) {
+        define_value_with_check(instruction->get_return_value());
+      }
+    }
+  }
 }

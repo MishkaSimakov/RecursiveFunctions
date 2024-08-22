@@ -9,7 +9,13 @@ class ReplaceBranchWithSelect : public FunctionLevelPass<> {
 
  public:
   ReplaceBranchWithSelect(PassManager& manager)
-      : FunctionLevelPass(manager, {"Replace branch with select", false}) {}
+      : FunctionLevelPass(manager) {
+    info_.name = "Replace branch with select";
+    info_.repeat_while_changing = false;
+
+    info_.preserve_ssa = true;
+    info_.require_ssa = true;
+  }
 
  protected:
   bool apply(IR::Function& function) override;

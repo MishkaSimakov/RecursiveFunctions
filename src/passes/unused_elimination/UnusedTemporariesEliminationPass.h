@@ -8,7 +8,13 @@ namespace Passes {
 class UnusedTemporariesEliminationPass : public FunctionLevelPass<> {
  public:
   UnusedTemporariesEliminationPass(PassManager& manager)
-      : FunctionLevelPass(manager, {"Unused temporaries elimination", true}) {}
+      : FunctionLevelPass(manager) {
+    info_.name = "Unused temporaries elimination";
+    info_.repeat_while_changing = true;
+
+    info_.preserve_ssa = true;
+    info_.require_ssa = false;
+  }
 
  protected:
   bool apply(IR::Function& function) override;

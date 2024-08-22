@@ -10,9 +10,13 @@
 
 Passes::PrintPass::PrintPass(PassManager& manager, std::ostream& os,
                              const PrintPassConfig& config)
-    : BasicBlockLevelPass(manager, {"Print", false}),
-      os_(os),
-      config_(config) {}
+    : BasicBlockLevelPass(manager), os_(os), config_(config) {
+  info_.name = "Print";
+  info_.repeat_while_changing = false;
+
+  info_.preserve_ssa = true;
+  info_.require_ssa = true;
+}
 
 bool Passes::PrintPass::apply(IR::Function& function, IR::BasicBlock& block) {
   auto& liveness =

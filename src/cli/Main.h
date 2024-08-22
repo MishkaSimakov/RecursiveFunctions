@@ -169,13 +169,10 @@ class Main {
 
       auto config = Passes::PrintPassConfig{false, true, false};
 
-      pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
-
       pass_manager.register_pass<Passes::LoopRotationPass>();
       pass_manager.register_pass<Passes::ConstantPropagationPass>();
 
       pass_manager.register_pass<Passes::InlinePass>();
-
 
       pass_manager.register_pass<Passes::SSAMoveErasure>();
       pass_manager.register_pass<Passes::ConstantPropagationPass>();
@@ -188,11 +185,12 @@ class Main {
 
       pass_manager.register_pass<Passes::PrintPass>(std::cout, config);
 
+      pass_manager.register_pass<Passes::ConstantPropagationPass>();
+
       pass_manager.register_pass<Passes::PhiEliminationPass>();
       pass_manager.register_pass<Passes::RegisterAllocationPass>();
 
       pass_manager.register_pass<Passes::SillyMoveErasurePass>();
-      pass_manager.register_pass<Passes::ConstantPropagationPass>();
 
       pass_manager.apply();
 

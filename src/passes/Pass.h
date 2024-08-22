@@ -7,6 +7,8 @@ class PassManager;
 struct PassInfo {
   std::string name{};
   bool repeat_while_changing{false};
+  bool require_ssa{true};
+  bool preserve_ssa{true};
 };
 
 class BasePass {

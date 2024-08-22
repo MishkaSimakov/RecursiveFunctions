@@ -24,6 +24,8 @@ class PassManager {
 
   std::unordered_map<std::type_index, std::unique_ptr<Analyser>> analysers;
 
+  bool is_in_ssa_{true};
+
  public:
   IR::Program& program;
 
@@ -58,6 +60,8 @@ class PassManager {
       analyser->invalidate();
     }
   }
+
+  bool is_in_ssa() const { return is_in_ssa_; }
 
   void apply();
 };

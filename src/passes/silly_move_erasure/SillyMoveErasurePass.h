@@ -9,8 +9,13 @@
 namespace Passes {
 class SillyMoveErasurePass : public BasicBlockLevelPass<> {
  public:
-  SillyMoveErasurePass(PassManager& manager)
-      : BasicBlockLevelPass(manager, {"Silly move erasure", false}) {}
+  SillyMoveErasurePass(PassManager& manager) : BasicBlockLevelPass(manager) {
+    info_.name = "Silly move erasure";
+    info_.repeat_while_changing = false;
+
+    info_.preserve_ssa = true;
+    info_.require_ssa = false;
+  }
 
  protected:
   bool apply(IR::Function& function, IR::BasicBlock& block) override;
