@@ -9,12 +9,22 @@ class DominatorsAnalysis final : public Analyser {
   struct Loop {
     std::unordered_set<const IR::BasicBlock*> blocks;
     std::unordered_set<const IR::BasicBlock*> exit_blocks;
+
     const IR::BasicBlock* header;
   };
 
   bool dominate(const IR::BasicBlock*, const IR::BasicBlock*) const;
 
-  const std::unordered_set<const IR::BasicBlock*>& dominators(const IR::BasicBlock*) const;
+  const std::unordered_set<const IR::BasicBlock*>& dominators(
+      const IR::BasicBlock*) const;
+
+  // Update all information about function, but doesn't invalidate loops
+  // iterators
+  void update_loops_information(const IR::Function&);
+
+  void change_loop_header(const IR::Function& function,
+                          const IR::BasicBlock* old_header,
+                          const IR::BasicBlock* new_header);
 
   size_t nesting_level(const IR::BasicBlock*) const;
 
@@ -39,7 +49,7 @@ class DominatorsAnalysis final : public Analyser {
   void join_natural_loops(const IR::Function&);
   void calculate_nesting_level(const IR::Function&);
 
-  void mark_loop_recursively(Loop& loop, const IR::BasicBlock* current,
-                             const IR::BasicBlock* header);
+  static void mark_loop_recursively(Loop& loop, const IR::BasicBlock* current,
+                                    const IR::BasicBlock* header);
 };
 }  // namespace Passes

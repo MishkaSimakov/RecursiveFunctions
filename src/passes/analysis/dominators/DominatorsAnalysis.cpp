@@ -12,6 +12,48 @@ Passes::DominatorsAnalysis::dominators(const IR::BasicBlock* block) const {
   return blocks_info.at(block).dominators;
 }
 
+void Passes::DominatorsAnalysis::update_loops_information(
+    const IR::Function& function) {
+  for (auto& block : function.basic_blocks) {
+    blocks_info.erase(&block);
+  }
+
+  find_dominators(function);
+
+  // TODO: there is some code duplication between this and find natural loops
+  for (auto& loop : loops[&function]) {
+    loop.blocks.clear();
+    loop.exit_blocks.clear();
+
+    for (auto parent : loop.header->parents) {
+      if (dominate(loop.header, parent)) {
+        mark_loop_recursively(loop, parent, loop.header);
+        loop.blocks.insert(loop.header);
+      }
+    }
+
+    // calculating exit blocks
+    for (auto loop_block : loop.blocks) {
+      for (auto loop_child : loop_block->nonnull_children()) {
+        if (!loop.blocks.contains(loop_child)) {
+          loop.exit_blocks.insert(loop_block);
+        }
+      }
+    }
+  }
+}
+
+void Passes::DominatorsAnalysis::change_loop_header(
+    const IR::Function& function, const IR::BasicBlock* old_header,
+    const IR::BasicBlock* new_header) {
+  for (auto& loop : loops[&function]) {
+    if (loop.header == old_header) {
+      loop.header = new_header;
+      break;
+    }
+  }
+}
+
 size_t Passes::DominatorsAnalysis::nesting_level(
     const IR::BasicBlock* block) const {
   return blocks_info.at(block).nesting_level;
@@ -28,9 +70,8 @@ void Passes::DominatorsAnalysis::perform_analysis(const IR::Program& program) {
 
   for (auto& function : program.functions) {
     find_dominators(function);
-    find_natural_loops(function);
 
-    join_natural_loops(function);
+    find_natural_loops(function);
     calculate_nesting_level(function);
   }
 }

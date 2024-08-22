@@ -196,7 +196,6 @@ class Main {
 
       pass_manager.apply();
 
-
       // auto assembly = Assembly::AssemblyPrinter(ir).print();
       //
       // // TODO: add -o flag support

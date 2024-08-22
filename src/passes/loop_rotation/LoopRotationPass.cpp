@@ -1,18 +1,29 @@
 #include "LoopRotationPass.h"
 
-#include "passes/analysis/dominators/DominatorsAnalysis.h"
-
 bool Passes::LoopRotationPass::apply(IR::Function& function) {
-  const auto& loops =
-      manager_.get_analysis<DominatorsAnalysis>().get_loops(function);
+  bool was_changed = false;
 
-  // TODO: process more than one loop
-  if (loops.empty()) {
-    return false;
+  auto& dominators_analysis = manager_.get_analysis<DominatorsAnalysis>();
+
+  for (const auto& loop : dominators_analysis.get_loops(function)) {
+    auto loop_copy = loop;
+    bool was_rotated = rotate_loop(function, loop_copy);
+
+    if (was_rotated) {
+      was_changed = true;
+
+      dominators_analysis.change_loop_header(function, loop.header,
+                                             loop_copy.header);
+      function.finalize();
+      dominators_analysis.update_loops_information(function);
+    }
   }
 
-  auto loop = loops.front();
+  return was_changed;
+}
 
+bool Passes::LoopRotationPass::rotate_loop(IR::Function& function,
+                                           DominatorsAnalysis::Loop& loop) {
   // loop must have only one exit in header block
   if (loop.exit_blocks.size() != 1 || !loop.exit_blocks.contains(loop.header)) {
     return false;
@@ -40,14 +51,15 @@ bool Passes::LoopRotationPass::apply(IR::Function& function) {
     throw std::runtime_error("Something strange in LoopRotationPass.");
   }
 
-  // for each assigned value in loop header we create many copies. One would be
-  // assigned inside loop and other outside.
+  // for each assigned value in loop header we create many copies. One would
+  // be assigned inside loop and other outside.
   std::unordered_map<IR::Value,
                      std::vector<std::pair<IR::BasicBlock*, IR::Value>>>
       header_values_replacements;
 
   // we duplicate header block and connect copies to his parents
-  // also we remove phi nodes in header because now it only contains one parent
+  // also we remove phi nodes in header because now it only contains one
+  // parent
   for (auto parent : loop.header->parents) {
     auto copy = function.add_block(loop.header->copy_instructions());
     copy->children = loop.header->children;
@@ -133,6 +145,8 @@ bool Passes::LoopRotationPass::apply(IR::Function& function) {
   std::erase_if(function.basic_blocks, [&loop](const IR::BasicBlock& block) {
     return &block == loop.header;
   });
+
+  loop.header = loop_new_header;
 
   return true;
 }

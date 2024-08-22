@@ -1,4 +1,5 @@
 #pragma once
+#include "passes/analysis/dominators/DominatorsAnalysis.h"
 #include "passes/pass_types/FunctionLevelPass.h"
 
 namespace Passes {
@@ -9,5 +10,7 @@ class LoopRotationPass : public FunctionLevelPass<> {
 
  protected:
   bool apply(IR::Function& function) override;
+
+  bool rotate_loop(IR::Function&, DominatorsAnalysis::Loop&);
 };
 }  // namespace Passes
