@@ -2,14 +2,19 @@
 #include "intermediate_representation/Program.h"
 
 namespace Passes {
+class PassManager;
+
 class Analyser {
- private:
   bool is_valid = false;
 
  protected:
+  PassManager& manager_;
+
   virtual void perform_analysis(const IR::Program&) = 0;
 
  public:
+  explicit Analyser(PassManager& manager) : manager_(manager) {}
+
   void analyse(const IR::Program& program) {
     if (is_valid) {
       return;

@@ -4,14 +4,15 @@
 
 #include <exception>
 #include <filesystem>
+#include <string>
 
 namespace Preprocessing {
 namespace fs = std::filesystem;
 
 struct MainSourceNotFoundException : std::exception {
-  string message;
+  std::string message;
 
-  explicit MainSourceNotFoundException(const string& source_name)
+  explicit MainSourceNotFoundException(const std::string& source_name)
       : message(fmt::format("File source located in {:?} was not found.",
                             source_name)) {}
 
@@ -19,7 +20,7 @@ struct MainSourceNotFoundException : std::exception {
 };
 
 struct FileSourceNotFoundException : std::exception {
-  string message;
+  std::string message;
 
   explicit FileSourceNotFoundException(const fs::path& filepath)
       : message(fmt::format("File source located in {:?} was not found.",
@@ -29,7 +30,7 @@ struct FileSourceNotFoundException : std::exception {
 };
 
 struct IncludeSourceNotFoundException : std::exception {
-  string message;
+  std::string message;
 
   explicit IncludeSourceNotFoundException(const std::string& in_source,
                                           const std::string& include_name)

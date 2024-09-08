@@ -38,9 +38,8 @@ class BasicBlockLevelPass : public BasePass {
  private:
   [[no_unique_address]] Order order_;
 
-  void apply() override {
+  void base_apply(IR::Program& program) override {
     bool repeat = get_info().repeat_while_changing;
-    auto& program = manager_.program;
 
     for (auto& function : program.functions) {
       before_function(function);

@@ -23,10 +23,17 @@ add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 
 add_subdirectory(src)
 target_link_libraries(RecursiveFunctions fmt::fmt)
+target_link_libraries(RecursiveFunctions argparse::argparse)
 
+# add executables from cli directory
+file(GLOB_RECURSE CliFiles
+        "src/cli/*.cpp"
+        "src/cli/*.h"
+)
 add_executable(Cli main.cpp)
+target_sources(Cli PUBLIC ${CliFiles})
+
 target_include_directories(Cli PUBLIC src)
-target_link_libraries(Cli argparse::argparse)
 target_link_libraries(Cli RecursiveFunctions)
 
 add_subdirectory(tests EXCLUDE_FROM_ALL)

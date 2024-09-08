@@ -4,16 +4,9 @@
 #include "passes/analysis/dfa/BackwardDFA.h"
 
 namespace Passes {
-enum class TemporaryLivenessState {
-  TOP = 0,
-  DEAD = 1,
-  LIVE = 2,
-};
-
 class LivenessAnalysis final
     : public Analyser,
-      public BackwardDFA<
-          std::unordered_map<IR::Value, TemporaryLivenessState>> {
+      public BackwardDFA<std::unordered_map<IR::Value, bool>> {
  public:
   using Analyser::Analyser;
 
@@ -26,12 +19,12 @@ class LivenessAnalysis final
 
   void perform_analysis(const IR::Program&) override;
 
-  std::unordered_map<IR::Value, TemporaryLivenessState> meet(
+  std::unordered_map<IR::Value, bool> meet(
       std::span<IR::BasicBlock* const> children,
       const IR::BasicBlock& current) override;
 
-  std::unordered_map<IR::Value, TemporaryLivenessState> transfer(
-      const std::unordered_map<IR::Value, TemporaryLivenessState>& after,
+  std::unordered_map<IR::Value, bool> transfer(
+      const std::unordered_map<IR::Value, bool>& after,
       const IR::BaseInstruction& instruction,
       const IR::BasicBlock& current) override;
 

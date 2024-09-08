@@ -1,6 +1,10 @@
 #pragma once
 #include <string>
 
+namespace IR {
+struct Program;
+}
+
 namespace Passes {
 class PassManager;
 
@@ -22,7 +26,7 @@ class BasePass {
 
   const PassInfo& get_info() const { return info_; }
 
-  virtual void apply() = 0;
+  virtual void base_apply(IR::Program& program) = 0;
 
   virtual ~BasePass() = default;
 };

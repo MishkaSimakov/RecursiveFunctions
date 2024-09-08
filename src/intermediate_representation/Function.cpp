@@ -165,3 +165,30 @@ void IR::Function::replace_phi_parents(
     }
   }
 }
+
+IR::BasicBlock& IR::Function::split_block(
+    BasicBlock& block, BasicBlock::InstructionItrT instruction_itr) {
+  auto new_block = add_block();
+
+  new_block->children = block.children;
+  block.children = {new_block, nullptr};
+
+  // copy instructions after call
+  new_block->instructions.splice(new_block->instructions.end(),
+                                 block.instructions, std::next(instruction_itr),
+                                 block.instructions.end());
+
+  // update parents and phi instructions
+  for (auto child : new_block->nonnull_children()) {
+    std::ranges::replace(child->parents, &block, new_block);
+
+    for (auto& instruction : child->instructions) {
+      if (auto* phi = dynamic_cast<Phi*>(instruction.get())) {
+        std::ranges::replace(phi->parents | std::views::keys, &block,
+                             new_block);
+      }
+    }
+  }
+
+  return *new_block;
+}

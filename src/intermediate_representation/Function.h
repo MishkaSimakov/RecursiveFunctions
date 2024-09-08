@@ -58,7 +58,8 @@ struct Function {
     }
   }
 
-  void simplify_blocks_recursive(BasicBlock*, std::unordered_set<const BasicBlock*>&);
+  void simplify_blocks_recursive(BasicBlock*,
+                                 std::unordered_set<const BasicBlock*>&);
 
  public:
   static constexpr auto entrypoint = "main";
@@ -162,5 +163,10 @@ struct Function {
 
     return result;
   }
+
+  // split block by given instruction
+  // all instructions AFTER given go into new block
+  BasicBlock& split_block(BasicBlock& block,
+                          BasicBlock::InstructionItrT instruction_itr);
 };
 }  // namespace IR

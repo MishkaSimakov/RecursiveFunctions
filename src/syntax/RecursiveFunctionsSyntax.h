@@ -9,6 +9,10 @@ using namespace SyntaxConsumers;
 enum RuleIdentifiers {
   PROGRAM,
   STATEMENT,
+
+  FUNCTION_DECLARATION,
+  EXTERN_FUNCTION_DEFINITION,
+
   FUNCTION_VALUE,
   ARGUMENTS_LIST,
   NONEMPTY_ARGUMENTS_LIST,
@@ -113,8 +117,13 @@ inline auto GetSyntax() {
   rules[PROGRAM] |= Branch(EatRule(STATEMENT) + EatToken(TokenType::SEMICOLON) + EatRule(PROGRAM), BuildProgramNode);
   rules[PROGRAM] |= Branch(EatEmpty());
 
-  rules[STATEMENT] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), BuildStatementNode);
-  rules[STATEMENT] |= Branch(EatRule(FUNCTION_CALL), Handover);
+  rules[STATEMENT] |= Branch(EatRule(FUNCTION_DECLARATION));
+  rules[STATEMENT] |= Branch(EatRule(EXTERN_FUNCTION_DEFINITION));
+
+  rules[EXTERN_FUNCTION_DEFINITION] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN));
+
+  rules[FUNCTION_DECLARATION] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), BuildStatementNode);
+  rules[FUNCTION_DECLARATION] |= Branch(EatRule(FUNCTION_CALL), Handover);
 
   rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), BuildFunctionNode);
   rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::CONSTANT), GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT));

@@ -9,13 +9,13 @@ class ModuleLevelPass : public BasePass {
   using BasePass::BasePass;
 
  private:
-  void apply() override {
+  void base_apply(IR::Program& program) override {
     bool repeat = get_info().repeat_while_changing;
 
     bool was_changed;
 
     do {
-      was_changed = apply(manager_.program);
+      was_changed = apply(program);
       if (was_changed) {
         manager_.invalidate();
       }

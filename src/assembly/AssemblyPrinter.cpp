@@ -174,7 +174,7 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
   }
 
   result.push_back(".data");
-  result.push_back("format: .asciz \"Result: %i\n\"");
+  result.push_back("format: .asciz \"%i\"");
 
   return std::move(result);
 }

@@ -2,7 +2,9 @@
 
 #include "verification/VerificationPass.h"
 
-void Passes::PassManager::apply() {
+void Passes::PassManager::apply(IR::Program& program) {
+  program_ = &program;
+
   for (auto& pass_factory : pass_factories_) {
     auto pass = pass_factory(*this);
     const auto& info = pass->get_info();
@@ -13,7 +15,7 @@ void Passes::PassManager::apply() {
           info.name));
     }
 
-    pass->apply();
+    pass->base_apply(*program_);
 
     if (!info.preserve_ssa) {
       is_in_ssa_ = false;
@@ -23,7 +25,7 @@ void Passes::PassManager::apply() {
     auto verification = std::make_unique<VerificationPass>(*this);
 
     try {
-      static_cast<BasePass*>(verification.get())->apply();
+      static_cast<BasePass*>(verification.get())->base_apply(program);
     } catch (std::runtime_error error) {
       throw std::runtime_error(
           fmt::format("Verification pass failed after \"{}\" pass.\nReason: {}",

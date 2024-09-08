@@ -8,6 +8,9 @@
 namespace Passes {
 class RecursionToLoopPass : public FunctionLevelPass<> {
  protected:
+  std::pair<IR::FunctionCall*, IR::BasicBlock*> find_suitable_call(
+      IR::Function& function);
+
   bool apply(IR::Function& function) override;
 
   void get_blocks_before_recursive_call(IR::BasicBlock*, const IR::BasicBlock*,

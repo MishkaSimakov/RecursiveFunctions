@@ -9,6 +9,7 @@
 
 #include "Exceptions.h"
 #include "Source.h"
+#include "log/Logger.h"
 
 using std::string, std::unordered_map, std::vector, std::unordered_set,
     std::pair, std::list;

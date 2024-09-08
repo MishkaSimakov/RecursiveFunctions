@@ -2,10 +2,9 @@
 #include "passes/pass_types/BasicBlockLevelPass.h"
 
 namespace Passes {
-class CommonElimination final : public BasicBlockLevelPass<> {
+class CommonEliminationPass final : public BasicBlockLevelPass<> {
  public:
-  CommonElimination(PassManager& manager)
-    : BasicBlockLevelPass(manager) {
+  CommonEliminationPass(PassManager& manager) : BasicBlockLevelPass(manager) {
     info_.name = "Common expressions elimination";
     info_.repeat_while_changing = false;
 

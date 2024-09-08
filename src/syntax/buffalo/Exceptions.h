@@ -1,6 +1,7 @@
 #pragma once
 
 #include <exception>
+#include <filesystem>
 
 namespace Syntax {
 namespace fs = std::filesystem;

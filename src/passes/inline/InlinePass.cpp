@@ -7,28 +7,15 @@
 #include "passes/analysis/dominators/DominatorsAnalysis.h"
 
 void Passes::InlinePass::inline_function_call(
-    IR::Function& function, IR::BasicBlock& block,
+    IR::Program& program, IR::Function& function, IR::BasicBlock& block,
     IR::BasicBlock::InstructionsListT::iterator call_itr) {
   auto& call = static_cast<IR::FunctionCall&>(**call_itr);
-  const auto& called_function = manager_.program.get_function(call.name);
+  const auto& called_function = program.get_function(call.name);
   auto& blocks = function.basic_blocks;
 
   // split original basic block into two
   IR::BasicBlock& first_part = block;
-  IR::BasicBlock& second_part = *function.add_block();
-
-  for (auto move_itr = std::next(call_itr);
-       move_itr != block.instructions.end();) {
-    second_part.instructions.push_back(std::move(*move_itr));
-    move_itr = first_part.instructions.erase(move_itr);
-  }
-
-  second_part.children = std::move(first_part.children);
-  first_part.children = {&second_part, nullptr};
-
-  std::unordered_map<const IR::BasicBlock*, IR::BasicBlock*> mapping;
-  mapping.emplace(&first_part, &second_part);
-  function.replace_phi_parents(mapping);
+  IR::BasicBlock& second_part = function.split_block(block, call_itr);
 
   // insert basic blocks
   auto new_blocks_start = std::prev(blocks.end());
@@ -133,13 +120,12 @@ bool Passes::InlinePass::apply(IR::Program& program) {
             continue;
           }
 
-          if (manager_.program.get_function(call_ptr->name).is_recursive()) {
+          if (program.get_function(call_ptr->name).is_recursive()) {
             continue;
           }
 
-          if (manager_.program.get_function(call_ptr->name).size() <=
-              inline_threshold) {
-            inline_function_call(function, block, itr);
+          if (program.get_function(call_ptr->name).size() <= inline_threshold) {
+            inline_function_call(program, function, block, itr);
             was_changed_on_current_iteration = true;
             was_function_changed = true;
             was_changed = true;

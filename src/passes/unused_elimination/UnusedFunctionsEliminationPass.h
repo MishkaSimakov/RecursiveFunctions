@@ -19,6 +19,6 @@ class UnusedFunctionsEliminationPass : public ModuleLevelPass {
 
   bool apply(IR::Program& program) override;
 
-  void find_used_recursively(const IR::Function&);
+  void find_used_recursively(IR::Program&, const IR::Function&);
 };
 }  // namespace Passes

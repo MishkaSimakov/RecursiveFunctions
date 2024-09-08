@@ -15,7 +15,7 @@ Passes::PrintPass::PrintPass(PassManager& manager, std::ostream& os,
   info_.repeat_while_changing = false;
 
   info_.preserve_ssa = true;
-  info_.require_ssa = true;
+  info_.require_ssa = false;
 }
 
 bool Passes::PrintPass::apply(IR::Function& function, IR::BasicBlock& block) {
@@ -86,14 +86,16 @@ std::string Passes::PrintPass::get_block_name(
 }
 
 void Passes::PrintPass::print_live_info(
-    const std::unordered_map<IR::Value, TemporaryLivenessState>& live) {
+    const std::unordered_map<IR::Value, bool>& live) {
   if (!config_.print_live_info) {
     return;
   }
 
-  for (auto [value, state] : live) {
-    if (state == TemporaryLivenessState::LIVE) {
-      os_ << value.to_string() << " ";
+  for (auto [value, is_live] : live) {
+    if (is_live) {
+      os_ << value.to_string() << ": live; ";
+    } else {
+      os_ << value.to_string() << ": dead; ";
     }
   }
   os_ << "\n";

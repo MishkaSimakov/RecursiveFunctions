@@ -21,7 +21,7 @@ class PrintPass : public BasicBlockLevelPass<ReversedPostBasicBlocksOrder> {
   std::string get_block_name(const IR::BasicBlock&) const;
 
   void print_live_info(
-      const std::unordered_map<IR::Value, TemporaryLivenessState>&);
+      const std::unordered_map<IR::Value, bool>&);
 
  protected:
   bool apply(IR::Function& function, IR::BasicBlock& block) override;

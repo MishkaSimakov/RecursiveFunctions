@@ -1,4 +1,6 @@
 #pragma once
+#include <filesystem>
+#include <iostream>
 #include <list>
 #include <string>
 #include <vector>
@@ -40,10 +42,13 @@ class AssemblyPrinter {
   void after_function(const InstructionContext&);
 
   enum class CalleeSavedOperationType { LOAD, STORE };
-  void print_callee_saved_registers(CalleeSavedOperationType, const InstructionContext&);
+  void print_callee_saved_registers(CalleeSavedOperationType,
+                                    const InstructionContext&);
 
  public:
   explicit AssemblyPrinter(const IR::Program& program) : program_(program) {}
+
+  static std::filesystem::path extension() { return ".asm"; }
 
   static std::string mangle_function_name(const IR::Function&);
   static std::string mangle_function_name(const std::string&);
@@ -52,4 +57,14 @@ class AssemblyPrinter {
 
   std::vector<std::string> print();
 };
+
+inline std::ostream& operator<<(std::ostream& os, AssemblyPrinter& printer) {
+  auto result = printer.print();
+
+  for (auto& line : result) {
+    os << line << "\n";
+  }
+
+  return os;
+}
 }  // namespace Assembly

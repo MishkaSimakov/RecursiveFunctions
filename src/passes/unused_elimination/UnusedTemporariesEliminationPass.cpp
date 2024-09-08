@@ -19,7 +19,7 @@ bool Passes::UnusedTemporariesEliminationPass::apply(IR::Function& function) {
 
           IR::Value return_value = instruction->get_return_value();
           auto& live_values = live.get_data(instruction.get(), Position::AFTER);
-          return live_values.at(return_value) != TemporaryLivenessState::LIVE;
+          return !live_values.at(return_value);
         });
 
     if (count != 0) {

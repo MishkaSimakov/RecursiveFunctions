@@ -12,6 +12,7 @@ struct Function;
 
 struct BasicBlock {
   using InstructionsListT = std::list<std::unique_ptr<BaseInstruction>>;
+  using InstructionItrT = InstructionsListT::iterator;
 
   // instructions
   InstructionsListT instructions;

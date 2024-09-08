@@ -5,7 +5,7 @@
 
 namespace Passes {
 class InlinePass : public ModuleLevelPass {
-  void inline_function_call(IR::Function&, IR::BasicBlock&,
+  void inline_function_call(IR::Program&, IR::Function&, IR::BasicBlock&,
                             IR::BasicBlock::InstructionsListT::iterator);
 
  public:

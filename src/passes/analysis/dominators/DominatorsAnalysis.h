@@ -6,6 +6,8 @@
 namespace Passes {
 class DominatorsAnalysis final : public Analyser {
  public:
+  using Analyser::Analyser;
+
   struct Loop {
     std::unordered_set<const IR::BasicBlock*> blocks;
     std::unordered_set<const IR::BasicBlock*> exit_blocks;

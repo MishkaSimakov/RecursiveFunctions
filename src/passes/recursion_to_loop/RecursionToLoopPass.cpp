@@ -1,54 +1,80 @@
 #include "RecursionToLoopPass.h"
 
+#include <ranges>
+
 #include "passes/PassManager.h"
+#include "passes/analysis/liveness/LivenessAnalysis.h"
 
-bool Passes::RecursionToLoopPass::apply(IR::Function& function) {
-  if (!function.is_recursive()) {
-    return false;
-  }
-
+std::pair<IR::FunctionCall*, IR::BasicBlock*>
+Passes::RecursionToLoopPass::find_suitable_call(IR::Function& function) {
   // TODO: recursive call must be something like a bridge between start and some
   // ends
 
-  // find recursive call
-  IR::BasicBlock* recursion_call_block = nullptr;
-  const IR::FunctionCall* recursive_call = nullptr;
+  if (!function.is_recursive()) {
+    return {};
+  }
+
+  const auto& liveness =
+      manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
+
+  IR::FunctionCall* recursive_call = nullptr;
+  IR::BasicBlock* call_block = nullptr;
 
   for (auto& block : function.basic_blocks) {
-    for (auto itr = block.instructions.begin(); itr != block.instructions.end();
-         ++itr) {
-      auto* call = dynamic_cast<const IR::FunctionCall*>(itr->get());
+    for (auto& instruction : block.instructions) {
+      auto* call = dynamic_cast<IR::FunctionCall*>(instruction.get());
 
       if (call == nullptr || call->name != function.name) {
         continue;
       }
 
-      // we must split this block by this call
-      auto new_block = function.add_block();
+      // there must be only one recursive call in function
+      if (recursive_call != nullptr) {
+        return {};
+      }
 
-      new_block->children = block.children;
-      block.children = {new_block, nullptr};
-
-      // copy instructions after call
-      new_block->instructions.splice(new_block->instructions.end(),
-                                     block.instructions, std::next(itr),
-                                     block.instructions.end());
-
-      recursion_call_block = &block;
       recursive_call = call;
-
-      break;
-    }
-
-    if (recursion_call_block != nullptr) {
-      break;
+      call_block = &block;
     }
   }
 
-  // TODO: remove
-  if (recursion_call_block == nullptr || recursive_call == nullptr) {
-    throw std::runtime_error("In RecursionToLoopPass error occured!!!");
+  if (recursive_call == nullptr) {
+    throw std::runtime_error(
+        "Something wrong with function data. Function is recursive but doesn't "
+        "contain recursive call.");
   }
+
+  // after call only arguments and that call return value must be alive
+  auto live_after_call = liveness.get_data(recursive_call, Position::AFTER);
+  for (auto argument : function.arguments) {
+    live_after_call.erase(argument);
+  }
+  live_after_call.erase(recursive_call->return_value);
+
+  for (auto [value, is_live] : live_after_call) {
+    if (is_live) {
+      return {};
+    }
+  }
+
+  return {recursive_call, call_block};
+}
+
+bool Passes::RecursionToLoopPass::apply(IR::Function& function) {
+  auto [recursive_call, recursion_call_block] = find_suitable_call(function);
+
+  if (recursive_call == nullptr) {
+    return false;
+  }
+
+  // we must split block by recursive call
+  auto call_itr = std::ranges::find_if(
+      recursion_call_block->instructions,
+      [recursive_call](const std::unique_ptr<IR::BaseInstruction>& ptr) {
+        return ptr.get() == recursive_call;
+      });
+
+  function.split_block(*recursion_call_block, call_itr);
 
   // transforming recursion into loop
   auto after_recursion_block = recursion_call_block->children[0];

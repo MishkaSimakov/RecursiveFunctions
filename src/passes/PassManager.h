@@ -26,10 +26,10 @@ class PassManager {
 
   bool is_in_ssa_{true};
 
- public:
-  IR::Program& program;
+  IR::Program* program_{nullptr};
 
-  PassManager(IR::Program& program) : program(program) {}
+ public:
+  PassManager() = default;
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<BasePass, T> &&
@@ -47,10 +47,10 @@ class PassManager {
 
     if (itr == analysers.end()) {
       std::tie(itr, std::ignore) =
-          analysers.emplace(typeid(T), std::make_unique<T>());
+          analysers.emplace(typeid(T), std::make_unique<T>(*this));
     }
 
-    itr->second->analyse(program);
+    itr->second->analyse(*program_);
 
     return static_cast<T&>(*itr->second);
   }
@@ -63,6 +63,6 @@ class PassManager {
 
   bool is_in_ssa() const { return is_in_ssa_; }
 
-  void apply();
+  void apply(IR::Program& program);
 };
 }  // namespace Passes

@@ -24,8 +24,7 @@ class FunctionLevelPass : public BasePass {
  private:
   [[no_unique_address]] Order order_;
 
-  void apply() override {
-    auto& program = manager_.program;
+  void base_apply(IR::Program& program) override {
     auto ordering = order_(program);
 
     bool repeat = get_info().repeat_while_changing;

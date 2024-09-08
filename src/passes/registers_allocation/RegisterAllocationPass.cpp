@@ -169,8 +169,8 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
         auto& after =
             liveness_info.get_data(instruction.get(), Position::AFTER);
 
-        bool live_before = before.at(temp) == TemporaryLivenessState::LIVE;
-        bool live_after = after.at(temp) == TemporaryLivenessState::LIVE;
+        bool live_before = before.at(temp);
+        bool live_after = after.at(temp);
 
         if (live_before && live_after) {
           vregs_info.at(temp).inside_lifetime.push_back(call);
@@ -228,15 +228,14 @@ bool Passes::RegisterAllocationPass::apply(IR::Function& function) {
 
   // find dependencies between temporaries
   auto create_dependencies =
-      [this](
-          const std::unordered_map<IR::Value, TemporaryLivenessState>& tmps) {
+      [this](const std::unordered_map<IR::Value, bool>& tmps) {
         for (auto s = tmps.begin(); s != tmps.end(); ++s) {
-          if (s->second != TemporaryLivenessState::LIVE) {
+          if (!s->second) {
             continue;
           }
 
           for (auto e = std::next(s); e != tmps.end(); ++e) {
-            if (e->second != TemporaryLivenessState::LIVE) {
+            if (!e->second) {
               continue;
             }
 

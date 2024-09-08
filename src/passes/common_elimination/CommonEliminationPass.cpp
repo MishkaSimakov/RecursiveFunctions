@@ -1,10 +1,9 @@
-#include "CommonElimination.h"
-
 #include <iostream>
 
+#include "CommonEliminationPass.h"
 #include "intermediate_representation/Function.h"
 
-bool Passes::CommonElimination::apply(IR::Function& function,
+bool Passes::CommonEliminationPass::apply(IR::Function& function,
                                       IR::BasicBlock& block) {
   bool was_changed = false;
 

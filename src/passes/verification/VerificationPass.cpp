@@ -67,8 +67,8 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
     auto live_before =
         before |
         std::views::filter(
-            [](const std::pair<IR::Value, TemporaryLivenessState>& pair) {
-              return pair.second == TemporaryLivenessState::LIVE;
+            [](const std::pair<IR::Value, bool>& pair) {
+              return pair.second;
             }) |
         std::views::keys;
 

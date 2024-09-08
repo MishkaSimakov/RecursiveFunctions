@@ -9,18 +9,18 @@ bool Passes::UnusedFunctionsEliminationPass::apply(IR::Program& program) {
   auto& entrypoint = program.get_function(IR::Function::entrypoint);
   used_.insert(IR::Function::entrypoint);
 
-  find_used_recursively(entrypoint);
+  find_used_recursively(program, entrypoint);
 
-  size_t erased_count = std::erase_if(manager_.program.functions,
-                                      [this](const IR::Function& function) {
-                                        return !used_.contains(function.name);
-                                      });
+  size_t erased_count =
+      std::erase_if(program.functions, [this](const IR::Function& function) {
+        return !used_.contains(function.name);
+      });
 
   return erased_count != 0;
 }
 
 void Passes::UnusedFunctionsEliminationPass::find_used_recursively(
-    const IR::Function& current) {
+    IR::Program& program, const IR::Function& current) {
   for (auto& block : current.basic_blocks) {
     for (auto& instruction : block.instructions) {
       auto* call_ptr = dynamic_cast<const IR::FunctionCall*>(instruction.get());
@@ -29,11 +29,11 @@ void Passes::UnusedFunctionsEliminationPass::find_used_recursively(
         continue;
       }
 
-      auto& called_function = manager_.program.get_function(call_ptr->name);
+      auto& called_function = program.get_function(call_ptr->name);
       auto [itr, was_inserted] = used_.insert(call_ptr->name);
 
       if (was_inserted) {
-        find_used_recursively(called_function);
+        find_used_recursively(program, called_function);
       }
     }
   }
