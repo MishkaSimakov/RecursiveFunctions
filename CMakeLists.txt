@@ -36,6 +36,12 @@ target_sources(Cli PUBLIC ${CliFiles})
 target_include_directories(Cli PUBLIC src)
 target_link_libraries(Cli RecursiveFunctions)
 
+add_custom_command(
+        TARGET Cli POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_SOURCE_DIR}/std/reclib.asm
+        ${CMAKE_BINARY_DIR}/std/reclib.asm)
+
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 
 set_target_properties(Cli PROPERTIES OUTPUT_NAME "recurator")
@@ -47,4 +53,5 @@ else ()
             PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
     )
+
 endif ()

@@ -10,7 +10,7 @@ void Passes::InlinePass::inline_function_call(
     IR::Program& program, IR::Function& function, IR::BasicBlock& block,
     IR::BasicBlock::InstructionsListT::iterator call_itr) {
   auto& call = static_cast<IR::FunctionCall&>(**call_itr);
-  const auto& called_function = program.get_function(call.name);
+  auto& called_function = *program.get_function(call.name);
   auto& blocks = function.basic_blocks;
 
   // split original basic block into two
@@ -120,11 +120,17 @@ bool Passes::InlinePass::apply(IR::Program& program) {
             continue;
           }
 
-          if (program.get_function(call_ptr->name).is_recursive()) {
+          auto called_func_ptr = program.get_function(call_ptr->name);
+
+          if (called_func_ptr == nullptr) {
             continue;
           }
 
-          if (program.get_function(call_ptr->name).size() <= inline_threshold) {
+          if (called_func_ptr->is_recursive()) {
+            continue;
+          }
+
+          if (called_func_ptr->size() <= inline_threshold) {
             inline_function_call(program, function, block, itr);
             was_changed_on_current_iteration = true;
             was_function_changed = true;

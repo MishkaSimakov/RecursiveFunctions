@@ -17,6 +17,7 @@ namespace Compilation {
 struct ProgramNode;
 struct FunctionDefinitionNode;
 struct RecursiveFunctionDefinitionNode;
+struct ExternFunctionDefinitionNode;
 struct RecursionParameterNode;
 struct ArgminOperatorNode;
 struct SuccessorOperatorNode;
@@ -31,6 +32,7 @@ class CompileTreeVisitor {
   COMPILE_NODE_TYPE(ProgramNode);
   COMPILE_NODE_TYPE(FunctionDefinitionNode);
   COMPILE_NODE_TYPE(RecursiveFunctionDefinitionNode);
+  COMPILE_NODE_TYPE(ExternFunctionDefinitionNode);
   COMPILE_NODE_TYPE(RecursionParameterNode);
   COMPILE_NODE_TYPE(ArgminOperatorNode);
   COMPILE_NODE_TYPE(SuccessorOperatorNode);
@@ -49,28 +51,33 @@ struct CompileNode {
   virtual ~CompileNode() {}
 };
 
-struct BaseFunctionDefinitionCompileNode : CompileNode {
+struct BaseFunctionDeclaration : CompileNode {
   string name;
   size_t arguments_count;
 
-  BaseFunctionDefinitionCompileNode(string name, size_t arguments_count)
+  BaseFunctionDeclaration(string name, size_t arguments_count)
       : name(std::move(name)), arguments_count(arguments_count) {}
 };
 
 struct ProgramNode final : CompileNode {
   vector<unique_ptr<CompileNode>> functions;
-  unique_ptr<CompileNode> call;
 
   ACCEPT_VISITOR();
 };
 
-struct FunctionDefinitionNode final : BaseFunctionDefinitionCompileNode {
+struct FunctionDefinitionNode final : BaseFunctionDeclaration {
   unique_ptr<CompileNode> body;
 
   FunctionDefinitionNode(string name, size_t arguments_count,
                          unique_ptr<CompileNode> body)
-      : BaseFunctionDefinitionCompileNode(std::move(name), arguments_count),
+      : BaseFunctionDeclaration(std::move(name), arguments_count),
         body(std::move(body)) {}
+
+  ACCEPT_VISITOR();
+};
+
+struct ExternFunctionDefinitionNode final : BaseFunctionDeclaration {
+  using BaseFunctionDeclaration::BaseFunctionDeclaration;
 
   ACCEPT_VISITOR();
 };
@@ -105,13 +112,12 @@ struct SuccessorOperatorNode final : CompileNode {
   ACCEPT_VISITOR();
 };
 
-struct RecursiveFunctionDefinitionNode final
-    : BaseFunctionDefinitionCompileNode {
+struct RecursiveFunctionDefinitionNode final : BaseFunctionDeclaration {
   bool use_previous_value;
   unique_ptr<CompileNode> zero_case;
   unique_ptr<CompileNode> general_case;
 
-  using BaseFunctionDefinitionCompileNode::BaseFunctionDefinitionCompileNode;
+  using BaseFunctionDeclaration::BaseFunctionDeclaration;
 
   size_t get_recursion_parameter_index() const { return arguments_count - 1; }
 

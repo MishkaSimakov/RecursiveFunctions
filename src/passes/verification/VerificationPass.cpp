@@ -3,6 +3,9 @@
 #include "passes/analysis/liveness/LivenessAnalysis.h"
 
 bool Passes::VerificationPass::apply(IR::Program& program) {
+  auto& liveness =
+      manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
+
   for (auto& function : program.functions) {
     if (manager_.is_in_ssa()) {
       check_ssa(function);
@@ -11,17 +14,18 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
     for (auto& block : function.basic_blocks) {
       // if there is only one child it must be the first one in pair
       if (block.children[0] == nullptr && block.children[1] != nullptr) {
-        throw std::runtime_error("Wrong children ordering");
+        throw VerificationException(function, "Wrong children ordering");
       }
 
       // empty blocks are banned
       if (block.instructions.empty()) {
-        throw std::runtime_error("No empty blocks");
+        throw VerificationException(function, "No empty blocks");
       }
 
       // each block must end with control flow instruction
       if (!block.instructions.back()->is_control_flow_instruction()) {
-        throw std::runtime_error(
+        throw VerificationException(
+            function,
             "Every block should have control flow instruction at the end");
       }
 
@@ -29,7 +33,8 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
       for (auto& instruction : block.instructions) {
         if (instruction->is_control_flow_instruction() &&
             instruction != block.instructions.back()) {
-          throw std::runtime_error(
+          throw VerificationException(
+              function,
               "There must be only one control flow instruction in each block");
         }
 
@@ -37,10 +42,19 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
           auto& phi = static_cast<const IR::Phi&>(*instruction);
 
           if (phi.parents.size() != block.parents.size()) {
-            throw std::runtime_error(
-                fmt::format("In function \"{}\" phi instruction \"{}\" doesn't "
-                            "enumerate all parents",
-                            function.name, instruction->to_string()));
+            throw VerificationException(
+                function, fmt::format("Phi instruction \"{}\" doesn't "
+                                      "enumerate all parents",
+                                      instruction->to_string()));
+          }
+
+          auto& alive = liveness.get_data(instruction.get(), Position::AFTER);
+          for (auto [parent, value] : phi.parents) {
+            if (alive.contains(value) && alive.at(value)) {
+              throw VerificationException(
+                  function,
+                  fmt::format("Value {} is not assigned before usage", value));
+            }
           }
 
           std::unordered_set<const IR::BasicBlock*> phi_parents;
@@ -50,7 +64,8 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
 
           for (auto parent : block.parents) {
             if (!phi_parents.contains(parent)) {
-              throw std::runtime_error(
+              throw VerificationException(
+                  function,
                   "Phi instruction must contain only current block parents");
             }
           }
@@ -58,27 +73,22 @@ bool Passes::VerificationPass::apply(IR::Program& program) {
       }
     }
 
-    auto& liveness =
-        manager_.get_analysis<LivenessAnalysis>().get_liveness_info();
-
     // only function arguments must be live before first instruction
     auto& before = liveness.get_data(
         function.begin_block->instructions.front().get(), Position::BEFORE);
     auto live_before =
-        before |
-        std::views::filter(
-            [](const std::pair<IR::Value, bool>& pair) {
-              return pair.second;
-            }) |
+        before | std::views::filter([](const std::pair<IR::Value, bool>& pair) {
+          return pair.second;
+        }) |
         std::views::keys;
 
     for (auto value : live_before) {
       if (std::ranges::find(function.arguments, value) ==
           function.arguments.end()) {
-        throw std::runtime_error(
-            fmt::format("In function \"{}\" value {} is used but has path that "
-                        "does not define this value.",
-                        function.name, value));
+        throw VerificationException(
+            function, fmt::format("Value {} is used but has path that "
+                                  "does not define this value.",
+                                  value));
       }
     }
   }
@@ -93,10 +103,10 @@ void Passes::VerificationPass::check_ssa(const IR::Function& function) {
     auto [itr, was_inserted] = defined.emplace(value);
 
     if (!was_inserted) {
-      throw std::runtime_error(fmt::format(
-          "In function \"{}\" SSA form is not satisfied. Value {} has more "
-          "than one definition.",
-          function.name, value));
+      throw VerificationException(
+          function, fmt::format("SSA form is not satisfied. Value {} has more "
+                                "than one definition.",
+                                value));
     }
   };
 

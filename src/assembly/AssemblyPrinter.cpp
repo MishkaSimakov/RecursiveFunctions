@@ -28,18 +28,6 @@ void Assembly::AssemblyPrinter::before_function(
 
 void Assembly::AssemblyPrinter::after_function(
     const InstructionContext& context) {
-  if (context.function.name == IR::Function::entrypoint) {
-    // print result
-    result.push_back("sub sp, sp, #16");
-    result.push_back("str x0, [sp]");
-    result.push_back("adrp x0, format@PAGE");
-    result.push_back("add x0, x0, format@PAGEOFF");
-    result.push_back("mov x1, sp");
-    result.push_back("bl _printf");
-    result.push_back("add sp, sp, #16");
-    result.push_back("mov x0, #0");
-  }
-
   print_callee_saved_registers(CalleeSavedOperationType::LOAD, context);
 
   if (!context.function.is_leaf()) {
@@ -172,9 +160,6 @@ std::vector<std::string> Assembly::AssemblyPrinter::print() {
       }
     }
   }
-
-  result.push_back(".data");
-  result.push_back("format: .asciz \"%i\"");
 
   return std::move(result);
 }

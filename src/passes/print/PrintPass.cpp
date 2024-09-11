@@ -93,9 +93,7 @@ void Passes::PrintPass::print_live_info(
 
   for (auto [value, is_live] : live) {
     if (is_live) {
-      os_ << value.to_string() << ": live; ";
-    } else {
-      os_ << value.to_string() << ": dead; ";
+      os_ << value.to_string() << " ";
     }
   }
   os_ << "\n";

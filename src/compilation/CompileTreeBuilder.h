@@ -21,7 +21,6 @@ struct VariableInfo {
 class CompileTreeBuilder {
   unordered_map<string, size_t> functions_indices_;
   vector<unique_ptr<CompileNode>> functions_;
-  unique_ptr<CompileNode> call_;
 
   struct ValueCompilationNodeBuilderParameters {
     const SyntaxNode* current_function_definition;
@@ -90,9 +89,11 @@ class CompileTreeBuilder {
 
   void visit_call_statement(const SyntaxNode& syntax_node);
 
+  void visit_declaration(const SyntaxNode& syntax_node);
+
   template <typename T>
-    requires std::is_base_of_v<BaseFunctionDefinitionCompileNode, T>
-  T& construct_definition_node(auto&&... args) {
+    requires std::is_base_of_v<BaseFunctionDeclaration, T>
+  T& construct_function_node(auto&&... args) {
     auto node_ptr = std::make_unique<T>(std::forward<decltype(args)>(args)...);
     functions_indices_[node_ptr->name] = functions_.size();
 
@@ -104,7 +105,7 @@ class CompileTreeBuilder {
 
   void visit_assignment_statement(const SyntaxNode& syntax_node);
 
-  RecursiveFunctionDefinitionNode& get_recursive_fucntion_definition_node(
+  RecursiveFunctionDefinitionNode& get_recursive_function_definition_node(
       const string& name, size_t arguments_count);
 
   void complete_recursive_function_definition(

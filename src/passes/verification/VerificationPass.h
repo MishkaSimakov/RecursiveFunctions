@@ -2,6 +2,15 @@
 #include "passes/pass_types/ModuleLevelPass.h"
 
 namespace Passes {
+class VerificationException final : public std::runtime_error {
+public:
+  const IR::Function& function;
+
+  explicit VerificationException(const IR::Function& function,
+                                 std::string string)
+      : std::runtime_error(std::move(string)), function(function) {}
+};
+
 class VerificationPass : public ModuleLevelPass {
  public:
   VerificationPass(PassManager& manager) : ModuleLevelPass(manager) {

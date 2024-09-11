@@ -4,10 +4,11 @@
 
 #include "intermediate_representation/Function.h"
 #include "passes/PassManager.h"
+#include "utils/Constants.h"
 
 bool Passes::UnusedFunctionsEliminationPass::apply(IR::Program& program) {
-  auto& entrypoint = program.get_function(IR::Function::entrypoint);
-  used_.insert(IR::Function::entrypoint);
+  auto& entrypoint = *program.get_function(Constants::entrypoint);
+  used_.insert(Constants::entrypoint);
 
   find_used_recursively(program, entrypoint);
 
@@ -29,11 +30,11 @@ void Passes::UnusedFunctionsEliminationPass::find_used_recursively(
         continue;
       }
 
-      auto& called_function = program.get_function(call_ptr->name);
+      auto called_function = program.get_function(call_ptr->name);
       auto [itr, was_inserted] = used_.insert(call_ptr->name);
 
-      if (was_inserted) {
-        find_used_recursively(program, called_function);
+      if (was_inserted && called_function != nullptr) {
+        find_used_recursively(program, *called_function);
       }
     }
   }

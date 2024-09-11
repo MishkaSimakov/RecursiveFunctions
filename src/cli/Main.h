@@ -81,9 +81,18 @@ class Main {
         auto saved_asm = FilesystemManager::get_instance().save_temporary(
             Assembly::AssemblyPrinter(optimized));
 
+        // we must find std to link our program with it
+        // for now we just search for ./std
+        auto std_path = fs::current_path() / "std" / "reclib.asm";
+
+        if (!fs::is_regular_file(std_path)) {
+          throw std::runtime_error("Unable to find std library files.");
+        }
+
         auto& output_path = arguments.output.replace_extension(".o");
-        auto compile_command = fmt::format(
-            "g++ {} -o {}", saved_asm.path.string(), output_path.string());
+        auto compile_command =
+            fmt::format("g++ -o {} {} {}", output_path.string(),
+                        saved_asm.path.string(), std_path.string());
         std::system(compile_command.c_str());
       }
     });

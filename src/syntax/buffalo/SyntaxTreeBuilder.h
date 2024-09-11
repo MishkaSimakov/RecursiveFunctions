@@ -55,6 +55,9 @@ class SyntaxTreeBuilder {
       case SyntaxNodeType::RECURSION_PARAMETER:
         result = "Rec{" + node.value + "}";
         break;
+      case SyntaxNodeType::EXTERN_SPECIFIER:
+        result = "Extern";
+      break;
     }
     std::cout << result << std::endl;
 
@@ -66,11 +69,11 @@ class SyntaxTreeBuilder {
     }
   }
 
+ public:
   static void print_syntax_tree(const SyntaxNode& node) {
     print_syntax_tree_recursive("", node, true);
   }
 
- public:
   static unique_ptr<SyntaxNode> build(
       const vector<Token>& program, const SyntaxConsumers::GrammarRulesT& rules,
       const SyntaxConsumers::RuleIdentifierT& start) {

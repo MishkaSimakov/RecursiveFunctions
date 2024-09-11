@@ -1,6 +1,9 @@
 #include "compilation/CompileTreeBuilder.h"
 
+#include <fmt/format.h>
+
 #include "compilation/CompileTreeNodes.h"
+#include "utils/Constants.h"
 
 using Compilation::CompileTreeBuilder, Compilation::CompileNode,
     Compilation::RecursiveFunctionDefinitionNode, Compilation::ProgramNode;
@@ -123,9 +126,8 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_function_call_compile_node(
     throw std::runtime_error(string("Usage of function \"") + function_name +
                              "\" before definition.");
   }
-  const auto& function_definition_node =
-      static_cast<BaseFunctionDefinitionCompileNode&>(
-          *functions_[function_index_itr->second]);
+  const auto& function_definition_node = static_cast<BaseFunctionDeclaration&>(
+      *functions_[function_index_itr->second]);
 
   auto arguments_count = function_definition_node.arguments_count;
   if (arguments_count != children.size()) {
@@ -166,13 +168,19 @@ unique_ptr<CompileNode> CompileTreeBuilder::build_value_compile_node(
   return build_function_call_compile_node(syntax_node, parameters);
 }
 
-void CompileTreeBuilder::visit_call_statement(const SyntaxNode& syntax_node) {
-  if (call_ != nullptr) {
-    throw std::runtime_error("There must be only one call in program.");
+void CompileTreeBuilder::visit_declaration(const SyntaxNode& syntax_node) {
+  const SyntaxNode& function_node = *syntax_node.children[0];
+
+  auto& name = function_node.value;
+
+  auto itr = functions_indices_.find(name);
+
+  if (itr != functions_indices_.end()) {
+    throw std::runtime_error("Function defined or declared twice.");
   }
 
-  auto params = ValueCompilationNodeBuilderParameters::for_call_statement();
-  call_ = build_value_compile_node(syntax_node, params);
+  construct_function_node<ExternFunctionDefinitionNode>(
+      name, function_node.children.size());
 }
 
 void CompileTreeBuilder::visit_assignment_statement(
@@ -234,15 +242,15 @@ void CompileTreeBuilder::visit_assignment_statement(
     return;
   }
 
-  construct_definition_node<FunctionDefinitionNode>(
+  construct_function_node<FunctionDefinitionNode>(
       function_name, variables_count, std::move(value_compile_node));
 }
 
 RecursiveFunctionDefinitionNode&
-CompileTreeBuilder::get_recursive_fucntion_definition_node(
+CompileTreeBuilder::get_recursive_function_definition_node(
     const string& name, size_t arguments_count) {
   if (!functions_indices_.contains(name)) {
-    return construct_definition_node<RecursiveFunctionDefinitionNode>(
+    return construct_function_node<RecursiveFunctionDefinitionNode>(
         name, arguments_count);
   }
 
@@ -259,7 +267,7 @@ void CompileTreeBuilder::complete_recursive_function_definition(
     const unordered_map<string, VariableInfo>& variables,
     std::unique_ptr<CompileNode> value_compile_node,
     FunctionType function_type) {
-  auto& node = get_recursive_fucntion_definition_node(name, arguments_count);
+  auto& node = get_recursive_function_definition_node(name, arguments_count);
 
   if (node.arguments_count != arguments_count) {
     throw std::runtime_error(
@@ -290,17 +298,40 @@ void CompileTreeBuilder::complete_recursive_function_definition(
 unique_ptr<ProgramNode> CompileTreeBuilder::build(
     const SyntaxNode& syntax_tree_root) {
   for (const auto& statement : syntax_tree_root.children) {
-    // there are two types of statements now: assignment and call
+    // there are two types of statements now: function definition and extern
+    // declaration
     if (statement->type == SyntaxNodeType::ASSIGNMENT) {
+      // it is definition
       visit_assignment_statement(*statement);
     } else {
-      visit_call_statement(*statement);
+      // it is extern function declaration
+      visit_declaration(*statement);
     }
   }
 
-  for (auto& function : functions_) {
+  bool found_main_function = false;
+  for (auto& node : functions_) {
+    auto& function = static_cast<const BaseFunctionDeclaration&>(*node);
+
+    // there is upper bound on arguments count for now
+    if (function.arguments_count > Constants::max_arguments) {
+      throw std::runtime_error(fmt::format("Maximum {} arguments in function.",
+                                           Constants::max_arguments));
+    }
+
+    // main function must exist and have zero arguments
+    if (function.name == Constants::entrypoint) {
+      found_main_function = true;
+
+      if (function.arguments_count != 0) {
+        throw std::runtime_error(
+            fmt::format("Function \"{}\" must have zero arguments.",
+                        Constants::entrypoint));
+      }
+    }
+
     auto recursive_ptr =
-        dynamic_cast<RecursiveFunctionDefinitionNode*>(function.get());
+        dynamic_cast<const RecursiveFunctionDefinitionNode*>(&function);
 
     if (recursive_ptr == nullptr) {
       continue;
@@ -312,13 +343,13 @@ unique_ptr<ProgramNode> CompileTreeBuilder::build(
     }
   }
 
-  if (call_ == nullptr) {
-    throw std::runtime_error("Program must have function call");
+  if (!found_main_function) {
+    throw std::runtime_error(fmt::format(
+        "Program must contain function called \"{}\"", Constants::entrypoint));
   }
 
   auto program_node = std::make_unique<ProgramNode>();
   program_node->functions = std::move(functions_);
-  program_node->call = std::move(call_);
 
   return program_node;
 }

@@ -10,8 +10,8 @@ enum RuleIdentifiers {
   PROGRAM,
   STATEMENT,
 
-  FUNCTION_DECLARATION,
-  EXTERN_FUNCTION_DEFINITION,
+  FUNCTION_DEFINITION,
+  EXTERN_FUNCTION_DECLARATION,
 
   FUNCTION_VALUE,
   ARGUMENTS_LIST,
@@ -23,6 +23,8 @@ enum RuleIdentifiers {
   FUNCTION_CALL,
   CALL_ARGUMENTS,
   NONEMPTY_CALL_ARGUMENTS,
+
+  SYNTAX_ERROR
 };
 
 // rules for building syntax tree
@@ -71,7 +73,7 @@ inline auto BuildProgramNode(TreeBuilderParams& params) {
   return node;
 }
 
-inline auto BuildStatementNode(TreeBuilderParams& params) {
+inline auto BuildFunctionDefinitionNode(TreeBuilderParams& params) {
   auto assignment_node =
       std::make_unique<SyntaxNode>(SyntaxNodeType::ASSIGNMENT);
 
@@ -91,6 +93,28 @@ inline auto BuildStatementNode(TreeBuilderParams& params) {
   assignment_node->children.push_back(std::move(params[5]));
 
   return assignment_node;
+}
+
+inline auto BuildExternFunctionDeclarationNode(TreeBuilderParams& params) {
+  // build left function node
+  auto function_node = std::move(params[5]);
+
+  if (function_node == nullptr) {
+    function_node = std::make_unique<SyntaxNode>(SyntaxNodeType::FUNCTION);
+  } else {
+    function_node->type = SyntaxNodeType::FUNCTION;
+  }
+
+  function_node->value = params[3]->value;
+
+  // wrap function into extern specifier
+  auto extern_node =
+      std::make_unique<SyntaxNode>(SyntaxNodeType::EXTERN_SPECIFIER);
+
+  extern_node->children.push_back(std::move(function_node));
+  extern_node->value = "extern";
+
+  return extern_node;
 }
 
 inline auto BuildFunctionNode(TreeBuilderParams& params) {
@@ -117,13 +141,12 @@ inline auto GetSyntax() {
   rules[PROGRAM] |= Branch(EatRule(STATEMENT) + EatToken(TokenType::SEMICOLON) + EatRule(PROGRAM), BuildProgramNode);
   rules[PROGRAM] |= Branch(EatEmpty());
 
-  rules[STATEMENT] |= Branch(EatRule(FUNCTION_DECLARATION));
-  rules[STATEMENT] |= Branch(EatRule(EXTERN_FUNCTION_DEFINITION));
+  rules[STATEMENT] |= Branch(EatRule(FUNCTION_DEFINITION), Handover);
+  rules[STATEMENT] |= Branch(EatRule(EXTERN_FUNCTION_DECLARATION), Handover);
 
-  rules[EXTERN_FUNCTION_DEFINITION] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN));
+  rules[EXTERN_FUNCTION_DECLARATION] |= Branch(EatToken(TokenType::LPAREN) + EatToken(TokenType::IDENTIFIER, "extern") + EatToken(TokenType::RPAREN) + EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN), BuildExternFunctionDeclarationNode);
 
-  rules[FUNCTION_DECLARATION] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), BuildStatementNode);
-  rules[FUNCTION_DECLARATION] |= Branch(EatRule(FUNCTION_CALL), Handover);
+  rules[FUNCTION_DEFINITION] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(ARGUMENTS_LIST) + EatToken(TokenType::RPAREN) + EatToken(TokenType::OPERATOR, "=") + EatRule(FUNCTION_VALUE), BuildFunctionDefinitionNode);
 
   rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::IDENTIFIER) + EatToken(TokenType::LPAREN) + EatRule(COMPOSITION_ARGUMENTS) + EatToken(TokenType::RPAREN), BuildFunctionNode);
   rules[FUNCTION_VALUE] |= Branch(EatToken(TokenType::CONSTANT), GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT));

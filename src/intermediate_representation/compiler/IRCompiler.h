@@ -94,5 +94,6 @@ class IRCompiler final : public CompileTreeVisitor {
   void visit(const AsteriskNode&) override;
   void visit(const FunctionCallNode&) override;
   void visit(const SelfCallNode&) override;
+  void visit(const ExternFunctionDefinitionNode&) override;
 };
 }  // namespace IR

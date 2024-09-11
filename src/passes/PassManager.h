@@ -27,9 +27,11 @@ class PassManager {
   bool is_in_ssa_{true};
 
   IR::Program* program_{nullptr};
+  bool should_verify_;
 
  public:
-  PassManager() = default;
+  explicit PassManager(bool should_verify = true)
+      : should_verify_(should_verify) {}
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<BasePass, T> &&

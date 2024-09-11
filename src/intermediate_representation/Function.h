@@ -62,8 +62,6 @@ struct Function {
                                  std::unordered_set<const BasicBlock*>&);
 
  public:
-  static constexpr auto entrypoint = "main";
-
   struct TemporariesInfo {
     // this is basic blocks that use that temporary or blocks which ancestors
     // use that temporary

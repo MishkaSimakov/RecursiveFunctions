@@ -1,7 +1,5 @@
 #include "arithmetics"
 
-extern print(number);
-
 fib_pair(x, y) = add(add(multiply(x, x), x), y);
 
 fib_left(p) = sqrt(p);
@@ -24,4 +22,4 @@ is_prime(n) = conditional(
 
 ceil_with_prime(n) = add(argmin(not(is_prime(add(*, n)))), n);
 
-fibonacci(11);
+main() = fibonacci(11);
