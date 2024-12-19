@@ -2,7 +2,7 @@
 #include <memory>
 
 #include "compilation/CompileTreeNodes.h"
-#include "syntax/buffalo/SyntaxNode.h"
+#include "syntax/SyntaxNode.h"
 
 class CompileTreeBuildStage {
 public:

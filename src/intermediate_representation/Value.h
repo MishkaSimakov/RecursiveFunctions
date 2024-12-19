@@ -4,8 +4,6 @@
 
 #include <string>
 
-#include "syntax/buffalo/SyntaxNode.h"
-
 namespace IR {
 enum class ValueType : char {
   CONSTANT,
@@ -97,7 +95,7 @@ struct hash<std::pair<T, U>> {
 
 template <>
 struct hash<IR::Value> {
-  auto operator()(IR::Value value) const {
+  auto operator()(IR::Value value) const noexcept {
     auto pair = std::make_pair(value.value, value.type);
 
     return std::hash<decltype(pair)>()(pair);

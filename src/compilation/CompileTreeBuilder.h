@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "CompileTreeNodes.h"
-#include "syntax/buffalo/SyntaxNode.h"
+#include "syntax/SyntaxNode.h"
 
 using std::unique_ptr, std::unordered_map, std::string, std::optional;
 

@@ -4,13 +4,19 @@
 
 #include "ArgumentsReader.h"
 #include "ExceptionsHandler.h"
-#include "RecursiveFunctions.h"
 #include "assembly/AssemblyPrinter.h"
+#include "compilation/CompileTreeBuilder.h"
 #include "filesystem/FilesystemManager.h"
 #include "intermediate_representation/IRPrinter.h"
 #include "intermediate_representation/compiler/IRCompiler.h"
+#include "lexis/LexicalAnalyzer.h"
 #include "passes/PassManager.h"
 #include "pipeline/stages/OptimizeIRStage.h"
+#include "preprocessor/FileSource.h"
+#include "preprocessor/Preprocessor.h"
+#include "syntax/RecursiveFunctionsGrammar.h"
+#include "syntax/lr/LRParser.h"
+#include "utils/Constants.h"
 
 using Compilation::CompileTreeBuilder;
 using Preprocessing::Preprocessor, Preprocessing::FileSource;
@@ -51,14 +57,19 @@ class Main {
         return;
       }
 
-      auto tokens = LexicalAnalyzer::get_tokens(program_text);
+      auto tokens = Lexing::LexicalAnalyzer::get_tokens(program_text);
 
-      auto syntax_tree = SyntaxTreeBuilder::build(
-          tokens, RecursiveFunctionsSyntax::GetSyntax(),
-          RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
+      auto [builders, _] = Syntax::get_recursive_functions_grammar();
+      auto parser = Syntax::LRParser(Constants::grammar_filepath, builders);
+      auto syntax_tree = parser.parse(tokens);
+
+      if (!syntax_tree) {
+        // TODO: refactor this
+        throw std::runtime_error("Wrong syntax.");
+      }
 
       CompileTreeBuilder compile_tree_builder;
-      auto compile_tree = compile_tree_builder.build(*syntax_tree);
+      auto compile_tree = compile_tree_builder.build(**syntax_tree);
 
       // generate intermediate representation
       auto ir = IR::IRCompiler().get_ir(*compile_tree);
@@ -70,7 +81,6 @@ class Main {
       }
 
       auto optimized = OptimizeIRStage().apply(std::move(ir));
-
       if (arguments.emit_type == CompilerEmitType::ASSEMBLY) {
         FilesystemManager::get_instance().save_to_file(
             arguments.output, Assembly::AssemblyPrinter(optimized));
@@ -83,7 +93,7 @@ class Main {
 
         // we must find std to link our program with it
         // for now we just search for ./std
-        auto std_path = fs::current_path() / "std" / "reclib.asm";
+        fs::path std_path = Constants::std_filepath;
 
         if (!fs::is_regular_file(std_path)) {
           throw std::runtime_error("Unable to find std library files.");

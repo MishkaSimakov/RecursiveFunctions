@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "lexis/LexicalAnalyzer.h"
-#include "syntax/buffalo/SyntaxNode.h"
+#include "syntax/SyntaxNode.h"
 
 class SyntaxTreeBuildStage {
  public:

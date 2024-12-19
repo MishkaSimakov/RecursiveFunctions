@@ -1,7 +1,17 @@
 #include "lexis/LexicalAnalyzer.h"
 
+#include <functional>
+
 using Lexing::LexicalAnalyzer, Lexing::Token;
 using std::string, std::array, std::function, std::vector;
+
+void LexicalAnalyzer::process_keywords(std::span<Token> tokens) {
+  for (Token& token : tokens) {
+    if (token.type == TokenType::IDENTIFIER && token.value == cExternKeyword) {
+      token.type = TokenType::KW_EXTERN;
+    }
+  }
+}
 
 vector<Token> LexicalAnalyzer::get_tokens(const string& program) {
   vector<Token> result;
@@ -14,7 +24,7 @@ vector<Token> LexicalAnalyzer::get_tokens(const string& program) {
     TokenType affiliation = get_symbol_affiliation(symbol);
 
     if (affiliation == TokenType::ERROR) {
-      throw UnexpectedSymbolException(program, i);
+      throw std::runtime_error("error");
     }
 
     auto solitary_mode = get_solitary_mode(affiliation);
@@ -33,13 +43,14 @@ vector<Token> LexicalAnalyzer::get_tokens(const string& program) {
 
     if (solitary_mode == TokenSolitaryMode::EXPLODE) {
       // TODO: maybe make separate exception for this case
-      throw UnexpectedSymbolException(program, i);
+      throw std::runtime_error("Error");
     }
 
     current_token.value += symbol;
   }
 
   result.push_back(current_token);
+  process_keywords(result);
 
   return result;
 }

@@ -3,3 +3,4 @@ cmake-build-*
 build
 **/.DS_Store
 bin
+files/grammar/grammar.lr
