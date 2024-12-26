@@ -3,17 +3,17 @@
 #include <array>
 #include <filesystem>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace Cli {
 enum class CompilerEmitType { PREPROCESSOR, IR, ASSEMBLY, COMPILED };
 
-struct CompilerArguments {
-  using IncludesStorage =
-      std::vector<std::pair<std::string, std::filesystem::path>>;
+// import name / filepath
+using SourcesList = std::unordered_map<std::string, std::filesystem::path>;
 
-  IncludesStorage includes;
-  std::filesystem::path main_path;
+struct CompilerArguments {
+  SourcesList sources;
 
   size_t verbosity_level;
   bool debug;
@@ -23,12 +23,12 @@ struct CompilerArguments {
 
 class ArgumentsReader {
   constexpr static auto kDefaultOutputName = "out";
-  constexpr static auto kIncludeNamePathDelimiter = ":";
+  constexpr static auto kSourceNamePathDelimiter = ":";
 
-  static CompilerArguments::IncludesStorage parse_includes(
-      std::vector<std::string> includes);
+  static SourcesList parse_source_paths(
+      std::vector<std::string> sources);
 
-  static std::filesystem::path parse_output(std::string output);
+  static std::filesystem::path parse_output(const std::string& output);
  public:
   static CompilerArguments read(int argc, char* argv[]);
 };

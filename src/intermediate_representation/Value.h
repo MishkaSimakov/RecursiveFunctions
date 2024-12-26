@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "utils/Hashers.h"
+
 namespace IR {
 enum class ValueType : char {
   CONSTANT,
@@ -74,31 +76,9 @@ struct fmt::formatter<IR::Value> {
   }
 };
 
-// hash helpers
-namespace std {
-template <typename T, typename U>
-struct hash<std::pair<T, U>> {
- private:
-  // taken from here:
-  // https://stackoverflow.com/questions/5889238/why-is-xor-the-default-way-to-combine-hashes
-  size_t hash_combine(size_t lhs, size_t rhs) const {
-    lhs ^= rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
-    return lhs;
-  }
-
- public:
-  auto operator()(const std::pair<T, U>& pair) const {
-    return hash_combine(std::hash<T>()(pair.first),
-                        std::hash<U>()(pair.second));
-  }
-};
-
 template <>
-struct hash<IR::Value> {
+struct std::hash<IR::Value> {
   auto operator()(IR::Value value) const noexcept {
-    auto pair = std::make_pair(value.value, value.type);
-
-    return std::hash<decltype(pair)>()(pair);
+    return tuple_hasher_fn(value.value, value.type);
   }
 };
-}  // namespace std

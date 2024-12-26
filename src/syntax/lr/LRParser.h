@@ -4,7 +4,9 @@
 
 #include "LRTableBuilder.h"
 #include "LRTableSerializer.h"
+#include "lexis/Exceptions.h"
 #include "lexis/LexicalAnalyzer.h"
+#include "syntax/Exceptions.h"
 #include "syntax/grammar/BuildersRegistry.h"
 
 namespace Syntax {
@@ -22,8 +24,7 @@ class LRParser {
     std::tie(actions_, goto_) = LRTableSerializer::deserialize(is);
   }
 
-  std::optional<std::unique_ptr<NodeT>> parse(
-      std::span<const Lexing::Token> tokens) const {
+  std::unique_ptr<NodeT> parse(std::span<const Lexing::Token> tokens) const {
     std::vector<size_t> states_stack;
 
     // use deque because it preserves references
@@ -46,22 +47,17 @@ class LRParser {
         return std::move(nodes_stack.back());
       }
       if (std::holds_alternative<RejectAction>(action)) {
-        std::cout << "Error in grammar! In position " << index << " expected: ";
-
         TokensBitset expected;
         for (auto type : Lexing::TokenType::values) {
           size_t type_id = static_cast<size_t>(type);
 
           if (!std::holds_alternative<RejectAction>(
                   actions_[states_stack.back()][type_id])) {
-            std::cout << GetTokenDescription(Lexing::Token{type, ""}) << " ";
             expected.add(type);
           }
         }
 
-        std::cout << std::endl;
-
-        return {};
+        throw UnexpectedTokenException(expected);
       }
       if (std::holds_alternative<ShiftAction>(action)) {
         states_stack.push_back(std::get<ShiftAction>(action).next_state);

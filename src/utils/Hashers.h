@@ -29,6 +29,12 @@ struct TupleHasher {
     (hasher << ... << args);
     return hasher.get_hash();
   }
+
+  size_t operator()(const std::tuple<Args...>& tuple) const {
+    return [this, &tuple]<size_t... I>(std::index_sequence<I...>) {
+      return operator()(std::get<I>(tuple)...);
+    }(std::index_sequence_for<Args...>{});
+  }
 };
 
 inline auto tuple_hasher_fn = []<typename... Args>(const Args&... args) {
@@ -78,4 +84,11 @@ struct UnorderedRangeHasher {
 
 inline auto unordered_range_hasher_fn = []<typename R>(const R& range) {
   return UnorderedRangeHasher<R>()(range);
+};
+
+template<typename U, typename V>
+struct std::hash<std::pair<U, V>> {
+  size_t operator()(const std::pair<U, V>& pair) const noexcept {
+    return tuple_hasher_fn(pair.first, pair.second);
+  }
 };

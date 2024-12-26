@@ -10,15 +10,23 @@
 
 namespace fs = std::filesystem;
 
-Cli::CompilerArguments::IncludesStorage Cli::ArgumentsReader::parse_includes(
-    std::vector<std::string> includes) {
-  CompilerArguments::IncludesStorage result;
+Cli::SourcesList Cli::ArgumentsReader::parse_source_paths(
+    std::vector<std::string> sources) {
+  SourcesList result;
+  auto add_source = [&result](const std::string& name, const fs::path& path) {
+    auto [_, was_emplaced] = result.emplace(name, path);
+    if (!was_emplaced) {
+      throw std::runtime_error(fmt::format(
+          "File {} was already included with different name.", path));
+    }
+  };
+
   std::string separator{fs::path::preferred_separator};
 
-  for (auto& include : includes) {
-    if (include.contains(kIncludeNamePathDelimiter)) {
+  for (auto& include : sources) {
+    if (include.contains(kSourceNamePathDelimiter)) {
       // named include
-      size_t index = include.find(kIncludeNamePathDelimiter);
+      size_t index = include.find(kSourceNamePathDelimiter);
       std::string name = include.substr(0, index);
 
       if (name.empty()) {
@@ -32,7 +40,7 @@ Cli::CompilerArguments::IncludesStorage Cli::ArgumentsReader::parse_includes(
             "Named include \"{}\" must refer to regular file.", name));
       }
 
-      result.emplace_back(name, path);
+      add_source(name, path);
     } else {
       // unnamed include
       // for this type of include name is stem part of path
@@ -50,7 +58,8 @@ Cli::CompilerArguments::IncludesStorage Cli::ArgumentsReader::parse_includes(
         auto include_name = std::regex_replace(std::string{path_copy},
                                                std::regex(separator), ".");
 
-        result.emplace_back(include_name, path);
+        add_source(include_name, path);
+
         continue;
       }
 
@@ -67,7 +76,7 @@ Cli::CompilerArguments::IncludesStorage Cli::ArgumentsReader::parse_includes(
           auto include_name =
               std::regex_replace(relative_path, std::regex(separator), ".");
 
-          result.emplace_back(include_name, subfile.path());
+          add_source(include_name, subfile.path());
         }
       }
     }
@@ -76,7 +85,8 @@ Cli::CompilerArguments::IncludesStorage Cli::ArgumentsReader::parse_includes(
   return result;
 }
 
-std::filesystem::path Cli::ArgumentsReader::parse_output(std::string output) {
+std::filesystem::path Cli::ArgumentsReader::parse_output(
+    const std::string& output) {
   fs::path output_path = output;
 
   // output must be directory or path
@@ -131,16 +141,8 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
 
   // fill arguments object
   CompilerArguments arguments;
-  arguments.includes =
-      parse_includes(parser.get<std::vector<std::string>>("include"));
-
-  // main path should be valid path to regular file
-  arguments.main_path = parser.get("filepath");
-  if (!fs::is_regular_file(arguments.main_path)) {
-    throw std::runtime_error(
-        "\"filepath\" must refer to existing regular file.");
-  }
-
+  arguments.sources =
+      parse_source_paths(parser.get<std::vector<std::string>>("include"));
   arguments.output = parse_output(parser.get("output"));
 
   arguments.debug = parser.get<bool>("debug");

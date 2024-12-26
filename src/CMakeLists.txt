@@ -1,6 +1,6 @@
 set(CoreModuleDirectories
-        log preprocessor lexis optimizations compilation
-        intermediate_representation assembly passes analysis filesystem pipeline utils
+        log lexis optimizations compilation
+        intermediate_representation assembly passes analysis filesystem pipeline utils sources
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)

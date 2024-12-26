@@ -6,4 +6,4 @@ add(x, y + 1) = successor(add);
 print_n_times(x, 0) = 0;
 print_n_times(x, n + 1) = add(print(x), print_n_times);
 
-main() = print_n_times(123, 123);
+main() = print(add(100, 100));

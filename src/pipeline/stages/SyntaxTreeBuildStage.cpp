@@ -11,5 +11,5 @@ std::unique_ptr<SyntaxNode> SyntaxTreeBuildStage::apply(
   auto parser = Syntax::LRParser(Constants::grammar_filepath, builders);
   auto syntax_tree = parser.parse(tokens);
 
-  return std::move(*syntax_tree);
+  return std::move(syntax_tree);
 }

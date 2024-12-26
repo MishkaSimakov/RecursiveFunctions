@@ -1,26 +1,40 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <ranges>
 #include <string>
 #include <vector>
 
+#include "sources/SourcesLoader.h"
 #include "utils/SmartEnum.h"
 
-namespace Lexing {
+namespace Lexis {
 ENUM(TokenType,
      IDENTIFIER,  // variable or function name
-     CONSTANT,    // number
-     LPAREN,      // left parenthesis
-     RPAREN,      // right parenthesis
-     OP_EQUAL,    // operator =
-     OP_PLUS,     // operator +
-     KW_EXTERN,   // extern keyword
-     SEMICOLON,   // semicolon for statements separation
-     ASTERISK,    // asterisk for argmin function
-     COMMA,       // comma for arguments separation
-     ERROR,       // returned if some unexpected symbol appeared
+     NUMBER,    // number
+     STRING,      // "hello world"
+
+     // operators
+     EQUAL,       // operator =
+     PLUS,        // operator +
+     LESS,        // <
+     GREATER,     // >
+     LESS_EQ,     // <=
+     GREATER_EQ,  // >=
+
+     // keywords
+     KW_IMPORT,  // import keyword
+
+     // special symbols
+     OPEN_PAREN,   // (
+     CLOSE_PAREN,  // )
+     OPEN_BRACE,   // {
+     CLOSE_BRACE,  // }
+     SEMICOLON,    // ;
+     COLON,        // :
+     COMMA,        // ,
+
+     ERROR,  // returned if some unexpected symbol appeared
 
      END  // reserved for sequence end in grammar parsing
 );
@@ -29,85 +43,25 @@ enum class TokenSolitaryMode { CONCATENATE, SEPARATE, EXPLODE };
 
 struct Token {
   TokenType type = TokenType::ERROR;
-  std::string value;
+  const SourceRange source_range{};
 
-  bool operator==(const Token&) const = default;
+  std::string_view value() const { return source_range.value(); }
+
+  bool operator==(const Token& other) const {
+    return type == other.type && value() == other.value();
+  }
 };
 
-inline std::string GetTokenDescription(const Token& token) {
-  switch (token.type) {
-    case TokenType::IDENTIFIER:
-      return "identifier(" + token.value + ")";
-    case TokenType::CONSTANT:
-      return "constant(" + token.value + ")";
-    case TokenType::LPAREN:
-      return "left parenthesis";
-    case TokenType::RPAREN:
-      return "right parenthesis";
-    case TokenType::OP_EQUAL:
-      return "operator=";
-    case TokenType::OP_PLUS:
-      return "operator+";
-    case TokenType::SEMICOLON:
-      return "semicolon";
-    case TokenType::ASTERISK:
-      return "asterisk";
-    case TokenType::COMMA:
-      return "comma";
-    case TokenType::ERROR:
-      return "error";
-    default:
-      return "something strange";
-  }
-}
+std::string GetTokenDescription(const Token& token);
 
 class LexicalAnalyzer {
-  static TokenType get_symbol_affiliation(char symbol) {
-    if (std::isdigit(symbol) != 0) {
-      return TokenType::CONSTANT;
-    }
+  static constexpr auto cImportKeyword = "import";
 
-    if (std::isalpha(symbol) != 0 || symbol == '_') {
-      return TokenType::IDENTIFIER;
-    }
-
-    switch (symbol) {
-      case '(':
-        return TokenType::LPAREN;
-      case ')':
-        return TokenType::RPAREN;
-      case '=':
-        return TokenType::OP_EQUAL;
-      case '+':
-        return TokenType::OP_PLUS;
-      case '*':
-        return TokenType::ASTERISK;
-      case ',':
-        return TokenType::COMMA;
-      case ';':
-        return TokenType::SEMICOLON;
-      default:
-        return TokenType::ERROR;
-    }
-  }
-
-  static TokenSolitaryMode get_solitary_mode(TokenType type) {
-    switch (type) {
-      case TokenType::CONSTANT:
-      case TokenType::IDENTIFIER:
-        return TokenSolitaryMode::CONCATENATE;
-      case TokenType::RPAREN:
-        return TokenSolitaryMode::SEPARATE;
-      default:
-        return TokenSolitaryMode::EXPLODE;
-    }
-  }
-
-  static constexpr auto cExternKeyword = "extern";
-
+  static TokenType get_symbol_affiliation(char symbol);
+  static TokenSolitaryMode get_solitary_mode(TokenType type);
   static void process_keywords(std::span<Token> tokens);
 
  public:
-  static std::vector<Token> get_tokens(const std::string& program);
+  static std::vector<Token> get_tokens(const SourcesLoader::FileSource& source);
 };
-}  // namespace Lexing
+}  // namespace Lexis
