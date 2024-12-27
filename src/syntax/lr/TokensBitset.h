@@ -1,28 +1,28 @@
 #pragma once
 #include <bitset>
 
-#include "lexis/LexicalAnalyzer.h"
+#include "lexis/Token.h"
 
 namespace Syntax {
 class TokensBitset {
-  constexpr static size_t cSize = Lexing::TokenType::count;
+  constexpr static size_t cSize = Lexis::TokenType::count;
 
   std::bitset<cSize> storage_;
 
  public:
   static TokensBitset only_end() {
     TokensBitset result;
-    result.add(Lexing::TokenType::END);
+    result.add(Lexis::TokenType::END);
     return result;
   }
 
   void add(const TokensBitset& other) { storage_ |= other.storage_; }
 
-  void add(Lexing::TokenType token) {
+  void add(Lexis::TokenType token) {
     storage_.set(static_cast<size_t>(token));
   }
 
-  void remove(Lexing::TokenType token) {
+  void remove(Lexis::TokenType token) {
     storage_.set(static_cast<size_t>(token), false);
   }
 
@@ -30,7 +30,7 @@ class TokensBitset {
 
   bool empty() const { return storage_.none(); }
 
-  bool contains(Lexing::TokenType token) const {
+  bool contains(Lexis::TokenType token) const {
     return storage_.test(static_cast<size_t>(token));
   }
 

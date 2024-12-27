@@ -106,7 +106,7 @@ auto BuildExternFunctionDeclarationNode(
 namespace Syntax {
 GrammarBuilder<SyntaxNode, cIsCompilingGrammar>
 get_recursive_functions_grammar() {
-  using enum Lexing::TokenType::InternalEnum;
+  using enum Lexis::TokenType::InternalEnum;
 
   GrammarBuilder<SyntaxNode, cIsCompilingGrammar> builder;
 
@@ -114,56 +114,45 @@ get_recursive_functions_grammar() {
   // NOLINTBEGIN
 
   // non-terminals
-  NonTerminal PROGRAM = builder.nonterm();
-  NonTerminal STATEMENT = builder.nonterm();
-  NonTerminal EXTERN_FUNCTION_DECLARATION = builder.nonterm();
-  NonTerminal FUNCTION_DEFINITION = builder.nonterm();
-  NonTerminal ARGUMENTS = builder.nonterm();
-  NonTerminal NONEMPTY_ARGUMENTS = builder.nonterm();
-  NonTerminal COMPOSITION_ARGUMENTS = builder.nonterm();
-  NonTerminal NONEMPTY_COMPOSITION_ARGUMENTS = builder.nonterm();
-  NonTerminal RECURSION_ARGUMENT = builder.nonterm();
-  NonTerminal FUNCTION_VALUE = builder.nonterm();
-
   // grammar
-  builder.add(PROGRAM, PROGRAM+ STATEMENT + Terminal{SEMICOLON}, BuildProgramNode);
-  builder.add(PROGRAM, STATEMENT + Terminal{SEMICOLON}, GetListRootBuilder(Handover()));
+  // builder.add(PROGRAM, PROGRAM+ STATEMENT + Terminal{SEMICOLON}, BuildProgramNode);
+  // builder.add(PROGRAM, STATEMENT + Terminal{SEMICOLON}, GetListRootBuilder(Handover()));
+  //
+  // builder.add(STATEMENT, FUNCTION_DEFINITION, Handover());
+  // builder.add(STATEMENT, EXTERN_FUNCTION_DECLARATION, Handover());
+  //
+  // builder.add(EXTERN_FUNCTION_DECLARATION, Terminal{LPAREN} + Terminal{KW_EXTERN} + Terminal{RPAREN} + Terminal{IDENTIFIER} + ARGUMENTS, BuildExternFunctionDeclarationNode);
+  //
+  // builder.add(FUNCTION_DEFINITION, Terminal{IDENTIFIER} + ARGUMENTS + Terminal{OP_EQUAL} + FUNCTION_VALUE, BuildFunctionDefinitionNode);
+  //
+  // builder.add(ARGUMENTS, Terminal{LPAREN} + Terminal{RPAREN}, Handover());
+  // builder.add(ARGUMENTS, Terminal{LPAREN} + NONEMPTY_ARGUMENTS + Terminal{RPAREN}, Handover(1));
+  //
+  // builder.add(NONEMPTY_ARGUMENTS, Terminal{IDENTIFIER} + Terminal{COMMA} + NONEMPTY_ARGUMENTS, CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  // builder.add(NONEMPTY_ARGUMENTS, Terminal{IDENTIFIER}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  // builder.add(NONEMPTY_ARGUMENTS, RECURSION_ARGUMENT, Handover());
+  //
+  // builder.add(RECURSION_ARGUMENT, Terminal{CONSTANT}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
+  // builder.add(RECURSION_ARGUMENT, Terminal{IDENTIFIER} + Terminal{OP_PLUS} + Terminal{CONSTANT}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
+  //
+  // builder.add(FUNCTION_VALUE, Terminal{IDENTIFIER} + COMPOSITION_ARGUMENTS , BuildFunctionNode);
+  // builder.add(FUNCTION_VALUE, Terminal{CONSTANT}, GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT));
+  // builder.add(FUNCTION_VALUE, Terminal{IDENTIFIER}, GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE));
+  //
+  // builder.add(COMPOSITION_ARGUMENTS, Terminal{LPAREN} + NONEMPTY_COMPOSITION_ARGUMENTS + Terminal{RPAREN}, Handover(1));
+  // builder.add(COMPOSITION_ARGUMENTS, Terminal{LPAREN} + Terminal{RPAREN}, Handover());
+  //
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER} + COMPOSITION_ARGUMENTS + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(BuildFunctionNode));
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER} + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{CONSTANT} + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{ASTERISK} + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(GetNodeConstructor(SyntaxNodeType::ASTERISK)));
+  //
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER} + COMPOSITION_ARGUMENTS, GetListRootBuilder(BuildFunctionNode));
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{CONSTANT}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
+  // builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{ASTERISK}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::ASTERISK)));
 
-  builder.add(STATEMENT, FUNCTION_DEFINITION, Handover());
-  builder.add(STATEMENT, EXTERN_FUNCTION_DECLARATION, Handover());
-
-  builder.add(EXTERN_FUNCTION_DECLARATION, Terminal{LPAREN} + Terminal{KW_EXTERN} + Terminal{RPAREN} + Terminal{IDENTIFIER} + ARGUMENTS, BuildExternFunctionDeclarationNode);
-
-  builder.add(FUNCTION_DEFINITION, Terminal{IDENTIFIER} + ARGUMENTS + Terminal{OP_EQUAL} + FUNCTION_VALUE, BuildFunctionDefinitionNode);
-
-  builder.add(ARGUMENTS, Terminal{LPAREN} + Terminal{RPAREN}, Handover());
-  builder.add(ARGUMENTS, Terminal{LPAREN} + NONEMPTY_ARGUMENTS + Terminal{RPAREN}, Handover(1));
-
-  builder.add(NONEMPTY_ARGUMENTS, Terminal{IDENTIFIER} + Terminal{COMMA} + NONEMPTY_ARGUMENTS, CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
-  builder.add(NONEMPTY_ARGUMENTS, Terminal{IDENTIFIER}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
-  builder.add(NONEMPTY_ARGUMENTS, RECURSION_ARGUMENT, Handover());
-
-  builder.add(RECURSION_ARGUMENT, Terminal{CONSTANT}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
-  builder.add(RECURSION_ARGUMENT, Terminal{IDENTIFIER} + Terminal{OP_PLUS} + Terminal{CONSTANT}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::RECURSION_PARAMETER)));
-
-  builder.add(FUNCTION_VALUE, Terminal{IDENTIFIER} + COMPOSITION_ARGUMENTS , BuildFunctionNode);
-  builder.add(FUNCTION_VALUE, Terminal{CONSTANT}, GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT));
-  builder.add(FUNCTION_VALUE, Terminal{IDENTIFIER}, GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE));
-
-  builder.add(COMPOSITION_ARGUMENTS, Terminal{LPAREN} + NONEMPTY_COMPOSITION_ARGUMENTS + Terminal{RPAREN}, Handover(1));
-  builder.add(COMPOSITION_ARGUMENTS, Terminal{LPAREN} + Terminal{RPAREN}, Handover());
-
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER} + COMPOSITION_ARGUMENTS + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(BuildFunctionNode));
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER} + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{CONSTANT} + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{ASTERISK} + Terminal{COMMA} + NONEMPTY_COMPOSITION_ARGUMENTS, CompactList(GetNodeConstructor(SyntaxNodeType::ASTERISK)));
-
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER} + COMPOSITION_ARGUMENTS, GetListRootBuilder(BuildFunctionNode));
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{IDENTIFIER}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::VARIABLE)));
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{CONSTANT}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::CONSTANT)));
-  builder.add(NONEMPTY_COMPOSITION_ARGUMENTS, Terminal{ASTERISK}, GetListRootBuilder(GetFirstParamNodeBuilder(SyntaxNodeType::ASTERISK)));
-
-  builder.set_start(PROGRAM);
+  // builder.set_start(PROGRAM);
   // NOLINTEND
   // clang-format on
 

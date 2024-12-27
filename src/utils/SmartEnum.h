@@ -39,10 +39,15 @@ struct EnumInfo;
    public:                                                                   \
     name() = delete;                                                         \
     constexpr name(InternalEnum value) : value_(value) {}                    \
+    explicit constexpr name(size_t value)                                    \
+        : value_(static_cast<InternalEnum>(value)) {}                        \
     constexpr operator InternalEnum() const { return value_; }               \
     explicit constexpr operator size_t() const {                             \
       return static_cast<size_t>(value_);                                    \
     }                                                                        \
+                                                                             \
+    bool operator==(InternalEnum other) const { return value_ == other; }    \
+    bool operator==(name other) const { return value_ == other.value_; }     \
                                                                              \
     constexpr std::string_view toString() const {                            \
       return separated[static_cast<size_t>(value_)];                         \

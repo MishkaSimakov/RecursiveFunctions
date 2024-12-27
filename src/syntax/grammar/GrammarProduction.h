@@ -6,7 +6,7 @@
 #include <string_view>
 #include <variant>
 
-#include "lexis/LexicalAnalyzer.h"
+#include "lexis/Token.h"
 #include "utils/Hashers.h"
 #include "utils/TupleUtils.h"
 
@@ -25,12 +25,12 @@ class NonTerminal {
 };
 
 class Terminal {
-  Lexing::TokenType token_;
+  Lexis::TokenType token_;
 
  public:
-  Terminal(Lexing::TokenType token) : token_(token) {}
+  Terminal(Lexis::TokenType token) : token_(token) {}
 
-  Lexing::TokenType get_token() const { return token_; }
+  Lexis::TokenType get_token() const { return token_; }
 
   bool operator==(const Terminal&) const = default;
 };
@@ -94,7 +94,7 @@ class GrammarProductionResult {
 
     bool is_terminal() const { return iterator_->index() == cTerminalIndex; }
 
-    Lexing::TokenType access_terminal() const {
+    Lexis::TokenType access_terminal() const {
       return std::get<cTerminalIndex>(*iterator_).get_token();
     }
 

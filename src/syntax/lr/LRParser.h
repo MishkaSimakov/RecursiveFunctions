@@ -4,7 +4,6 @@
 
 #include "LRTableBuilder.h"
 #include "LRTableSerializer.h"
-#include "lexis/Exceptions.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/Exceptions.h"
 #include "syntax/grammar/BuildersRegistry.h"
@@ -24,7 +23,8 @@ class LRParser {
     std::tie(actions_, goto_) = LRTableSerializer::deserialize(is);
   }
 
-  std::unique_ptr<NodeT> parse(std::span<const Lexing::Token> tokens) const {
+  std::unique_ptr<NodeT> parse(
+      const Lexis::LexicalAnalyzer& lexical_analyzer) const {
     std::vector<size_t> states_stack;
 
     // use deque because it preserves references
@@ -33,22 +33,18 @@ class LRParser {
     std::vector<std::unique_ptr<NodeT>> nodes_stack;
 
     states_stack.push_back(0);
+    Lexis::Token current_token = lexical_analyzer.get_token();
 
-    size_t index = 0;
-    while (index <= tokens.size()) {
-      Lexing::Token token = index < tokens.size()
-                                ? tokens[index]
-                                : Lexing::Token{Lexing::TokenType::END, ""};
-
-      Action action =
-          actions_[states_stack.back()][static_cast<size_t>(token.type)];
+    while (true) {
+      Action action = actions_[states_stack.back()]
+                              [static_cast<size_t>(current_token.type)];
 
       if (std::holds_alternative<AcceptAction>(action)) {
         return std::move(nodes_stack.back());
       }
       if (std::holds_alternative<RejectAction>(action)) {
         TokensBitset expected;
-        for (auto type : Lexing::TokenType::values) {
+        for (auto type : Lexis::TokenType::values) {
           size_t type_id = static_cast<size_t>(type);
 
           if (!std::holds_alternative<RejectAction>(
@@ -61,9 +57,9 @@ class LRParser {
       }
       if (std::holds_alternative<ShiftAction>(action)) {
         states_stack.push_back(std::get<ShiftAction>(action).next_state);
-        nodes_stack.emplace_back(std::make_unique<NodeT>(token));
+        nodes_stack.emplace_back(std::make_unique<NodeT>(current_token));
 
-        ++index;
+        current_token = lexical_analyzer.get_token();
       } else {
         // action is reduce
         auto reduce = std::get<ReduceAction>(action);

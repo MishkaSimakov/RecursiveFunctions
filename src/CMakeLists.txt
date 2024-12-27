@@ -1,6 +1,5 @@
 set(CoreModuleDirectories
-        log lexis optimizations compilation
-        intermediate_representation assembly passes analysis filesystem pipeline utils sources
+        log optimizations compilation intermediate_representation assembly passes analysis filesystem
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)
@@ -17,6 +16,12 @@ list(APPEND CoreFiles
         syntax/grammar/Grammar.cpp
         syntax/lr/LRTableSerializer.cpp
         syntax/RecursiveFunctionsGrammar.cpp
+)
+
+# for lexis same as grammar
+list(APPEND CoreFiles
+        lexis/LexicalAnalyzer.cpp
+        lexis/table/LexicalTableSerializer.cpp
 )
 
 add_library(RecursiveFunctions ${CoreFiles})

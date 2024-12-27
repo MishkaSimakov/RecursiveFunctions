@@ -36,9 +36,7 @@ struct Position {
       }
 
       if (itr.is_terminal()) {
-        result +=
-            "(" +
-            GetTokenDescription(Lexing::Token{itr.access_terminal(), ""}) + ")";
+        result += "(" + std::string(itr.access_terminal().toString()) + ")";
       } else {
         result += std::to_string(itr.access_nonterminal().get_id());
       }

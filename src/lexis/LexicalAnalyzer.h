@@ -1,67 +1,25 @@
 #pragma once
 
-#include <array>
-#include <ranges>
-#include <string>
+#include <filesystem>
+#include <unordered_map>
 #include <vector>
 
-#include "sources/SourcesLoader.h"
-#include "utils/SmartEnum.h"
+#include "lexis/Token.h"
+#include "lexis/table/LexicalAutomatonState.h"
 
 namespace Lexis {
-ENUM(TokenType,
-     IDENTIFIER,  // variable or function name
-     NUMBER,    // number
-     STRING,      // "hello world"
-
-     // operators
-     EQUAL,       // operator =
-     PLUS,        // operator +
-     LESS,        // <
-     GREATER,     // >
-     LESS_EQ,     // <=
-     GREATER_EQ,  // >=
-
-     // keywords
-     KW_IMPORT,  // import keyword
-
-     // special symbols
-     OPEN_PAREN,   // (
-     CLOSE_PAREN,  // )
-     OPEN_BRACE,   // {
-     CLOSE_BRACE,  // }
-     SEMICOLON,    // ;
-     COLON,        // :
-     COMMA,        // ,
-
-     ERROR,  // returned if some unexpected symbol appeared
-
-     END  // reserved for sequence end in grammar parsing
-);
-
-enum class TokenSolitaryMode { CONCATENATE, SEPARATE, EXPLODE };
-
-struct Token {
-  TokenType type = TokenType::ERROR;
-  const SourceRange source_range{};
-
-  std::string_view value() const { return source_range.value(); }
-
-  bool operator==(const Token& other) const {
-    return type == other.type && value() == other.value();
-  }
-};
-
-std::string GetTokenDescription(const Token& token);
-
 class LexicalAnalyzer {
-  static constexpr auto cImportKeyword = "import";
+  const std::vector<JumpTableT> jumps_;
+  static std::unordered_map<std::string_view, TokenType> keywords;
 
-  static TokenType get_symbol_affiliation(char symbol);
-  static TokenSolitaryMode get_solitary_mode(TokenType type);
-  static void process_keywords(std::span<Token> tokens);
+  std::istream* stream_{nullptr};
+
+  Token get_token_internal() const;
 
  public:
-  static std::vector<Token> get_tokens(const SourcesLoader::FileSource& source);
+  explicit LexicalAnalyzer(const std::filesystem::path& path);
+
+  Token get_token() const;
+  void set_stream(std::istream& stream);
 };
 }  // namespace Lexis

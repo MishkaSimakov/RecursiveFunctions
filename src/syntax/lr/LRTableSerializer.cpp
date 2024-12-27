@@ -56,7 +56,7 @@ LRTableSerializer::deserialize(std::istream& is) {
 
   size_t states_count = read_bytes();
   size_t nonterms_count = read_bytes();
-  size_t tokens_count = Lexing::TokenType::count;
+  size_t tokens_count = Lexis::TokenType::count;
 
   ActionsTableT actions_table(states_count);
 

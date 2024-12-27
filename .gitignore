@@ -4,3 +4,4 @@ build
 **/.DS_Store
 bin
 files/grammar/grammar.lr
+files/lexis/lexis.lx

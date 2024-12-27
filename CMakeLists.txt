@@ -27,8 +27,9 @@ add_subdirectory(src)
 target_link_libraries(RecursiveFunctions fmt::fmt)
 target_link_libraries(RecursiveFunctions argparse::argparse)
 
-# add executable for compiling grammar
+# add executable for compiling grammar and lexis
 add_subdirectory(src/syntax)
+add_subdirectory(src/lexis)
 
 # add executables from cli directory
 file(GLOB_RECURSE CliFiles

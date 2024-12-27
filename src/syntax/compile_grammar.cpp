@@ -9,4 +9,7 @@ int main() {
   auto [builders, grammar] = Syntax::get_recursive_functions_grammar();
   auto builder = Syntax::LRTableBuilder(std::move(grammar));
   builder.save_to(absolute_grammar_filepath);
+
+  std::cout << "Stored grammar table in: " << absolute_grammar_filepath
+            << std::endl;
 }

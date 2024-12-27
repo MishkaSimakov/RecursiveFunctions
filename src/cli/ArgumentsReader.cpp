@@ -17,7 +17,7 @@ Cli::SourcesList Cli::ArgumentsReader::parse_source_paths(
     auto [_, was_emplaced] = result.emplace(name, path);
     if (!was_emplaced) {
       throw std::runtime_error(fmt::format(
-          "File {} was already included with different name.", path));
+          "File {} was already included with different name.", path.c_str()));
     }
   };
 

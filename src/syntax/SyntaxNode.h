@@ -28,7 +28,7 @@ struct SyntaxNode {
   explicit SyntaxNode(SyntaxNodeType type, string value = "")
       : type(type), value(std::move(value)) {}
 
-  explicit SyntaxNode(const Lexing::Token& token)
+  explicit SyntaxNode(const Lexis::Token& token)
       : type(SyntaxNodeType::ROOT), value(token.value) {}
 
   bool operator==(const SyntaxNode& other) const {
