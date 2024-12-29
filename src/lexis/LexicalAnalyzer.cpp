@@ -8,24 +8,25 @@
 #include "lexis/table/LexicalTableSerializer.h"
 
 namespace Lexis {
-std::unordered_map<std::string_view, TokenType> LexicalAnalyzer::keywords{
-    {"import", TokenType::KW_IMPORT}};
-
-Token LexicalAnalyzer::get_token_internal() const {
+Token LexicalAnalyzer::get_token_internal() {
   size_t current_state = 0;
-  std::string token_value;
+  SourceLocation begin = location_;
+
+  auto view = source_manager_.get_file_view(location_);
 
   while (true) {
-    int symbol = stream_->get();
-
-    if (stream_->eof()) {
+    if (view.empty()) {
       return Token{TokenType::END};
     }
+
+    char symbol = view.front();
+    view.remove_prefix(1);
+    ++location_.pos_id;
+
     if (symbol >= Charset::kCharactersCount) {
       return Token{TokenType::ERROR};
     }
 
-    token_value += static_cast<char>(symbol);
     auto jump = jumps_[current_state][symbol];
 
     if (std::holds_alternative<NextStateJump>(jump)) {
@@ -35,24 +36,33 @@ Token LexicalAnalyzer::get_token_internal() const {
 
     if (std::holds_alternative<FinishJump>(jump)) {
       FinishJump finish_jump = std::get<FinishJump>(jump);
-      stream_->seekg(-static_cast<off_t>(finish_jump.forward_shift),
-                   std::ios_base::cur);
-      token_value.resize(token_value.size() - finish_jump.forward_shift);
+      seek(-static_cast<off_t>(finish_jump.forward_shift));
 
-      return Token{TokenType{finish_jump.token}, token_value};
+      SourceLocation end = location_;
+      --end.pos_id;
+
+      return Token{TokenType{finish_jump.token}, {begin, end}};
     }
 
     return Token{TokenType::ERROR};
   }
 }
 
-LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path)
+LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path,
+                                 const SourceManager& source_manager)
     : jumps_([&path] {
         std::ifstream is(path);
         return LexicalTableSerializer::deserialize(is);
-      }()) {}
+      }()),
+      source_manager_(source_manager) {}
 
-Token LexicalAnalyzer::get_token() const {
+void LexicalAnalyzer::set_location(SourceLocation location) {
+  location_ = location;
+}
+
+void LexicalAnalyzer::seek(off_t offset) { location_.pos_id += offset; }
+
+Token LexicalAnalyzer::get_token() {
   Token token;
   do {
     token = get_token_internal();
@@ -61,6 +71,4 @@ Token LexicalAnalyzer::get_token() const {
 
   return token;
 }
-
-void LexicalAnalyzer::set_stream(std::istream& stream) { stream_ = &stream; }
 }  // namespace Lexis

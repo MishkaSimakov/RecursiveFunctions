@@ -20,7 +20,7 @@ struct AcceptAction {};
 struct ReduceAction {
   NonTerminal next;
   size_t remove_count;
-  BuilderFunction builder;
+  size_t production_index;
 };
 struct ShiftAction {
   size_t next_state;

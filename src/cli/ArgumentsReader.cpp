@@ -103,11 +103,10 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
       "Compiler for general recursive functions "
       "(https://en.wikipedia.org/wiki/General_recursive_function).");
 
-  parser.add_argument("filepath").help("Path to main file.");
-  parser.add_argument("-i", "--include")
-      .nargs(argparse::nargs_pattern::any)
+  parser.add_argument("sources")
+      .nargs(argparse::nargs_pattern::at_least_one)
       .help(
-          "adds include paths. You can write <name>:<filepath> to create "
+          "Files to compile. You can write <name>:<filepath> to create "
           "implicitly named include, <filepath> to deduce include name "
           "automatically or <directory path> to include all files in "
           "directory recursively.");
@@ -142,7 +141,7 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
   // fill arguments object
   CompilerArguments arguments;
   arguments.sources =
-      parse_source_paths(parser.get<std::vector<std::string>>("include"));
+      parse_source_paths(parser.get<std::vector<std::string>>("sources"));
   arguments.output = parse_output(parser.get("output"));
 
   arguments.debug = parser.get<bool>("debug");

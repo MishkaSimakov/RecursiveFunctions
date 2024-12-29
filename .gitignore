@@ -5,3 +5,4 @@ build
 bin
 files/grammar/grammar.lr
 files/lexis/lexis.lx
+src/syntax/BuildersRegistry.h

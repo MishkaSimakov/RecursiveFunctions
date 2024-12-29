@@ -1,0 +1,69 @@
+program:
+    declaration-seq [pass<0>]
+
+// basics
+literal:
+    string-literal [pass<0>]
+    integer-literal [pass<0>]
+
+string-literal:
+    STRING [string_literal]
+
+integer-literal:
+    NUMBER [integer_literal]
+
+// declarations
+declaration-seq:
+    declaration                 [sequence<ProgramDecl, Declaration>]
+    declaration-seq declaration [sequence<ProgramDecl, Declaration>]
+
+declaration:
+    function-definition [pass<0>]
+    module-import [pass<0>]
+
+module-import:
+    KW_IMPORT STRING SEMICOLON [module_import]
+
+function-definition:
+    IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
+
+parameters:
+    OPEN_PAREN CLOSE_PAREN                              [construct<ParametersListDecl>]
+    OPEN_PAREN parameter-declaration-list CLOSE_PAREN   [pass<1>]
+
+parameter-declaration-list:
+    parameter-declaration                                   [sequence<ParametersListDecl, ParameterDecl>]
+    parameter-declaration-list COMMA parameter-declaration  [sequence<ParametersListDecl, ParameterDecl>]
+
+parameter-declaration:
+    IDENTIFIER COLON type-name [parameter_declaration]
+
+return-type:
+    ARROW type-name [pass<1>]
+
+type-name:
+    KW_INT [construct<IntType>]
+
+// statements
+compound-statement:
+    OPEN_BRACE CLOSE_BRACE                  [construct<CompoundStmt>]
+    OPEN_BRACE statement-seq CLOSE_BRACE    [pass<1>]
+
+statement-seq:
+    statement               [sequence<CompoundStmt, Statement>]
+    statement-seq statement [sequence<CompoundStmt, Statement>]
+
+statement:
+    expression-statement    [pass<0>]
+    jump-statement          [pass<0>]
+
+jump-statement:
+    KW_RETURN expression SEMICOLON [return_statement]
+
+expression-statement:
+    expression SEMICOLON [pass<0>]
+
+// expressions
+expression:
+    literal [pass<0>]
+    IDENTIFIER [id_expression]

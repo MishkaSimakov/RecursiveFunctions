@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "LRTableSerializer.h"
-#include "lexis/LexicalAnalyzer.h"
+#include "lexis/Token.h"
 #include "syntax/grammar/GrammarProduction.h"
 #include "utils/Hashers.h"
 
@@ -117,7 +117,7 @@ void LRTableBuilder::build_follow_table() {
   };
 
   std::unordered_map<NonTerminal, TokensBitset> curr_added;
-  curr_added[grammar_.get_start()].add(Lexing::TokenType::END);
+  curr_added[grammar_.get_start()].add(Lexis::TokenType::END);
 
   while (!curr_added.empty()) {
     // merge into result
@@ -198,7 +198,7 @@ void LRTableBuilder::build_actions_table() {
   std::vector<std::vector<std::vector<Action>>> temp_actions;
   temp_actions.resize(states_.size());
 
-  const auto& tokens = Lexing::TokenType::values;
+  const auto& tokens = Lexis::TokenType::values;
 
   for (size_t i = 0; i < states_.size(); ++i) {
     const auto& [state, info] = *state_by_index(i);
@@ -220,19 +220,19 @@ void LRTableBuilder::build_actions_table() {
       } else {
         size_t remove_count = position.production.first.size();
         NonTerminal next = position.from;
-        BuilderFunction builder = position.production.second;
+        size_t production_index = position.production.second;
 
-        action = ReduceAction{next, remove_count, builder};
+        action = ReduceAction{next, remove_count, production_index};
       }
 
-      for (auto token : Lexing::TokenType::values) {
+      for (auto token : tokens) {
         if (follow.contains(token)) {
           actions[static_cast<size_t>(token)].push_back(action);
         }
       }
     }
 
-    for (Lexing::TokenType token : tokens) {
+    for (auto token : tokens) {
       ssize_t index = static_cast<size_t>(token);
 
       if (grouped.contains(index)) {
@@ -253,7 +253,7 @@ void LRTableBuilder::build_actions_table() {
     const auto& state_actions = temp_actions[state_id];
     actions_[state_id].resize(tokens.size());
 
-    for (Lexing::TokenType token : tokens) {
+    for (auto token : tokens) {
       ssize_t index = static_cast<size_t>(token);
 
       if (state_actions[index].size() != 1) {
@@ -322,8 +322,7 @@ LRTableBuilder::LRTableBuilder(Grammar grammar) : grammar_(std::move(grammar)) {
 
   NonTerminal new_start = grammar_.register_nonterm();
 
-  // this action will never be called so it's index doesn't matter
-  grammar_.add_rule(new_start, grammar_.get_start(), BuilderFunction{0});
+  grammar_.add_rule(new_start, grammar_.get_start());
   grammar_.set_start(new_start);
 
   build_first_table();
@@ -360,7 +359,7 @@ std::ostream& operator<<(std::ostream& os, const Syntax::Action& action) {
 std::ostream& operator<<(std::ostream& os, const Syntax::State& state) {
   for (const auto& [position, follow] : state) {
     os << position.to_string() << " [ ";
-    for (auto token : Lexing::TokenType::values) {
+    for (auto token : Lexis::TokenType::values) {
       if (follow.contains(token)) {
         os << static_cast<size_t>(token) << " ";
       }

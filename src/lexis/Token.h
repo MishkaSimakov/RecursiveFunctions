@@ -1,9 +1,15 @@
 #pragma once
 
+#include "sources/SourceLocation.h"
 #include "utils/SmartEnum.h"
 
 namespace Lexis {
 ENUM(TokenType,
+     // keywords
+     KW_IMPORT,  // import keyword
+     KW_INT,     // int keyword
+     KW_RETURN,  // return keyword
+
      IDENTIFIER,  // variable or function name
      NUMBER,      // number
      STRING,      // "hello world"
@@ -17,9 +23,6 @@ ENUM(TokenType,
      GREATER_EQ,  // >=
 
      ARROW,  // ->
-
-     // keywords
-     KW_IMPORT,  // import keyword
 
      // special symbols
      OPEN_PAREN,   // (
@@ -40,8 +43,7 @@ ENUM(TokenType,
 
 struct Token {
   TokenType type = TokenType::ERROR;
-  std::string value;
 
-  bool operator==(const Token& other) const = default;
+  SourceRange source_range;
 };
-}
+}  // namespace Lexis

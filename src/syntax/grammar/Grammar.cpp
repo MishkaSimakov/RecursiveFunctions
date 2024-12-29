@@ -160,14 +160,14 @@ void Grammar::check() {
   check_epsilon_producing();
 }
 
-void Grammar::add_rule(NonTerminal from, GrammarProductionResult to,
-                       BuilderFunction builder) {
+void Grammar::add_rule(NonTerminal from, GrammarProductionResult to) {
   for (const auto& [production, builder_id] : get_productions_for(from)) {
     if (production == to) {
       return;
     }
   }
 
-  productions_[from].emplace_back(std::move(to), builder);
+  productions_[from].emplace_back(std::move(to), productions_count_);
+  ++productions_count_;
 }
 }  // namespace Syntax

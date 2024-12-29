@@ -4,7 +4,7 @@
 #include <exception>
 #include <iostream>
 
-#include "Exceptions.h"
+#include "cli/Exceptions.h"
 
 class ExceptionsHandler {
  public:

@@ -14,6 +14,11 @@ int main() {
   generator["space"] = "[ \t\r\n\v\f]";
   generator["comment_symbol"] = "[a-zA-Z0-9 \t\r\v\f]";
 
+  // keywords
+  generator[TokenType::KW_IMPORT] = "import";
+  generator[TokenType::KW_INT] = "int";
+  generator[TokenType::KW_RETURN] = "return";
+
   generator[TokenType::IDENTIFIER] = "{letter}({letter}|{digit})*";
   generator[TokenType::NUMBER] = "{digit}+";
 

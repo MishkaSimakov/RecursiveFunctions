@@ -5,16 +5,15 @@
 #include <unordered_set>
 #include <vector>
 
-#include "BuildersRegistry.h"
 #include "GrammarProduction.h"
 
 namespace Syntax {
 class Grammar {
   size_t nonterminals_count_{0};
-  // non-terminal id / productions with it
-  std::unordered_map<
-      NonTerminal,
-      std::vector<std::pair<GrammarProductionResult, BuilderFunction>>>
+  size_t productions_count_{0};
+  // non-terminal id / global production index
+  std::unordered_map<NonTerminal,
+                     std::vector<std::pair<GrammarProductionResult, size_t>>>
       productions_;
   NonTerminal start_{0};
 
@@ -33,7 +32,7 @@ class Grammar {
 
   NonTerminal register_nonterm() { return NonTerminal{nonterminals_count_++}; }
 
-  std::span<const std::pair<GrammarProductionResult, BuilderFunction>>
+  std::span<const std::pair<GrammarProductionResult, size_t>>
   get_productions_for(const NonTerminal& non_terminal) const {
     auto itr = productions_.find(non_terminal);
 
@@ -50,7 +49,6 @@ class Grammar {
 
   void check();
 
-  void add_rule(NonTerminal from, GrammarProductionResult to,
-                BuilderFunction builder);
+  void add_rule(NonTerminal from, GrammarProductionResult to);
 };
 }  // namespace Syntax

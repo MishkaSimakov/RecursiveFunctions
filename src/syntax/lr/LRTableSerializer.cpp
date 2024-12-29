@@ -33,7 +33,7 @@ void LRTableSerializer::serialize(std::ostream& os,
                             [&write_bytes](ReduceAction reduce) {
                               write_bytes(reduce.next.get_id());
                               write_bytes(reduce.remove_count);
-                              write_bytes(reduce.builder.index);
+                              write_bytes(reduce.production_index);
                             }},
                  action);
     }
@@ -75,9 +75,8 @@ LRTableSerializer::deserialize(std::istream& is) {
           actions_table[i][j] = ShiftAction{read_bytes()};
           break;
         case variant_type_index_v<ReduceAction, Action>:
-          actions_table[i][j] =
-              ReduceAction{NonTerminal{read_bytes()}, read_bytes(),
-                           BuilderFunction{read_bytes()}};
+          actions_table[i][j] = ReduceAction{NonTerminal{read_bytes()},
+                                             read_bytes(), read_bytes()};
           break;
       }
     }

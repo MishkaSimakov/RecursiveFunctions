@@ -83,12 +83,15 @@ void LexicalAutomatonGenerator::build_and_save(
     for (size_t i = 0; i < kTokensCount; ++i) {
       if (mapping[i] != -1 && tokens_automata[i].nodes[mapping[i]].is_final) {
         if (final_token.has_value()) {
-          // two final states overlap => fail
-          throw std::runtime_error(fmt::format(
-              "Failed to build automaton. Tokens {} and {} match same "
-              "sequence.",
-              TokenType(i).toString(),
-              TokenType(final_token.value()).toString()));
+          // two final states overlap => choose first of them
+          std::cout << fmt::format(
+                           "Warning: tokens {} and {} match same "
+                           "sequence. First will be selected.",
+                           TokenType(final_token.value()).to_string(),
+                           TokenType(i).to_string())
+                    << std::endl;
+
+          continue;
         }
 
         final_token = i;
@@ -134,7 +137,7 @@ void LexicalAutomatonGenerator::build_and_save(
     if (final_token.has_value() && !has_final_jump) {
       throw std::runtime_error(
           fmt::format("Token {} is unrecognizable.",
-                      TokenType(final_token.value()).toString()));
+                      TokenType(final_token.value()).to_string()));
     }
   }
 

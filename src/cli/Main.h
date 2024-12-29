@@ -3,17 +3,15 @@
 #include <argparse/argparse.hpp>
 
 #include "ArgumentsReader.h"
-#include "ExceptionsHandler.h"
 #include "assembly/AssemblyPrinter.h"
-#include "compilation/CompileTreeBuilder.h"
+#include "ast/ASTPrinter.h"
+#include "errors/ExceptionsHandler.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "log/Logger.h"
 #include "passes/PassManager.h"
-#include "syntax/RecursiveFunctionsGrammar.h"
+#include "sources/SourceManager.h"
 #include "syntax/lr/LRParser.h"
 #include "utils/Constants.h"
-
-using Compilation::CompileTreeBuilder;
 
 namespace Cli {
 namespace fs = std::filesystem;
@@ -26,19 +24,21 @@ class Main {
 
       Logger::set_level(arguments.verbosity_level);
 
+      SourceManager source_manager;
+
       // setup parser and lexical analyzer, load tables
-      Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
-      auto [builders, _] = Syntax::get_recursive_functions_grammar();
-      auto parser = Syntax::LRParser(Constants::grammar_filepath, builders);
+      Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath,
+                                              source_manager);
+      auto parser =
+          Syntax::LRParser(Constants::grammar_filepath, source_manager);
 
       // process each file separately
       for (auto& [name, path] : arguments.sources) {
-        std::ifstream is(path);
-        lexical_analyzer.set_stream(is);
+        SourceLocation begin = source_manager.load(path);
+        lexical_analyzer.set_location(begin);
+        auto ast = parser.parse(lexical_analyzer);
 
-        auto syntax_tree = parser.parse(lexical_analyzer);
-
-        PrintSyntaxTreeRecursive("", *syntax_tree, true);
+        ASTPrinter(ast, std::cout, source_manager).traverse();
 
         // CompileTreeBuilder compile_tree_builder;
         // auto compile_tree = compile_tree_builder.build(*syntax_tree);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <string_view>
 
 template <typename T>
@@ -49,7 +50,15 @@ struct EnumInfo;
     bool operator==(InternalEnum other) const { return value_ == other; }    \
     bool operator==(name other) const { return value_ == other.value_; }     \
                                                                              \
-    constexpr std::string_view toString() const {                            \
+    constexpr std::string_view to_string() const {                           \
       return separated[static_cast<size_t>(value_)];                         \
+    }                                                                        \
+    static std::optional<name> from_string(std::string_view string) {        \
+      for (size_t i = 0; i < count; ++i) {                                   \
+        if (separated[i] == string) {                                        \
+          return name(i);                                                    \
+        }                                                                    \
+      }                                                                      \
+      return {};                                                             \
     }                                                                        \
   };

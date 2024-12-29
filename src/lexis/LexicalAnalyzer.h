@@ -6,20 +6,25 @@
 
 #include "lexis/Token.h"
 #include "lexis/table/LexicalAutomatonState.h"
+#include "sources/SourceManager.h"
 
 namespace Lexis {
 class LexicalAnalyzer {
   const std::vector<JumpTableT> jumps_;
   static std::unordered_map<std::string_view, TokenType> keywords;
 
-  std::istream* stream_{nullptr};
+  SourceLocation location_{};
+  const SourceManager& source_manager_;
 
-  Token get_token_internal() const;
+  Token get_token_internal();
 
  public:
-  explicit LexicalAnalyzer(const std::filesystem::path& path);
+  LexicalAnalyzer(const std::filesystem::path& table_path,
+                  const SourceManager& source_manager);
 
-  Token get_token() const;
-  void set_stream(std::istream& stream);
+  void set_location(SourceLocation location);
+  void seek(off_t offset);
+
+  Token get_token();
 };
 }  // namespace Lexis

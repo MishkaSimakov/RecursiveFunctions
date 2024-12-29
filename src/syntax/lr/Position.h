@@ -4,12 +4,11 @@
 namespace Syntax {
 struct Position {
   NonTerminal from;
-  const std::pair<GrammarProductionResult, BuilderFunction>& production;
+  const std::pair<GrammarProductionResult, size_t>& production;
   GrammarProductionResult::const_iterator iterator;
 
-  Position(
-      NonTerminal from,
-      const std::pair<GrammarProductionResult, BuilderFunction>& production)
+  Position(NonTerminal from,
+           const std::pair<GrammarProductionResult, size_t>& production)
       : from(from),
         production(production),
         iterator(production.first.cbegin()) {}
@@ -36,7 +35,7 @@ struct Position {
       }
 
       if (itr.is_terminal()) {
-        result += "(" + std::string(itr.access_terminal().toString()) + ")";
+        result += "(" + std::string(itr.access_terminal().to_string()) + ")";
       } else {
         result += std::to_string(itr.access_nonterminal().get_id());
       }
