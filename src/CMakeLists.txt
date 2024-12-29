@@ -1,5 +1,5 @@
 set(CoreModuleDirectories
-        log optimizations intermediate_representation assembly passes analysis filesystem ast sources errors
+        log filesystem ast sources errors
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)

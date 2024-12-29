@@ -3,12 +3,10 @@
 #include <argparse/argparse.hpp>
 
 #include "ArgumentsReader.h"
-#include "assembly/AssemblyPrinter.h"
 #include "ast/ASTPrinter.h"
 #include "errors/ExceptionsHandler.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "log/Logger.h"
-#include "passes/PassManager.h"
 #include "sources/SourceManager.h"
 #include "syntax/lr/LRParser.h"
 #include "utils/Constants.h"
@@ -38,7 +36,7 @@ class Main {
         lexical_analyzer.set_location(begin);
         auto ast = parser.parse(lexical_analyzer);
 
-        ASTPrinter(ast, std::cout, source_manager).traverse();
+        ASTPrinter(ast, std::cout, source_manager).print();
 
         // CompileTreeBuilder compile_tree_builder;
         // auto compile_tree = compile_tree_builder.build(*syntax_tree);
