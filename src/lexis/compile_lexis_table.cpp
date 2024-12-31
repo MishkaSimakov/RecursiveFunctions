@@ -12,22 +12,29 @@ int main() {
   generator["letter"] = "[a-zA-Z]";
   generator["digit"] = "[0-9]";
   generator["space"] = "[ \t\r\n\v\f]";
-  generator["comment_symbol"] = "[a-zA-Z0-9 \t\r\v\f]";
+  generator["comment_symbol"] = "[^\n]";
+  generator["s_char"] = "[^\"^\n]"; // everything except quote and new line
+  generator["id_char"] = "[a-zA-Z0-9_]";
 
   // keywords
   generator[TokenType::KW_IMPORT] = "import";
-  generator[TokenType::KW_INT] = "int";
+  generator[TokenType::KW_EXPORT] = "export";
   generator[TokenType::KW_RETURN] = "return";
 
-  generator[TokenType::IDENTIFIER] = "{letter}({letter}|{digit})*";
+  generator[TokenType::KW_INT] = "int";
+  generator[TokenType::KW_BOOL] = "bool";
+
+  generator[TokenType::IDENTIFIER] = "{letter}({id_char})*";
   generator[TokenType::NUMBER] = "{digit}+";
 
   // TODO: string can contain any character + escape sequence
-  generator[TokenType::STRING] = "\"({letter}|{digit})*\"";
+  generator[TokenType::STRING] = "\"({s_char})*\"";
 
   // operators
   generator[TokenType::EQUAL] = "=";
   generator[TokenType::PLUS] = "\\+";
+  generator[TokenType::MINUS] = "-";
+  generator[TokenType::MULTIPLY] = "\\*";
   generator[TokenType::LESS] = "<";
   generator[TokenType::GREATER] = ">";
   generator[TokenType::LESS_EQ] = "<=";

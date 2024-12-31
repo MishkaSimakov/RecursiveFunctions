@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <iostream>
 #include <memory>
@@ -87,6 +88,10 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     add_node(fmt::format("IntType {}", range_string(value)));
     return true;
   }
+  bool visit_bool_type(const BoolType& value) {
+    add_node(fmt::format("BoolType {}", range_string(value)));
+    return true;
+  }
   bool visit_compound_statement(const CompoundStmt& value) {
     add_node(fmt::format("CompoundStmt {}", range_string(value)));
     return true;
@@ -99,12 +104,14 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     add_node(fmt::format("ParamDecl {} {}", range_string(value), value.id));
     return true;
   }
-  bool visit_parameter_list_declaration(const ParametersListDecl& value) {
-    add_node(fmt::format("ParamListDecl {}", range_string(value)));
-    return true;
-  }
   bool visit_function_declaration(const FunctionDecl& value) {
-    add_node(fmt::format("FuncDecl {} {}", range_string(value), value.name));
+    std::vector<std::string> specifiers;
+    if (value.is_exported) {
+      specifiers.push_back("export");
+    }
+
+    add_node(fmt::format("FuncDecl {} {} {}", range_string(value), value.name,
+                         fmt::join(specifiers, " ")));
     return true;
   }
   bool visit_return_statement(const ReturnStmt& value) {
@@ -128,6 +135,27 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
   bool visit_import_declaration(const ImportDecl& value) {
     const auto& string = context_.string_literals_table[value.id].value;
     add_node(fmt::format("ImportDecl {} {}", range_string(value), string));
+    return true;
+  }
+  bool visit_call_expression(const CallExpr& value) {
+    add_node(fmt::format("CallExpr {} {}", range_string(value), value.id));
+    return true;
+  }
+  bool visit_binary_operator(const BinaryOperator& value) {
+    char operator_name;
+    switch (value.type) {
+      case BinaryOperator::OpType::PLUS:
+        operator_name = '+';
+        break;
+      case BinaryOperator::OpType::MINUS:
+        operator_name = '-';
+        break;
+      case BinaryOperator::OpType::MULTIPLY:
+        operator_name = '*';
+        break;
+    }
+
+    add_node(fmt::format("BinaryOp {} {}", range_string(value), operator_name));
     return true;
   }
 

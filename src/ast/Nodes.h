@@ -3,22 +3,24 @@
 #include <string>
 #include <vector>
 
+#include "errors/Helpers.h"
 #include "lexis/Token.h"
 
 struct ASTNode {
   enum class Kind {
-    TOKEN,
     INT_TYPE,
+    BOOL_TYPE,
     COMPOUND_STMT,
     PROGRAM_DECL,
     PARAMETER_DECL,
-    PARAMETERS_LIST_DECL,
     FUNCTION_DECL,
     RETURN_STMT,
     INTEGER_LITERAL_EXPR,
     STRING_LITERAL_EXPR,
     ID_EXPR,
-    IMPORT_DECL
+    IMPORT_DECL,
+    BINARY_OPERATOR,
+    CALL_EXPR,
   };
 
   SourceLocation source_begin;
@@ -27,9 +29,7 @@ struct ASTNode {
   ASTNode(SourceRange source_range)
       : source_begin(source_range.begin), source_end(source_range.end) {}
 
-  SourceRange source_range() const {
-    return {source_begin, source_end};
-  }
+  SourceRange source_range() const { return {source_begin, source_end}; }
 
   virtual ~ASTNode() = default;
 
@@ -42,7 +42,9 @@ struct TokenNode : ASTNode {
   TokenNode(const Lexis::Token& token)
       : ASTNode(token.source_range), token_type(token.type) {}
 
-  Kind get_kind() const override { return Kind::TOKEN; }
+  Kind get_kind() const override {
+    unreachable("Token node doesn't appear anywhere except ASTBuildContext.");
+  }
 };
 
 struct Statement : ASTNode {
@@ -64,30 +66,22 @@ struct IntType : Type {
   Kind get_kind() const override { return Kind::INT_TYPE; }
 };
 
+struct BoolType : Type {
+  BoolType(SourceRange source_range) : Type(source_range) {}
+
+  Kind get_kind() const override { return Kind::BOOL_TYPE; }
+};
+
 struct CompoundStmt : Statement {
   std::vector<std::unique_ptr<Statement>> statements;
 
-  CompoundStmt(SourceRange source_range)
-      : Statement(source_range) {}
+  CompoundStmt(SourceRange source_range) : Statement(source_range) {}
 
   void add_item(std::unique_ptr<Statement> node) {
     statements.push_back(std::move(node));
   }
 
   Kind get_kind() const override { return Kind::COMPOUND_STMT; }
-};
-
-struct ProgramDecl : Declaration {
-  std::vector<std::unique_ptr<Declaration>> declarations;
-
-  ProgramDecl(SourceRange source_range)
-      : Declaration(source_range) {}
-
-  void add_item(std::unique_ptr<Declaration> node) {
-    declarations.push_back(std::move(node));
-  }
-
-  Kind get_kind() const override { return Kind::PROGRAM_DECL; }
 };
 
 struct ParameterDecl : Declaration {
@@ -101,17 +95,21 @@ struct ParameterDecl : Declaration {
   Kind get_kind() const override { return Kind::PARAMETER_DECL; }
 };
 
-struct ParametersListDecl : Declaration {
-  std::vector<std::unique_ptr<ParameterDecl>> parameters;
+template <typename NodeT = ASTNode>
+  requires std::is_base_of_v<ASTNode, NodeT>
+struct NodesList : ASTNode {
+  std::vector<std::unique_ptr<NodeT>> nodes;
 
-  ParametersListDecl(SourceRange source_range)
-      : Declaration(source_range) {}
+  NodesList(SourceRange source_range) : ASTNode(source_range) {}
 
-  void add_item(std::unique_ptr<ParameterDecl> node) {
-    parameters.push_back(std::move(node));
+  void add_item(std::unique_ptr<NodeT> node) {
+    nodes.push_back(std::move(node));
   }
 
-  Kind get_kind() const override { return Kind::PARAMETERS_LIST_DECL; }
+  Kind get_kind() const override {
+    unreachable(
+        "NodesList<T> node doesn't appear anywhere except ASTBuildContext.");
+  }
 };
 
 struct FunctionDecl : Declaration {
@@ -120,15 +118,18 @@ struct FunctionDecl : Declaration {
   std::unique_ptr<Type> return_type;
   std::unique_ptr<CompoundStmt> body;
 
+  bool is_exported;
+
   FunctionDecl(SourceRange source_range, std::string_view name,
                std::vector<std::unique_ptr<ParameterDecl>> parameters,
                std::unique_ptr<Type> return_type,
-               std::unique_ptr<CompoundStmt> body)
+               std::unique_ptr<CompoundStmt> body, bool is_exported)
       : Declaration(source_range),
         name(name),
         parameters(std::move(parameters)),
         return_type(std::move(return_type)),
-        body(std::move(body)) {}
+        body(std::move(body)),
+        is_exported(is_exported) {}
 
   Kind get_kind() const override { return Kind::FUNCTION_DECL; }
 };
@@ -136,8 +137,7 @@ struct FunctionDecl : Declaration {
 struct ReturnStmt : Statement {
   std::unique_ptr<Expression> value;
 
-  ReturnStmt(SourceRange source_range,
-             std::unique_ptr<Expression> value)
+  ReturnStmt(SourceRange source_range, std::unique_ptr<Expression> value)
       : Statement(source_range), value(std::move(value)) {}
 
   Kind get_kind() const override { return Kind::RETURN_STMT; }
@@ -176,4 +176,42 @@ struct ImportDecl : Declaration {
       : Declaration(source_range), id(id) {}
 
   Kind get_kind() const override { return Kind::IMPORT_DECL; }
+};
+
+struct BinaryOperator : Expression {
+  enum class OpType { PLUS, MINUS, MULTIPLY };
+
+  OpType type;
+  std::unique_ptr<Expression> left;
+  std::unique_ptr<Expression> right;
+
+  BinaryOperator(SourceRange source_range, OpType type,
+                 std::unique_ptr<Expression> left,
+                 std::unique_ptr<Expression> right)
+      : Expression(source_range),
+        type(type),
+        left(std::move(left)),
+        right(std::move(right)) {}
+
+  Kind get_kind() const override { return Kind::BINARY_OPERATOR; }
+};
+
+struct CallExpr : Expression {
+  std::string id;
+  std::vector<std::unique_ptr<Expression>> arguments;
+
+  CallExpr(SourceRange source_range, std::string_view id,
+           std::vector<std::unique_ptr<Expression>> arguments)
+      : Expression(source_range), id(id), arguments(std::move(arguments)) {}
+
+  Kind get_kind() const override { return Kind::CALL_EXPR; }
+};
+
+struct ProgramDecl : Declaration {
+  std::vector<std::unique_ptr<ImportDecl>> imports;
+  std::vector<std::unique_ptr<Declaration>> declarations;
+
+  ProgramDecl(SourceRange source_range) : Declaration(source_range) {}
+
+  Kind get_kind() const override { return Kind::PROGRAM_DECL; }
 };

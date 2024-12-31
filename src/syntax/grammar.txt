@@ -1,5 +1,13 @@
 program:
-    declaration-seq [pass<0>]
+    preamble declaration-seq    [program_declaration]
+    declaration-seq             [program_declaration]
+
+preamble:
+    import-seq [pass<0>]
+
+import-seq:
+    import              [sequence<NodesList<ImportDecl>, ImportDecl>]
+    import-seq import   [sequence<NodesList<ImportDecl>, ImportDecl>]
 
 // basics
 literal:
@@ -14,26 +22,29 @@ integer-literal:
 
 // declarations
 declaration-seq:
-    declaration                 [sequence<ProgramDecl, Declaration>]
-    declaration-seq declaration [sequence<ProgramDecl, Declaration>]
+    declaration                 [sequence<NodesList<Declaration>, Declaration>]
+    declaration-seq declaration [sequence<NodesList<Declaration>, Declaration>]
 
 declaration:
     function-definition [pass<0>]
-    module-import [pass<0>]
 
-module-import:
+import:
     KW_IMPORT STRING SEMICOLON [module_import]
 
 function-definition:
+    specifiers IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
     IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
 
+specifiers:
+    KW_EXPORT [pass<0>]
+
 parameters:
-    OPEN_PAREN CLOSE_PAREN                              [construct<ParametersListDecl>]
+    OPEN_PAREN CLOSE_PAREN                              [construct<NodesList<ParameterDecl>>]
     OPEN_PAREN parameter-declaration-list CLOSE_PAREN   [pass<1>]
 
 parameter-declaration-list:
-    parameter-declaration                                   [sequence<ParametersListDecl, ParameterDecl>]
-    parameter-declaration-list COMMA parameter-declaration  [sequence<ParametersListDecl, ParameterDecl>]
+    parameter-declaration                                   [sequence<NodesList<ParameterDecl>, ParameterDecl>]
+    parameter-declaration-list COMMA parameter-declaration  [sequence<NodesList<ParameterDecl>, ParameterDecl>]
 
 parameter-declaration:
     IDENTIFIER COLON type-name [parameter_declaration]
@@ -43,6 +54,7 @@ return-type:
 
 type-name:
     KW_INT [construct<IntType>]
+    KW_BOOL [construct<BoolType>]
 
 // statements
 compound-statement:
@@ -63,7 +75,31 @@ jump-statement:
 expression-statement:
     expression SEMICOLON [pass<0>]
 
-// expressions
+expression-list:
+    expression                          [sequence<NodesList<Expression>, Expression>]
+    expression-list COMMA expression    [sequence<NodesList<Expression>, Expression>]
+
+call-arguments:
+    OPEN_PAREN CLOSE_PAREN                  [construct<NodesList<Expression>>]
+    OPEN_PAREN expression-list CLOSE_PAREN  [pass<1>]
+
+call-expression:
+    IDENTIFIER call-arguments [call_expression]
+
+primary-expression:
+    literal                             [pass<0>]
+    IDENTIFIER                          [id_expression]
+    OPEN_PAREN expression CLOSE_PAREN   [pass<1>]
+    call-expression                     [pass<0>]
+
+multiply-expression:
+    primary-expression [pass<0>]
+    multiply-expression MULTIPLY primary-expression [binary_op<MULTIPLY>]
+
+add-expression:
+    multiply-expression                         [pass<0>]
+    add-expression PLUS multiply-expression     [binary_op<PLUS>]
+    add-expression MINUS multiply-expression    [binary_op<MINUS>]
+
 expression:
-    literal [pass<0>]
-    IDENTIFIER [id_expression]
+    add-expression  [pass<0>]

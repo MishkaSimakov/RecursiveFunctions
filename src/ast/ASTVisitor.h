@@ -16,11 +16,9 @@ class ASTVisitor {
   using wrap_const = std::conditional_t<IsConst, const T, T>;
 
  public:
-  explicit ASTVisitor(const ASTContext& context): context_(context) {}
+  explicit ASTVisitor(const ASTContext& context) : context_(context) {}
 
-  bool traverse() {
-    return traverse(*context_.root);
-  }
+  bool traverse() { return traverse(*context_.root); }
 
   bool traverse(wrap_const<ASTNode>& node) {
     if (!child().before_traverse(node)) {
@@ -72,6 +70,11 @@ class ASTVisitor {
       return false;
     }
 
+    for (auto& import_decl : node.imports) {
+      if (!traverse(*import_decl)) {
+        return false;
+      }
+    }
     for (auto& declaration : node.declarations) {
       if (!traverse(*declaration)) {
         return false;
@@ -87,20 +90,7 @@ class ASTVisitor {
 
     return traverse(*node.type);
   }
-  bool traverse_parameter_list_declaration(
-      wrap_const<ParametersListDecl>& node) {
-    if (!child().visit_parameter_list_declaration(node)) {
-      return false;
-    }
 
-    for (auto& parameter : node.parameters) {
-      if (!traverse(*parameter)) {
-        return false;
-      }
-    }
-
-    return true;
-  }
   bool traverse_function_declaration(wrap_const<FunctionDecl>& node) {
     if (!child().visit_function_declaration(node)) {
       return false;
@@ -136,6 +126,34 @@ class ASTVisitor {
   }
   bool traverse_import_declaration(wrap_const<ImportDecl>& node) {
     return child().visit_import_declaration(node);
+  }
+  bool traverse_bool_type(wrap_const<BoolType>& node) {
+    return child().visit_bool_type(node);
+  }
+  bool traverse_binary_operator(wrap_const<BinaryOperator>& node) {
+    if (!child().visit_binary_operator(node)) {
+      return false;
+    }
+    if (!traverse(*node.left)) {
+      return false;
+    }
+    if (!traverse(*node.right)) {
+      return false;
+    }
+
+    return true;
+  }
+  bool traverse_call_expression(wrap_const<CallExpr>& node) {
+    if (!child().visit_call_expression(node)) {
+      return false;
+    }
+    for (auto& argument : node.arguments) {
+      if (!traverse(*argument)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   bool before_traverse(wrap_const<ASTNode>& node) { return true; }

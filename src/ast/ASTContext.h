@@ -14,4 +14,5 @@ struct ASTContext {
 
   std::unique_ptr<ProgramDecl> root;
   std::vector<StringLiteralData> string_literals_table;
+  std::vector<size_t> dependencies;
 };

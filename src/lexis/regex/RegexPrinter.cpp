@@ -1,7 +1,7 @@
 #include "RegexPrinter.h"
 
-#include "lexis/Charset.h"
 #include "RegexNodes.h"
+#include "lexis/Charset.h"
 
 namespace {
 struct RegexPrinterVisitor final : RegexConstNodeVisitor {
@@ -10,12 +10,15 @@ struct RegexPrinterVisitor final : RegexConstNodeVisitor {
 
   explicit RegexPrinterVisitor(std::ostream& os) : os(os) {}
 
-  void visit(const SymbolRangeNode& node) override {
+  void visit(const SymbolNode& node) override {
     os << "[";
-    if (node.from == node.to) {
-      os << print_symbol(node.from);
-    } else {
-      os << print_symbol(node.from) << "-" << print_symbol(node.to);
+    auto groups = group_symbols(node.match);
+
+    for (auto [from, to] : groups) {
+      os << print_symbol(from);
+      if (from != to) {
+        os << "-" << print_symbol(to);
+      }
     }
     os << "]";
   }

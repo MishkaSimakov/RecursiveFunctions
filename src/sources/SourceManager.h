@@ -32,8 +32,12 @@ class SourceManager {
   std::string_view get_file_view(SourceLocation location) const;
   std::string_view get_file_view(SourceRange source_range) const;
 
-  std::string_view get_line_view(SourceLocation location) const;
-  size_t get_line_id(SourceLocation location) const;
+  struct LineInfo {
+    std::string_view view;
+    size_t index;
+    size_t offset;
+  };
+  LineInfo get_line_info(SourceLocation location) const;
 
   void add_annotation(SourceLocation location, std::string_view text);
   void print_annotations(std::ostream& os);

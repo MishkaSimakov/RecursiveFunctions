@@ -65,13 +65,15 @@ std::string_view SourceManager::get_file_view(SourceRange source_range) const {
   return {file_begin + begin.pos_id, file_begin + end.pos_id + 1};
 }
 
-std::string_view SourceManager::get_line_view(SourceLocation location) const {
+SourceManager::LineInfo SourceManager::get_line_info(SourceLocation location) const {
   auto [begin, size, _] = loaded_[location.file_id];
   const char* line_begin = begin;
+  size_t line_index = 0;
 
   for (size_t i = 0; i < location.pos_id; ++i) {
     if (begin[i] == '\n') {
       line_begin = begin + i + 1;
+      ++line_index;
     }
   }
 
@@ -80,13 +82,9 @@ std::string_view SourceManager::get_line_view(SourceLocation location) const {
     ++line_end;
   }
 
-  return {line_begin, line_end};
-}
-
-size_t SourceManager::get_line_id(SourceLocation location) const {
-  auto begin = loaded_[location.file_id].begin;
-
-  return std::count(begin, begin + location.pos_id, '\n');
+  auto view = std::string_view(line_begin, line_end);
+  size_t offset = location.pos_id - (line_begin - begin);
+  return {view, line_index, offset};
 }
 
 void SourceManager::add_annotation(SourceLocation location,
@@ -98,11 +96,11 @@ void SourceManager::print_annotations(std::ostream& os) {
   for (const SourceAnnotation& annotation : annotations_) {
     auto [file_id, position] = annotation.position;
     auto [begin, size, path] = loaded_[file_id];
-    size_t line_id = get_line_id(annotation.position);
+    auto [line_view, line_index, line_offset] = get_line_info(annotation.position);
 
-    os << fmt::format("In file {:?} on line {}:\n", path.c_str(), line_id);
-    os << "\t" << get_line_view(annotation.position) << "\n";
-    os << "\t" << annotation.value << "\n";
+    os << fmt::format("In file {:?} on line {}:\n", path.c_str(), line_index);
+    os << "\t" << line_view << "\n";
+    os << "\t" << std::string(line_offset, ' ') << "`-" << annotation.value << "\n";
   }
 }
 

@@ -9,12 +9,14 @@ struct NonDeterministicFiniteAutomata::FiniteAutomataBuilderVisitor final
     : RegexConstNodeVisitor {
   NonDeterministicFiniteAutomata result;
 
-  void visit(const SymbolRangeNode& node) override {
+  void visit(const SymbolNode& node) override {
     auto& start_node = result.get_start_node();
     auto& end_node = result.add_node();
 
-    for (char symbol = node.from; symbol <= node.to; ++symbol) {
-      start_node.jumps.emplace(symbol, &end_node);
+    for (size_t i = 0; i < Charset::kCharactersCount; ++i) {
+      if (node.match[i]) {
+        start_node.jumps.emplace(i, &end_node);
+      }
     }
 
     end_node.is_final = true;

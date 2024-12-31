@@ -8,6 +8,8 @@
 
 #include "ast/ASTBuildContext.h"
 #include "errors/Helpers.h"
+
+using enum BinaryOperator::OpType;
 #include "syntax/BuildersRegistry.h"
 
 namespace Syntax {

@@ -70,6 +70,20 @@ class ASTBuildContext {
     return std::move(nodes[Index]);
   }
 
+  NodePtr program_declaration(SourceRange source_range,
+                              std::span<NodePtr> nodes) {
+    auto program_node = std::make_unique<ProgramDecl>(source_range);
+    if (nodes.size() == 2) {
+      auto import_list = cast_move<NodesList<ImportDecl>>(std::move(nodes[0]));
+      program_node->imports = std::move(import_list->nodes);
+    }
+
+    auto decl_list = cast_move<NodesList<Declaration>>(std::move(nodes.back()));
+    program_node->declarations = std::move(decl_list->nodes);
+
+    return std::move(program_node);
+  }
+
   NodePtr string_literal(SourceRange source_range, std::span<NodePtr> nodes) {
     auto& token_node = cast_view<TokenNode>(nodes.front());
     std::string_view string =
@@ -123,15 +137,25 @@ class ASTBuildContext {
 
   NodePtr function_definition(SourceRange source_range,
                               std::span<NodePtr> nodes) {
-    auto& token = cast_view<TokenNode>(nodes[0]);
-    auto name_view = source_manager_.get_file_view(token.source_range());
-    auto parameters = cast_move<ParametersListDecl>(std::move(nodes[2]));
-    auto return_type = cast_move<Type>(std::move(nodes[3]));
-    auto body = cast_move<CompoundStmt>(std::move(nodes[5]));
+    bool has_specifier = nodes.size() == 7;
+    size_t shift = has_specifier ? 1 : 0;
 
-    return make_node<FunctionDecl>(source_range, name_view,
-                                   std::move(parameters->parameters),
-                                   std::move(return_type), std::move(body));
+    // specifiers
+    auto& spec_token = cast_view<TokenNode>(nodes[0]);
+    bool is_exported = has_specifier;
+
+    // identifier
+    auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
+    auto name_view = source_manager_.get_file_view(id_token.source_range());
+
+    auto parameters =
+        cast_move<NodesList<ParameterDecl>>(std::move(nodes[shift + 2]));
+    auto return_type = cast_move<Type>(std::move(nodes[shift + 3]));
+    auto body = cast_move<CompoundStmt>(std::move(nodes[shift + 5]));
+
+    return make_node<FunctionDecl>(
+        source_range, name_view, std::move(parameters->nodes),
+        std::move(return_type), std::move(body), is_exported);
   }
 
   NodePtr module_import(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -155,5 +179,23 @@ class ASTBuildContext {
     root->add_item(cast_move<ListItemT>(std::move(nodes.back())));
 
     return std::move(root);
+  }
+
+  template <BinaryOperator::OpType type>
+  NodePtr binary_op(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto left = cast_move<Expression>(std::move(nodes.front()));
+    auto right = cast_move<Expression>(std::move(nodes.back()));
+
+    return std::make_unique<BinaryOperator>(source_range, type, std::move(left),
+                                            std::move(right));
+  }
+
+  NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto arguments_list = cast_move<NodesList<Expression>>(std::move(nodes[1]));
+    auto id_token = cast_view<TokenNode>(nodes[0]);
+    auto id_view = source_manager_.get_file_view(id_token.source_range());
+
+    return std::make_unique<CallExpr>(source_range, id_view,
+                                      std::move(arguments_list->nodes));
   }
 };

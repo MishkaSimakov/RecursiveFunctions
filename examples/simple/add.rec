@@ -1,9 +1,0 @@
-import "math";
-
-add: (a: int, b: int) -> int = {
-    return a;
-}
-
-main: () -> int = {
-    return "hello";
-}

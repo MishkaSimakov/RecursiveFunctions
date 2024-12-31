@@ -1,6 +1,9 @@
 #include "RegexParser.h"
 
+#include <lexis/Charset.h>
+
 #include <locale>
+#include <set>
 #include <vector>
 
 std::string_view::iterator RegexParser::get_matching_paren(
@@ -30,36 +33,51 @@ std::string_view::iterator RegexParser::get_closing_bracket(
 
 std::unique_ptr<RegexNode> RegexParser::parse_symbols_range(
     std::string_view regex) {
-  std::vector<std::unique_ptr<RegexNode>> nodes;
+  std::vector<std::pair<size_t, size_t>> additions;
+  std::set<size_t> exclusions;
 
   for (size_t i = 0; i < regex.size();) {
+    if (regex[i] == '^') {
+      if (i + 1 >= regex.size()) {
+        throw std::runtime_error(
+            "In symbols range: symbol must be presented after exclusion sign "
+            "(^).");
+      }
+
+      exclusions.insert(regex[i + 1]);
+      i += 2;
+      continue;
+    }
+
     if (i + 1 < regex.size() && regex[i + 1] == '-') {
       if (i + 2 >= regex.size()) {
         throw std::runtime_error("In symbols range: unclosed range.");
       }
 
-      nodes.push_back(
-          std::make_unique<SymbolRangeNode>(regex[i], regex[i + 2]));
+      additions.emplace_back(regex[i], regex[i + 2]);
 
       i += 3;
     } else {
-      nodes.push_back(std::make_unique<SymbolRangeNode>(regex[i], regex[i]));
+      additions.emplace_back(regex[i], regex[i]);
       ++i;
     }
   }
 
-  // now we should merge all nodes into one
-  while (nodes.size() >= 2) {
-    auto left_node = std::move(nodes.back());
-    nodes.pop_back();
-    auto right_node = std::move(nodes.back());
-    nodes.pop_back();
-
-    nodes.emplace_back(std::make_unique<OrNode>(
-        std::move(left_node), std::move(right_node)));
+  if (additions.empty() && !exclusions.empty()) {
+    additions.emplace_back(0, Charset::kCharactersCount - 1);
   }
 
-  return std::move(nodes.back());
+  std::bitset<Charset::kCharactersCount> result;
+  for (auto [from, to] : additions) {
+    for (size_t i = from; i <= to; ++i) {
+      result[i] = true;
+    }
+  }
+  for (size_t symbol : exclusions) {
+    result[symbol] = false;
+  }
+
+  return std::make_unique<SymbolNode>(result);
 }
 
 std::unique_ptr<RegexNode> RegexParser::parse_recursively(
@@ -125,10 +143,10 @@ std::unique_ptr<RegexNode> RegexParser::parse_recursively(
   } else if (regex.front() == '\\') {
     // escaped characters are treated like plain symbols
     regex.remove_prefix(1);
-    left = std::make_unique<SymbolRangeNode>(regex.front(), regex.front());
+    left = std::make_unique<SymbolNode>(regex.front());
     regex.remove_prefix(1);
   } else {
-    left = std::make_unique<SymbolRangeNode>(regex.front(), regex.front());
+    left = std::make_unique<SymbolNode>(regex.front());
     regex.remove_prefix(1);
   }
 

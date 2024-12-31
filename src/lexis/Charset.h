@@ -1,7 +1,9 @@
 #pragma once
 
+#include <bitset>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 struct Charset {
   using CharacterT = uint8_t;
@@ -22,4 +24,20 @@ inline std::string print_symbol(char symbol) {
   }
 
   return std::string(1, symbol);
+}
+
+inline std::vector<std::pair<char, char>> group_symbols(
+    std::bitset<Charset::kCharactersCount> symbols) {
+  std::vector<std::pair<char, char>> groups;
+
+  for (size_t i = 0; i < Charset::kCharactersCount; ++i) {
+    if (symbols[i] && (i == 0 || !symbols[i - 1])) {
+      groups.emplace_back(i, 0);
+    }
+    if (symbols[i] && (i + 1 == Charset::kCharactersCount || !symbols[i + 1])) {
+      groups.back().second = i;
+    }
+  }
+
+  return groups;
 }

@@ -1,4 +1,7 @@
 #pragma once
+#include <lexis/Charset.h>
+
+#include <bitset>
 #include <memory>
 
 #define REGEX_CONST_NODE_VISITOR_VISIT(T) virtual void visit(const T& node) = 0;
@@ -10,14 +13,14 @@
   }                                                            \
   void accept(RegexNodeVisitor& visitor) override { visitor.visit(*this); }
 
-struct SymbolRangeNode;
+struct SymbolNode;
 struct ConcatenationNode;
 struct OrNode;
 struct StarNode;
 struct PlusNode;
 
 struct RegexConstNodeVisitor {
-  REGEX_CONST_NODE_VISITOR_VISIT(SymbolRangeNode)
+  REGEX_CONST_NODE_VISITOR_VISIT(SymbolNode)
   REGEX_CONST_NODE_VISITOR_VISIT(ConcatenationNode)
   REGEX_CONST_NODE_VISITOR_VISIT(OrNode)
   REGEX_CONST_NODE_VISITOR_VISIT(StarNode)
@@ -27,7 +30,7 @@ struct RegexConstNodeVisitor {
 };
 
 struct RegexNodeVisitor {
-  REGEX_NODE_VISITOR_VISIT(SymbolRangeNode)
+  REGEX_NODE_VISITOR_VISIT(SymbolNode)
   REGEX_NODE_VISITOR_VISIT(ConcatenationNode)
   REGEX_NODE_VISITOR_VISIT(OrNode)
   REGEX_NODE_VISITOR_VISIT(StarNode)
@@ -62,24 +65,26 @@ struct RegexNode {
   }
 };
 
-// match symbols in range [from, to]
-struct SymbolRangeNode final : RegexNode {
-  char from;
-  char to;
+// match symbols in bitset
+struct SymbolNode final : RegexNode {
+  std::bitset<Charset::kCharactersCount> match;
 
-  SymbolRangeNode(char from, char to) : from(from), to(to) {}
+  SymbolNode(std::bitset<Charset::kCharactersCount> match) : match(match) {}
+  SymbolNode(size_t symbol) {
+    match[symbol] = true;
+  }
 
   std::unique_ptr<RegexNode> clone() const override {
-    return std::make_unique<SymbolRangeNode>(from, to);
+    return std::make_unique<SymbolNode>(match);
   }
 
   REGEX_NODE_ACCEPT_VISITORS()
 
  protected:
   bool equal_base(const RegexNode& node) const override {
-    const auto& other = static_cast<const SymbolRangeNode&>(node);
+    const auto& other = static_cast<const SymbolNode&>(node);
 
-    return other.from == from && other.to == to;
+    return other.match == match;
   }
 };
 

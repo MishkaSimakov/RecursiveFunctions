@@ -7,16 +7,22 @@ namespace Lexis {
 ENUM(TokenType,
      // keywords
      KW_IMPORT,  // import keyword
-     KW_INT,     // int keyword
      KW_RETURN,  // return keyword
+     KW_EXPORT,  // export keyword
+
+     // types
+     KW_INT,   // int keyword
+     KW_BOOL,  // bool keyword
 
      IDENTIFIER,  // variable or function name
-     NUMBER,      // number
+     NUMBER,      // number literal
      STRING,      // "hello world"
 
      // operators
      EQUAL,       // operator =
      PLUS,        // operator +
+     MINUS,       // operator -
+     MULTIPLY,    // operator *
      LESS,        // <
      GREATER,     // >
      LESS_EQ,     // <=
