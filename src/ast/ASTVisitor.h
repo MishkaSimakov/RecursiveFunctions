@@ -10,13 +10,12 @@ class ASTVisitor {
   const Child& child() const { return static_cast<const Child&>(*this); }
 
  protected:
-  const ASTContext& context_;
-
   template <typename T>
   using wrap_const = std::conditional_t<IsConst, const T, T>;
 
+  wrap_const<ASTContext>& context_;
  public:
-  explicit ASTVisitor(const ASTContext& context) : context_(context) {}
+  explicit ASTVisitor(wrap_const<ASTContext>& context) : context_(context) {}
 
   bool traverse() { return traverse(*context_.root); }
 
@@ -160,7 +159,7 @@ class ASTVisitor {
   bool after_traverse(wrap_const<ASTNode>& node) { return true; }
 
 #define NODE(kind, type, snake_case) \
-  bool visit_##snake_case(wrap_const<type>&) { return true; }
+  bool visit_##snake_case(wrap_const<type>&) { return true; } \
 
 #include "ast/NodesList.h"
 

@@ -79,11 +79,6 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
 
     return true;
   }
-  bool visit_token_node(const TokenNode& value) {
-    add_node(fmt::format("TokenNode {} {}", range_string(value),
-                         value.token_type.to_string()));
-    return true;
-  }
   bool visit_int_type(const IntType& value) {
     add_node(fmt::format("IntType {}", range_string(value)));
     return true;
@@ -101,7 +96,8 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     return true;
   }
   bool visit_parameter_declaration(const ParameterDecl& value) {
-    add_node(fmt::format("ParamDecl {} {}", range_string(value), value.id));
+    std::string_view name = context_.symbols[value.id];
+    add_node(fmt::format("ParamDecl {} {}", range_string(value), name));
     return true;
   }
   bool visit_function_declaration(const FunctionDecl& value) {
@@ -110,7 +106,8 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
       specifiers.push_back("export");
     }
 
-    add_node(fmt::format("FuncDecl {} {} {}", range_string(value), value.name,
+    std::string_view name = context_.symbols[value.name_id];
+    add_node(fmt::format("FuncDecl {} {} {}", range_string(value), name,
                          fmt::join(specifiers, " ")));
     return true;
   }
@@ -129,7 +126,8 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     return true;
   }
   bool visit_id_expression(const IdExpr& value) {
-    add_node(fmt::format("IdExpr {} {}", range_string(value), value.name));
+    std::string_view name = context_.symbols[value.id];
+    add_node(fmt::format("IdExpr {} {}", range_string(value), name));
     return true;
   }
   bool visit_import_declaration(const ImportDecl& value) {
@@ -138,7 +136,8 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     return true;
   }
   bool visit_call_expression(const CallExpr& value) {
-    add_node(fmt::format("CallExpr {} {}", range_string(value), value.id));
+    std::string_view name = context_.symbols[value.id];
+    add_node(fmt::format("CallExpr {} {}", range_string(value), name));
     return true;
   }
   bool visit_binary_operator(const BinaryOperator& value) {

@@ -22,7 +22,7 @@ ENUM(TokenType,
      EQUAL,       // operator =
      PLUS,        // operator +
      MINUS,       // operator -
-     MULTIPLY,    // operator *
+     STAR,    // operator *
      LESS,        // <
      GREATER,     // >
      LESS_EQ,     // <=

@@ -1,5 +1,5 @@
 set(CoreModuleDirectories
-        log filesystem ast sources errors
+        log filesystem ast sources errors compilation
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)

@@ -6,22 +6,20 @@
 #include <functional>
 #include <span>
 
-#include "ast/ASTBuildContext.h"
 #include "errors/Helpers.h"
 
 using enum BinaryOperator::OpType;
 #include "syntax/BuildersRegistry.h"
 
 namespace Syntax {
-ASTContext LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer) const {
+ASTContext LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
+                           ASTBuildContext& build_context) const {
   std::vector<size_t> states_stack;
 
   // use deque because it preserves references
   // TODO: make this memory allocation more efficient
   // maybe implement something like a deque
   std::vector<std::unique_ptr<ASTNode>> nodes_stack;
-
-  ASTBuildContext build_context(source_manager_);
 
   states_stack.push_back(0);
   Lexis::Token current_token = lexical_analyzer.get_token();

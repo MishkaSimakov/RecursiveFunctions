@@ -5,11 +5,14 @@
 
 #include "ASTContext.h"
 #include "Nodes.h"
+#include "compilation/types/TypesStorage.h"
 #include "sources/SourceManager.h"
 
 class ASTBuildContext {
   const SourceManager& source_manager_;
   ASTContext context_;
+  std::unordered_map<std::string_view, size_t> symbols_mapping_;
+  TypesStorage& types_storage_;
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<ASTNode, T>
@@ -47,11 +50,29 @@ class ASTBuildContext {
     return table.size() - 1;
   }
 
+  size_t get_symbol_id(std::string_view value) {
+    auto itr = symbols_mapping_.find(value);
+
+    if (itr != symbols_mapping_.end()) {
+      return itr->second;
+    }
+
+    size_t index = context_.symbols.size();
+    context_.symbols.push_back(std::string(value));
+    symbols_mapping_.emplace(value, index);
+    return index;
+  }
+
+  size_t get_symbol_id(SourceRange source_range) {
+    return get_symbol_id(source_manager_.get_file_view(source_range));
+  }
+
  public:
   using NodePtr = std::unique_ptr<ASTNode>;
 
-  explicit ASTBuildContext(const SourceManager& manager)
-      : source_manager_(manager) {}
+  explicit ASTBuildContext(const SourceManager& manager,
+                           TypesStorage& types_storage)
+      : source_manager_(manager), context_(), types_storage_(types_storage) {}
 
   ASTContext&& move_context(std::unique_ptr<ASTNode> root) {
     context_.root = cast_move<ProgramDecl>(std::move(root));
@@ -114,10 +135,10 @@ class ASTBuildContext {
 
   NodePtr id_expression(SourceRange source_range, std::span<NodePtr> nodes) {
     auto& token_node = cast_view<TokenNode>(nodes.front());
-    std::string_view string =
-        source_manager_.get_file_view(token_node.source_range());
+    size_t id =
+        get_symbol_id(source_manager_.get_file_view(token_node.source_range()));
 
-    return make_node<IdExpr>(source_range, string);
+    return make_node<IdExpr>(source_range, id);
   }
 
   NodePtr return_statement(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -130,9 +151,10 @@ class ASTBuildContext {
     auto decl_type = cast_move<Type>(std::move(nodes[2]));
 
     auto& token_node = cast_view<TokenNode>(nodes.front());
-    auto view = source_manager_.get_file_view(token_node.source_range());
+    size_t name_id = get_symbol_id(token_node.source_range());
 
-    return make_node<ParameterDecl>(source_range, view, std::move(decl_type));
+    return make_node<ParameterDecl>(source_range, name_id,
+                                    std::move(decl_type));
   }
 
   NodePtr function_definition(SourceRange source_range,
@@ -146,7 +168,7 @@ class ASTBuildContext {
 
     // identifier
     auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
-    auto name_view = source_manager_.get_file_view(id_token.source_range());
+    size_t name_id = get_symbol_id(id_token.source_range());
 
     auto parameters =
         cast_move<NodesList<ParameterDecl>>(std::move(nodes[shift + 2]));
@@ -154,7 +176,7 @@ class ASTBuildContext {
     auto body = cast_move<CompoundStmt>(std::move(nodes[shift + 5]));
 
     return make_node<FunctionDecl>(
-        source_range, name_view, std::move(parameters->nodes),
+        source_range, name_id, std::move(parameters->nodes),
         std::move(return_type), std::move(body), is_exported);
   }
 
@@ -193,9 +215,16 @@ class ASTBuildContext {
   NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes) {
     auto arguments_list = cast_move<NodesList<Expression>>(std::move(nodes[1]));
     auto id_token = cast_view<TokenNode>(nodes[0]);
-    auto id_view = source_manager_.get_file_view(id_token.source_range());
+    size_t id =
+        get_symbol_id(source_manager_.get_file_view(id_token.source_range()));
 
-    return std::make_unique<CallExpr>(source_range, id_view,
+    return std::make_unique<CallExpr>(source_range, id,
                                       std::move(arguments_list->nodes));
+  }
+
+  NodePtr pointer_type(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto child = cast_move<Type>(std::move(nodes[0]));
+    Type* child_ptr = types_storage_.get_type_ptr(std::move(child), );
+    return std::make_unique<PointerType>(source_range, child_ptr);
   }
 };

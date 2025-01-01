@@ -3,13 +3,12 @@
 #include <argparse/argparse.hpp>
 
 #include "ArgumentsReader.h"
-#include "ast/ASTPrinter.h"
+#include "compilation/TeaFrontend.h"
+
 #include "errors/ExceptionsHandler.h"
-#include "lexis/LexicalAnalyzer.h"
+
 #include "log/Logger.h"
-#include "sources/SourceManager.h"
-#include "syntax/lr/LRParser.h"
-#include "utils/Constants.h"
+
 
 namespace Cli {
 namespace fs = std::filesystem;
@@ -22,27 +21,9 @@ class Main {
 
       Logger::set_level(arguments.verbosity_level);
 
-      SourceManager source_manager;
-
-      // setup parser and lexical analyzer, load tables
-      Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath,
-                                              source_manager);
-      auto parser =
-          Syntax::LRParser(Constants::grammar_filepath, source_manager);
-
-      // process each file separately
-      for (auto& [name, path] : arguments.sources) {
-        SourceLocation begin = source_manager.load(path);
-        lexical_analyzer.set_location(begin);
-        auto ast = parser.parse(lexical_analyzer);
-
-        ASTPrinter(ast, std::cout, source_manager).print();
-
-        // CompileTreeBuilder compile_tree_builder;
-        // auto compile_tree = compile_tree_builder.build(*syntax_tree);
-
-        // auto ir = IR::IRCompiler().get_ir(*compile_tree);
-      }
+      auto result = TeaFrontend().compile(arguments.sources);
+      // result must be a bunch of IR files
+      // compile each module into IR
 
       //   if (arguments.emit_type == CompilerEmitType::IR) {
       //     FilesystemManager::get_instance().save_to_file(arguments.output,

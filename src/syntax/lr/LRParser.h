@@ -5,8 +5,10 @@
 
 #include "LRTableBuilder.h"
 #include "LRTableSerializer.h"
+#include "ast/ASTBuildContext.h"
 #include "ast/ASTContext.h"
 #include "ast/Nodes.h"
+#include "compilation/types/TypesStorage.h"
 #include "lexis/LexicalAnalyzer.h"
 
 namespace Syntax {
@@ -23,6 +25,6 @@ class LRParser {
     std::tie(actions_, goto_) = LRTableSerializer::deserialize(is);
   }
 
-  ASTContext parse(Lexis::LexicalAnalyzer& lexical_analyzer) const;
+  ASTContext parse(Lexis::LexicalAnalyzer& lexical_analyzer, ASTBuildContext& build_context) const;
 };
 }  // namespace Syntax

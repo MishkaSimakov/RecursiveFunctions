@@ -34,7 +34,7 @@ int main() {
   generator[TokenType::EQUAL] = "=";
   generator[TokenType::PLUS] = "\\+";
   generator[TokenType::MINUS] = "-";
-  generator[TokenType::MULTIPLY] = "\\*";
+  generator[TokenType::STAR] = "\\*";
   generator[TokenType::LESS] = "<";
   generator[TokenType::GREATER] = ">";
   generator[TokenType::LESS_EQ] = "<=";

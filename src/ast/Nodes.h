@@ -5,11 +5,13 @@
 
 #include "errors/Helpers.h"
 #include "lexis/Token.h"
+#include "compilation/types/Type.h"
 
 struct ASTNode {
   enum class Kind {
     INT_TYPE,
     BOOL_TYPE,
+    POINTER_TYPE,
     COMPOUND_STMT,
     PROGRAM_DECL,
     PARAMETER_DECL,
@@ -41,6 +43,8 @@ struct TokenNode : ASTNode {
 
   TokenNode(const Lexis::Token& token)
       : ASTNode(token.source_range), token_type(token.type) {}
+  TokenNode(SourceRange source_range, Lexis::TokenType token_type)
+      : ASTNode(source_range), token_type(token_type) {}
 
   Kind get_kind() const override {
     unreachable("Token node doesn't appear anywhere except ASTBuildContext.");
@@ -53,23 +57,18 @@ struct Statement : ASTNode {
 struct Declaration : ASTNode {
   using ASTNode::ASTNode;
 };
-struct Type : ASTNode {
+struct TypeNode : ASTNode {
   using ASTNode::ASTNode;
+
+  Type* value;
+
+  virtual size_t hash() const = 0;
 };
+
 struct Expression : ASTNode {
+  Type* type;
+
   using ASTNode::ASTNode;
-};
-
-struct IntType : Type {
-  IntType(SourceRange source_range) : Type(source_range) {}
-
-  Kind get_kind() const override { return Kind::INT_TYPE; }
-};
-
-struct BoolType : Type {
-  BoolType(SourceRange source_range) : Type(source_range) {}
-
-  Kind get_kind() const override { return Kind::BOOL_TYPE; }
 };
 
 struct CompoundStmt : Statement {
@@ -85,11 +84,10 @@ struct CompoundStmt : Statement {
 };
 
 struct ParameterDecl : Declaration {
-  std::string id;
-  std::unique_ptr<Type> type;
+  size_t id;
+  Type* type;
 
-  ParameterDecl(SourceRange source_range, std::string_view id,
-                std::unique_ptr<Type> type)
+  ParameterDecl(SourceRange source_range, size_t id, Type* type)
       : Declaration(source_range), id(id), type(std::move(type)) {}
 
   Kind get_kind() const override { return Kind::PARAMETER_DECL; }
@@ -113,19 +111,19 @@ struct NodesList : ASTNode {
 };
 
 struct FunctionDecl : Declaration {
-  std::string name;
+  size_t name_id;
   std::vector<std::unique_ptr<ParameterDecl>> parameters;
-  std::unique_ptr<Type> return_type;
+  Type* return_type;
   std::unique_ptr<CompoundStmt> body;
 
   bool is_exported;
 
-  FunctionDecl(SourceRange source_range, std::string_view name,
+  FunctionDecl(SourceRange source_range, size_t name_id,
                std::vector<std::unique_ptr<ParameterDecl>> parameters,
-               std::unique_ptr<Type> return_type,
-               std::unique_ptr<CompoundStmt> body, bool is_exported)
+               Type* return_type, std::unique_ptr<CompoundStmt> body,
+               bool is_exported)
       : Declaration(source_range),
-        name(name),
+        name_id(name_id),
         parameters(std::move(parameters)),
         return_type(std::move(return_type)),
         body(std::move(body)),
@@ -161,10 +159,10 @@ struct StringLiteral : Expression {
 };
 
 struct IdExpr : Expression {
-  std::string name;
+  size_t id;
 
-  IdExpr(SourceRange source_range, std::string_view value)
-      : Expression(source_range), name(value) {}
+  IdExpr(SourceRange source_range, size_t id)
+      : Expression(source_range), id(id) {}
 
   Kind get_kind() const override { return Kind::ID_EXPR; }
 };
@@ -197,10 +195,10 @@ struct BinaryOperator : Expression {
 };
 
 struct CallExpr : Expression {
-  std::string id;
+  size_t id;
   std::vector<std::unique_ptr<Expression>> arguments;
 
-  CallExpr(SourceRange source_range, std::string_view id,
+  CallExpr(SourceRange source_range, size_t id,
            std::vector<std::unique_ptr<Expression>> arguments)
       : Expression(source_range), id(id), arguments(std::move(arguments)) {}
 

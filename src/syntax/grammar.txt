@@ -53,6 +53,7 @@ return-type:
     ARROW type-name [pass<1>]
 
 type-name:
+    type-name STAR [pointer_type]
     KW_INT [construct<IntType>]
     KW_BOOL [construct<BoolType>]
 
@@ -94,7 +95,7 @@ primary-expression:
 
 multiply-expression:
     primary-expression [pass<0>]
-    multiply-expression MULTIPLY primary-expression [binary_op<MULTIPLY>]
+    multiply-expression STAR primary-expression [binary_op<MULTIPLY>]
 
 add-expression:
     multiply-expression                         [pass<0>]
