@@ -1,17 +1,25 @@
 #pragma once
+#include <compilation/StringId.h>
+
 #include <memory>
+#include <ranges>
 #include <string>
 #include <vector>
 
+#include "compilation/Scope.h"
+#include "compilation/types/Type.h"
 #include "errors/Helpers.h"
 #include "lexis/Token.h"
-#include "compilation/types/Type.h"
+
+// Here all AST Nodes are defined. To add new node:
+// 1. Create class and inherit it from ASTNode
+// 2. Add new ASTNode::Kind
+// 3. Register node in NodesList.h
+// 4. Add traverse_* method in ASTVisitor
+// 5. Add visit_* method in ASTPrinter
 
 struct ASTNode {
   enum class Kind {
-    INT_TYPE,
-    BOOL_TYPE,
-    POINTER_TYPE,
     COMPOUND_STMT,
     PROGRAM_DECL,
     PARAMETER_DECL,
@@ -23,15 +31,19 @@ struct ASTNode {
     IMPORT_DECL,
     BINARY_OPERATOR,
     CALL_EXPR,
+    TYPE_NODE,
+    VARIABLE_DECL,
+    DECLARATION_STMT,
   };
 
-  SourceLocation source_begin;
-  SourceLocation source_end;
+  SourceRange source_range;
+  Scope* scope;
 
   ASTNode(SourceRange source_range)
-      : source_begin(source_range.begin), source_end(source_range.end) {}
+      : source_range(source_range), scope(nullptr) {}
 
-  SourceRange source_range() const { return {source_begin, source_end}; }
+  SourceLocation source_begin() const { return source_range.begin; }
+  SourceLocation source_end() const { return source_range.end; }
 
   virtual ~ASTNode() = default;
 
@@ -58,11 +70,11 @@ struct Declaration : ASTNode {
   using ASTNode::ASTNode;
 };
 struct TypeNode : ASTNode {
-  using ASTNode::ASTNode;
-
   Type* value;
 
-  virtual size_t hash() const = 0;
+  TypeNode(SourceRange source_range, Type* value)
+      : ASTNode(source_range), value(value) {}
+  Kind get_kind() const override { return Kind::TYPE_NODE; }
 };
 
 struct Expression : ASTNode {
@@ -84,10 +96,11 @@ struct CompoundStmt : Statement {
 };
 
 struct ParameterDecl : Declaration {
-  size_t id;
-  Type* type;
+  StringId id;
+  std::unique_ptr<TypeNode> type;
 
-  ParameterDecl(SourceRange source_range, size_t id, Type* type)
+  ParameterDecl(SourceRange source_range, StringId id,
+                std::unique_ptr<TypeNode> type)
       : Declaration(source_range), id(id), type(std::move(type)) {}
 
   Kind get_kind() const override { return Kind::PARAMETER_DECL; }
@@ -111,19 +124,19 @@ struct NodesList : ASTNode {
 };
 
 struct FunctionDecl : Declaration {
-  size_t name_id;
+  StringId name;
   std::vector<std::unique_ptr<ParameterDecl>> parameters;
-  Type* return_type;
+  std::unique_ptr<TypeNode> return_type;
   std::unique_ptr<CompoundStmt> body;
 
   bool is_exported;
 
-  FunctionDecl(SourceRange source_range, size_t name_id,
+  FunctionDecl(SourceRange source_range, StringId name,
                std::vector<std::unique_ptr<ParameterDecl>> parameters,
-               Type* return_type, std::unique_ptr<CompoundStmt> body,
-               bool is_exported)
+               std::unique_ptr<TypeNode> return_type,
+               std::unique_ptr<CompoundStmt> body, bool is_exported)
       : Declaration(source_range),
-        name_id(name_id),
+        name(name),
         parameters(std::move(parameters)),
         return_type(std::move(return_type)),
         body(std::move(body)),
@@ -151,26 +164,26 @@ struct IntegerLiteral : Expression {
 };
 
 struct StringLiteral : Expression {
-  size_t id;
-  StringLiteral(SourceRange source_range, size_t id)
+  StringId id;
+  StringLiteral(SourceRange source_range, StringId id)
       : Expression(source_range), id(id) {}
 
   Kind get_kind() const override { return Kind::STRING_LITERAL_EXPR; }
 };
 
 struct IdExpr : Expression {
-  size_t id;
+  StringId id;
 
-  IdExpr(SourceRange source_range, size_t id)
+  IdExpr(SourceRange source_range, StringId id)
       : Expression(source_range), id(id) {}
 
   Kind get_kind() const override { return Kind::ID_EXPR; }
 };
 
 struct ImportDecl : Declaration {
-  size_t id;
+  StringId id;
 
-  ImportDecl(SourceRange source_range, size_t id)
+  ImportDecl(SourceRange source_range, StringId id)
       : Declaration(source_range), id(id) {}
 
   Kind get_kind() const override { return Kind::IMPORT_DECL; }
@@ -179,15 +192,15 @@ struct ImportDecl : Declaration {
 struct BinaryOperator : Expression {
   enum class OpType { PLUS, MINUS, MULTIPLY };
 
-  OpType type;
+  OpType op_type;
   std::unique_ptr<Expression> left;
   std::unique_ptr<Expression> right;
 
-  BinaryOperator(SourceRange source_range, OpType type,
+  BinaryOperator(SourceRange source_range, OpType op_type,
                  std::unique_ptr<Expression> left,
                  std::unique_ptr<Expression> right)
       : Expression(source_range),
-        type(type),
+        op_type(op_type),
         left(std::move(left)),
         right(std::move(right)) {}
 
@@ -195,14 +208,30 @@ struct BinaryOperator : Expression {
 };
 
 struct CallExpr : Expression {
-  size_t id;
+  StringId id;
   std::vector<std::unique_ptr<Expression>> arguments;
 
-  CallExpr(SourceRange source_range, size_t id,
+  CallExpr(SourceRange source_range, StringId id,
            std::vector<std::unique_ptr<Expression>> arguments)
       : Expression(source_range), id(id), arguments(std::move(arguments)) {}
 
   Kind get_kind() const override { return Kind::CALL_EXPR; }
+};
+
+struct VariableDecl : Declaration {
+  StringId name;
+  std::unique_ptr<TypeNode> type;
+  std::unique_ptr<Expression> initializer;
+
+  VariableDecl(SourceRange source_range, StringId name,
+               std::unique_ptr<TypeNode> type,
+               std::unique_ptr<Expression> initializer)
+      : Declaration(source_range),
+        name(name),
+        type(std::move(type)),
+        initializer(std::move(initializer)) {}
+
+  Kind get_kind() const override { return Kind::VARIABLE_DECL; }
 };
 
 struct ProgramDecl : Declaration {
@@ -212,4 +241,14 @@ struct ProgramDecl : Declaration {
   ProgramDecl(SourceRange source_range) : Declaration(source_range) {}
 
   Kind get_kind() const override { return Kind::PROGRAM_DECL; }
+};
+
+struct DeclarationStmt : Statement {
+  std::unique_ptr<Declaration> value;
+
+  DeclarationStmt(SourceRange source_range,
+                  std::unique_ptr<Declaration> declaration)
+      : Statement(source_range), value(std::move(declaration)) {}
+
+  Kind get_kind() const override { return Kind::DECLARATION_STMT; }
 };

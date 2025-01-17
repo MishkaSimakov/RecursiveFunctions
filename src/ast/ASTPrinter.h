@@ -8,83 +8,36 @@
 #include <vector>
 
 #include "ast/ASTVisitor.h"
-#include "sources/SourceManager.h"
+#include "utils/Printing.h"
 
-class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
-  struct TextNode {
-    std::string value;
-    std::vector<std::unique_ptr<TextNode>> children;
-
-    TextNode(std::string value) : value(std::move(value)) {}
-  };
-
-  std::ostream& os_;
-  const SourceManager& source_manager_;
-  std::vector<TextNode*> nodes_stack_;
+class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
+  const GlobalContext& global_context_;
+  const ModuleContext& context_;
 
   std::string range_string(const ASTNode& node) {
-    return fmt::format("<{}:{}>", node.source_begin.pos_id,
-                       node.source_end.pos_id);
+    return fmt::format("<{}:{}>", node.source_range.begin.pos_id,
+                       node.source_range.end.pos_id);
   }
 
-  void add_node(std::string value) {
-    nodes_stack_.pop_back();
-
-    auto node = std::make_unique<TextNode>(std::move(value));
-    auto node_ptr = node.get();
-    nodes_stack_.back()->children.push_back(std::move(node));
-
-    nodes_stack_.push_back(node_ptr);
-  }
-
-  void print_recursive(const TextNode& node,
-                       std::vector<std::string>& prefixes) {
-    for (auto& str : prefixes) {
-      os_ << str;
-    }
-
-    os_ << node.value << "\n";
-
-    if (node.children.empty()) {
-      return;
-    }
-
-    if (!prefixes.empty()) {
-      if (prefixes.back() == "|-") {
-        prefixes.back() = "| ";
-      } else if (prefixes.back() == "`-") {
-        prefixes.back() = "  ";
-      }
-    }
-
-    for (size_t i = 0; i < node.children.size(); ++i) {
-      prefixes.push_back(i + 1 == node.children.size() ? "`-" : "|-");
-      print_recursive(*node.children[i], prefixes);
-      prefixes.pop_back();
-    }
-  }
 
  public:
-  explicit ASTPrinter(const ASTContext& context, std::ostream& os,
-                      const SourceManager& source_manager)
-      : ASTVisitor(context), os_(os), source_manager_(source_manager) {}
+  explicit ASTPrinter(const GlobalContext& global_context,
+                      const ModuleContext& module_context, std::ostream& os)
+      : ASTVisitor(*module_context.ast_root), TreePrinter(os),
+        global_context_(global_context),
+        context_(module_context) {}
 
-  bool before_traverse(const ASTNode&) {
-    // dummy node for convenience
-    nodes_stack_.push_back(nullptr);
-    return true;
+  NodeTraverseType before_traverse(const ASTNode&) {
+    move_cursor_down();
+    return NodeTraverseType::CONTINUE;
   }
   bool after_traverse(const ASTNode&) {
-    nodes_stack_.pop_back();
-
+    move_cursor_up();
     return true;
   }
-  bool visit_int_type(const IntType& value) {
-    add_node(fmt::format("IntType {}", range_string(value)));
-    return true;
-  }
-  bool visit_bool_type(const BoolType& value) {
-    add_node(fmt::format("BoolType {}", range_string(value)));
+  bool visit_type_node(const TypeNode& value) {
+    add_node(fmt::format("Type {} {}", range_string(value),
+                         value.value->to_string()));
     return true;
   }
   bool visit_compound_statement(const CompoundStmt& value) {
@@ -96,7 +49,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     return true;
   }
   bool visit_parameter_declaration(const ParameterDecl& value) {
-    std::string_view name = context_.symbols[value.id];
+    std::string_view name = global_context_.get_string(value.id);
     add_node(fmt::format("ParamDecl {} {}", range_string(value), name));
     return true;
   }
@@ -106,7 +59,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
       specifiers.push_back("export");
     }
 
-    std::string_view name = context_.symbols[value.name_id];
+    std::string_view name = global_context_.get_string(value.name);
     add_node(fmt::format("FuncDecl {} {} {}", range_string(value), name,
                          fmt::join(specifiers, " ")));
     return true;
@@ -121,28 +74,28 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     return true;
   }
   bool visit_string_literal(const StringLiteral& value) {
-    const auto& string = context_.string_literals_table[value.id].value;
+    const auto& string = global_context_.get_string(value.id);
     add_node(fmt::format("StringLiteral {} {}", range_string(value), string));
     return true;
   }
   bool visit_id_expression(const IdExpr& value) {
-    std::string_view name = context_.symbols[value.id];
+    std::string_view name = global_context_.get_string(value.id);
     add_node(fmt::format("IdExpr {} {}", range_string(value), name));
     return true;
   }
   bool visit_import_declaration(const ImportDecl& value) {
-    const auto& string = context_.string_literals_table[value.id].value;
+    const auto& string = global_context_.get_string(value.id);
     add_node(fmt::format("ImportDecl {} {}", range_string(value), string));
     return true;
   }
   bool visit_call_expression(const CallExpr& value) {
-    std::string_view name = context_.symbols[value.id];
+    std::string_view name = global_context_.get_string(value.id);
     add_node(fmt::format("CallExpr {} {}", range_string(value), name));
     return true;
   }
   bool visit_binary_operator(const BinaryOperator& value) {
     char operator_name;
-    switch (value.type) {
+    switch (value.op_type) {
       case BinaryOperator::OpType::PLUS:
         operator_name = '+';
         break;
@@ -157,15 +110,19 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true> {
     add_node(fmt::format("BinaryOp {} {}", range_string(value), operator_name));
     return true;
   }
+  bool visit_variable_declaration(const VariableDecl& value) {
+    std::string_view name = global_context_.get_string(value.name);
+    add_node(fmt::format("VariableDecl {} {} {}", range_string(value), name,
+                         value.type->value->to_string()));
+    return true;
+  }
+  bool visit_declaration_statement(const DeclarationStmt& value) {
+    add_node(fmt::format("DeclarationStmt {}", range_string(value)));
+    return true;
+  }
 
   void print() {
-    auto root = std::make_unique<TextNode>("");
-    nodes_stack_.push_back(root.get());
-
     traverse();
-
-    std::vector<std::string> prefixes;
-    print_recursive(*root->children.front(), prefixes);
-    nodes_stack_.pop_back();
+    TreePrinter::print();
   }
 };

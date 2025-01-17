@@ -12,8 +12,10 @@ using enum BinaryOperator::OpType;
 #include "syntax/BuildersRegistry.h"
 
 namespace Syntax {
-ASTContext LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
-                           ASTBuildContext& build_context) const {
+void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
+                     size_t module_id) const {
+  auto& source_manager = context_.source_manager;
+  ASTBuildContext build_context(module_id, context_);
   std::vector<size_t> states_stack;
 
   // use deque because it preserves references
@@ -29,7 +31,9 @@ ASTContext LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         actions_[states_stack.back()][static_cast<size_t>(current_token.type)];
 
     if (std::holds_alternative<AcceptAction>(action)) {
-      return build_context.move_context(std::move(nodes_stack.front()));
+      context_.modules[module_id].ast_root = std::unique_ptr<ProgramDecl>(
+          dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
+      return;
     }
     if (std::holds_alternative<RejectAction>(action)) {
       std::vector<std::string_view> expected_tokens;
@@ -42,12 +46,12 @@ ASTContext LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         }
       }
 
-      source_manager_.add_annotation(
+      source_manager.add_annotation(
           current_token.source_range.begin,
           fmt::format("Unexpected token {}. Expected: {}",
                       current_token.type.to_string(),
                       fmt::join(expected_tokens, ", ")));
-      source_manager_.print_annotations(std::cout);
+      source_manager.print_annotations(std::cout);
       throw std::runtime_error("Unexpected token.");
     }
     if (std::holds_alternative<ShiftAction>(action)) {
@@ -61,8 +65,8 @@ ASTContext LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       auto nodes_span =
           std::span{nodes_stack.end() - reduce.remove_count, nodes_stack.end()};
 
-      auto source_range = SourceRange::merge(nodes_span.front()->source_range(),
-                                             nodes_span.back()->source_range());
+      auto source_range = SourceRange::merge(nodes_span.front()->source_range,
+                                             nodes_span.back()->source_range);
 
       std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
           &build_context, source_range, nodes_span);

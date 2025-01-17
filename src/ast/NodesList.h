@@ -5,9 +5,6 @@
 #define NODE(enum_case, type, snake_case)
 #endif
 
-NODE(INT_TYPE, IntType, int_type);
-NODE(BOOL_TYPE, BoolType, bool_type);
-
 NODE(COMPOUND_STMT, CompoundStmt, compound_statement);
 NODE(PROGRAM_DECL, ProgramDecl, program_declaration);
 NODE(PARAMETER_DECL, ParameterDecl, parameter_declaration);
@@ -19,3 +16,6 @@ NODE(ID_EXPR, IdExpr, id_expression);
 NODE(IMPORT_DECL, ImportDecl, import_declaration);
 NODE(BINARY_OPERATOR, BinaryOperator, binary_operator);
 NODE(CALL_EXPR, CallExpr, call_expression);
+NODE(TYPE_NODE, TypeNode, type_node);
+NODE(VARIABLE_DECL, VariableDecl, variable_declaration);
+NODE(DECLARATION_STMT, DeclarationStmt, declaration_statement);

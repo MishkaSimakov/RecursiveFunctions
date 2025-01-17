@@ -6,13 +6,11 @@
 namespace Lexis {
 ENUM(TokenType,
      // keywords
-     KW_IMPORT,  // import keyword
-     KW_RETURN,  // return keyword
-     KW_EXPORT,  // export keyword
+     KW_IMPORT, KW_RETURN, KW_EXPORT, KW_EXTERNAL, KW_IF, KW_ELSE, KW_WHILE,
+     KW_CONTINUE, KW_BREAK, KW_TRUE, KW_FALSE, KW_NULLPTR,
 
      // types
-     KW_INT,   // int keyword
-     KW_BOOL,  // bool keyword
+     KW_INT, KW_BOOL, KW_CHAR,
 
      IDENTIFIER,  // variable or function name
      NUMBER,      // number literal
@@ -22,7 +20,8 @@ ENUM(TokenType,
      EQUAL,       // operator =
      PLUS,        // operator +
      MINUS,       // operator -
-     STAR,    // operator *
+     STAR,        // operator *
+     AMPERSAND,   // operator &
      LESS,        // <
      GREATER,     // >
      LESS_EQ,     // <=

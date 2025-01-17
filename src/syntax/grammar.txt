@@ -29,11 +29,11 @@ declaration:
     function-definition [pass<0>]
 
 import:
-    KW_IMPORT STRING SEMICOLON [module_import]
+    KW_IMPORT string-literal SEMICOLON [module_import]
 
 function-definition:
     specifiers IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
-    IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
+               IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
 
 specifiers:
     KW_EXPORT [pass<0>]
@@ -54,21 +54,27 @@ return-type:
 
 type-name:
     type-name STAR [pointer_type]
-    KW_INT [construct<IntType>]
-    KW_BOOL [construct<BoolType>]
+    KW_INT [construct_type<IntType>]
+    KW_BOOL [construct_type<BoolType>]
 
 // statements
 compound-statement:
-    OPEN_BRACE CLOSE_BRACE                  [construct<CompoundStmt>]
-    OPEN_BRACE statement-seq CLOSE_BRACE    [pass<1>]
+    OPEN_BRACE CLOSE_BRACE                  [compound_statement]
+    OPEN_BRACE statement-seq CLOSE_BRACE    [compound_statement]
 
 statement-seq:
     statement               [sequence<CompoundStmt, Statement>]
     statement-seq statement [sequence<CompoundStmt, Statement>]
 
 statement:
+    declaration-statement   [declaration_statement]
     expression-statement    [pass<0>]
     jump-statement          [pass<0>]
+
+// for now only variable declaration
+declaration-statement:
+    IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
+    IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
 
 jump-statement:
     KW_RETURN expression SEMICOLON [return_statement]

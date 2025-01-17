@@ -9,7 +9,6 @@
 #include "Grammar.h"
 
 namespace Syntax {
-
 namespace {
 using TokenType = Lexis::TokenType;
 

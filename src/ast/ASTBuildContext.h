@@ -3,16 +3,17 @@
 #include <charconv>
 #include <memory>
 
-#include "ASTContext.h"
 #include "Nodes.h"
+#include "compilation/GlobalContext.h"
 #include "compilation/types/TypesStorage.h"
 #include "sources/SourceManager.h"
 
 class ASTBuildContext {
-  const SourceManager& source_manager_;
-  ASTContext context_;
-  std::unordered_map<std::string_view, size_t> symbols_mapping_;
-  TypesStorage& types_storage_;
+  size_t module_id;
+  GlobalContext& context_;
+
+  TypesStorage& types() { return context_.types_storage; }
+  ModuleContext& module() { return context_.modules[module_id]; }
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<ASTNode, T>
@@ -37,47 +38,18 @@ class ASTBuildContext {
     return dynamic_cast<const U&>(*ptr);
   }
 
-  size_t get_string_literal_id(std::string_view value, bool is_import) {
-    auto& table = context_.string_literals_table;
-
-    for (size_t i = 0; i < context_.string_literals_table.size(); ++i) {
-      if (table[i].value == value && table[i].is_import == is_import) {
-        return i;
-      }
-    }
-
-    table.emplace_back(value, is_import);
-    return table.size() - 1;
+  std::string_view get_token_string(const TokenNode& node) const {
+    return context_.source_manager.get_file_view(node.source_range);
   }
 
-  size_t get_symbol_id(std::string_view value) {
-    auto itr = symbols_mapping_.find(value);
-
-    if (itr != symbols_mapping_.end()) {
-      return itr->second;
-    }
-
-    size_t index = context_.symbols.size();
-    context_.symbols.push_back(std::string(value));
-    symbols_mapping_.emplace(value, index);
-    return index;
-  }
-
-  size_t get_symbol_id(SourceRange source_range) {
-    return get_symbol_id(source_manager_.get_file_view(source_range));
-  }
+  Scope* make_scope() { return &module().scopes.emplace_back(); }
+  void set_scope_recursively(ASTNode& node, Scope* scope);
 
  public:
   using NodePtr = std::unique_ptr<ASTNode>;
 
-  explicit ASTBuildContext(const SourceManager& manager,
-                           TypesStorage& types_storage)
-      : source_manager_(manager), context_(), types_storage_(types_storage) {}
-
-  ASTContext&& move_context(std::unique_ptr<ASTNode> root) {
-    context_.root = cast_move<ProgramDecl>(std::move(root));
-    return std::move(context_);
-  }
+  explicit ASTBuildContext(size_t module_id, GlobalContext& context)
+      : module_id(module_id), context_(context) {}
 
   template <typename T>
   NodePtr construct(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -86,8 +58,7 @@ class ASTBuildContext {
 
   template <size_t Index = 0>
   NodePtr pass(SourceRange source_range, std::span<NodePtr> nodes) {
-    nodes[Index]->source_begin = source_range.begin;
-    nodes[Index]->source_end = source_range.end;
+    nodes[Index]->source_range = source_range;
     return std::move(nodes[Index]);
   }
 
@@ -97,26 +68,40 @@ class ASTBuildContext {
     if (nodes.size() == 2) {
       auto import_list = cast_move<NodesList<ImportDecl>>(std::move(nodes[0]));
       program_node->imports = std::move(import_list->nodes);
+
+      auto imports_string_ids =
+          program_node->imports |
+          std::views::transform(
+              [](const std::unique_ptr<ImportDecl>& node) { return node->id; });
+      module().imports =
+          std::vector(imports_string_ids.begin(), imports_string_ids.end());
     }
 
     auto decl_list = cast_move<NodesList<Declaration>>(std::move(nodes.back()));
     program_node->declarations = std::move(decl_list->nodes);
 
+    Scope* root_scope = make_scope();
+    set_scope_recursively(*program_node, root_scope);
+    module().root_scope = root_scope;
+
     return std::move(program_node);
   }
 
   NodePtr string_literal(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto& token_node = cast_view<TokenNode>(nodes.front());
-    std::string_view string =
-        source_manager_.get_file_view(token_node.source_range());
+    const auto& token_node = cast_view<TokenNode>(nodes.front());
+    std::string_view string = get_token_string(token_node);
 
-    size_t literal_id = get_string_literal_id(string, false);
+    // remove quotes
+    string.remove_prefix(1);
+    string.remove_suffix(1);
+
+    auto literal_id = context_.add_string(string);
     return make_node<StringLiteral>(source_range, literal_id);
   }
 
   NodePtr integer_literal(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto& token_node = cast_view<TokenNode>(nodes.front());
-    auto string = source_manager_.get_file_view(token_node.source_range());
+    const auto& token_node = cast_view<TokenNode>(nodes.front());
+    auto string = get_token_string(token_node);
 
     int result{};
     auto [_, ec] =
@@ -127,7 +112,7 @@ class ASTBuildContext {
       throw std::runtime_error(
           "Something wrong with lexer: INTEGER_LITERAL is not a number.");
     } else if (ec == std::errc::result_out_of_range) {
-      throw std::runtime_error("Too big a number for integer literal.");
+      throw std::runtime_error("Value is too big to be represented by int type.");
     }
 
     return std::make_unique<IntegerLiteral>(source_range, result);
@@ -135,8 +120,7 @@ class ASTBuildContext {
 
   NodePtr id_expression(SourceRange source_range, std::span<NodePtr> nodes) {
     auto& token_node = cast_view<TokenNode>(nodes.front());
-    size_t id =
-        get_symbol_id(source_manager_.get_file_view(token_node.source_range()));
+    auto id = context_.add_string(get_token_string(token_node));
 
     return make_node<IdExpr>(source_range, id);
   }
@@ -148,13 +132,28 @@ class ASTBuildContext {
 
   NodePtr parameter_declaration(SourceRange source_range,
                                 std::span<NodePtr> nodes) {
-    auto decl_type = cast_move<Type>(std::move(nodes[2]));
+    auto decl_type = cast_move<TypeNode>(std::move(nodes[2]));
 
-    auto& token_node = cast_view<TokenNode>(nodes.front());
-    size_t name_id = get_symbol_id(token_node.source_range());
+    const auto& token_node = cast_view<TokenNode>(nodes.front());
+    auto name_id = context_.add_string(get_token_string(token_node));
 
     return make_node<ParameterDecl>(source_range, name_id,
                                     std::move(decl_type));
+  }
+
+  NodePtr compound_statement(SourceRange source_range,
+                             std::span<NodePtr> nodes) {
+    std::unique_ptr<CompoundStmt> statements =
+        nodes.size() == 3 ? cast_move<CompoundStmt>(std::move(nodes[1]))
+                          : make_node<CompoundStmt>(source_range);
+
+    statements->source_range = source_range;
+
+    // create new scope
+    Scope* scope = make_scope();
+    set_scope_recursively(*statements, scope);
+
+    return std::move(statements);
   }
 
   NodePtr function_definition(SourceRange source_range,
@@ -167,13 +166,18 @@ class ASTBuildContext {
     bool is_exported = has_specifier;
 
     // identifier
-    auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
-    size_t name_id = get_symbol_id(id_token.source_range());
+    const auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
+    auto name_id = context_.add_string(get_token_string(id_token));
 
     auto parameters =
         cast_move<NodesList<ParameterDecl>>(std::move(nodes[shift + 2]));
-    auto return_type = cast_move<Type>(std::move(nodes[shift + 3]));
+    auto return_type = cast_move<TypeNode>(std::move(nodes[shift + 3]));
     auto body = cast_move<CompoundStmt>(std::move(nodes[shift + 5]));
+
+    // arguments lie in the same scope as function body
+    for (auto& param : parameters->nodes) {
+      set_scope_recursively(*param, body->scope);
+    }
 
     return make_node<FunctionDecl>(
         source_range, name_id, std::move(parameters->nodes),
@@ -181,12 +185,8 @@ class ASTBuildContext {
   }
 
   NodePtr module_import(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto& token_node = cast_view<TokenNode>(nodes[1]);
-    std::string_view view =
-        source_manager_.get_file_view(token_node.source_range());
-
-    size_t literal_id = get_string_literal_id(view, true);
-    return make_node<ImportDecl>(source_range, literal_id);
+    const auto& name_node = cast_view<StringLiteral>(nodes[1]);
+    return make_node<ImportDecl>(source_range, name_node.id);
   }
 
   template <typename ListRootT, typename ListItemT>
@@ -197,7 +197,7 @@ class ASTBuildContext {
                              ? make_node<ListRootT>(source_range)
                              : cast_move<ListRootT>(std::move(nodes.front())));
 
-    root->source_end = source_range.end;
+    root->source_range.end = source_range.end;
     root->add_item(cast_move<ListItemT>(std::move(nodes.back())));
 
     return std::move(root);
@@ -214,17 +214,46 @@ class ASTBuildContext {
 
   NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes) {
     auto arguments_list = cast_move<NodesList<Expression>>(std::move(nodes[1]));
-    auto id_token = cast_view<TokenNode>(nodes[0]);
-    size_t id =
-        get_symbol_id(source_manager_.get_file_view(id_token.source_range()));
+    const auto& id_token = cast_view<TokenNode>(nodes[0]);
+    auto id = context_.add_string(get_token_string(id_token));
 
     return std::make_unique<CallExpr>(source_range, id,
                                       std::move(arguments_list->nodes));
   }
 
   NodePtr pointer_type(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto child = cast_move<Type>(std::move(nodes[0]));
-    Type* child_ptr = types_storage_.get_type_ptr(std::move(child), );
-    return std::make_unique<PointerType>(source_range, child_ptr);
+    auto child = cast_move<TypeNode>(std::move(nodes[0]));
+
+    child->value = types().add_pointer(child->value);
+    child->source_range = source_range;
+
+    return std::move(child);
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<Type, T>
+  NodePtr construct_type(SourceRange source_range, std::span<NodePtr> nodes) {
+    Type* type_ptr = types().add_primitive<T>();
+    return make_node<TypeNode>(source_range, type_ptr);
+  }
+
+  NodePtr variable_declaration(SourceRange source_range,
+                               std::span<NodePtr> nodes) {
+    const TokenNode& name_node = cast_view<TokenNode>(nodes.front());
+    StringId name_id = context_.add_string(get_token_string(name_node));
+
+    auto type = cast_move<TypeNode>(std::move(nodes[2]));
+    auto initializer = nodes.size() == 6
+                           ? cast_move<Expression>(std::move(nodes[4]))
+                           : nullptr;
+
+    return make_node<VariableDecl>(source_range, name_id, std::move(type),
+                                   std::move(initializer));
+  }
+
+  NodePtr declaration_statement(SourceRange source_range,
+                                std::span<NodePtr> nodes) {
+    auto declaration = cast_move<Declaration>(std::move(nodes.front()));
+    return make_node<DeclarationStmt>(source_range, std::move(declaration));
   }
 };

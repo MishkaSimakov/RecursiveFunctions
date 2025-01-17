@@ -5,16 +5,25 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ast/ASTContext.h"
-#include "compilation/ModuleCompileInfo.h"
-#include "sources/SourceManager.h"
+#include "GlobalContext.h"
+#include "compilation/ModuleContext.h"
 #include "compilation/types/TypesStorage.h"
+#include "sources/SourceManager.h"
+
+struct ModuleCompileInfo {
+  bool is_processed = false;
+  std::vector<ModuleCompileInfo*> next;
+  std::vector<ModuleCompileInfo*> dependencies;
+  ModuleContext& context;
+
+  ModuleCompileInfo(ModuleContext& context) : context(context) {}
+};
 
 class TeaFrontend {
-  std::unordered_map<std::string_view, ModuleCompileInfo> modules_;
+  GlobalContext context_;
+
   std::vector<ModuleCompileInfo*> start_modules_;
-  TypesStorage types_storage_;
-  SourceManager source_manager_;
+  std::unordered_map<size_t, ModuleCompileInfo> compile_info_;
 
   static bool has_loops_recursive(
       const ModuleCompileInfo* current,

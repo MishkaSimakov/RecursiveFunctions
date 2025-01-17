@@ -3,10 +3,10 @@
 #include <iostream>
 
 #include "ast/ASTPrinter.h"
-#include "compilation/ImportASTVisitor.h"
-#include "compilation/TypeASTVisitor.h"
+#include "compilation/ScopePrinter.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
+#include "types/TypesASTVisitor.h"
 #include "utils/Constants.h"
 
 bool TeaFrontend::has_loops_recursive(
@@ -35,48 +35,49 @@ bool TeaFrontend::has_loops_recursive(
 
 void TeaFrontend::build_ast_and_dependencies(
     const std::unordered_map<std::string, std::filesystem::path>& files) {
+  auto& source_manager = context_.source_manager;
+
   // setup parser and lexical analyzer, load tables
   Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath,
-                                          source_manager_);
-  auto parser = Syntax::LRParser(Constants::grammar_filepath, source_manager_);
+                                          source_manager);
+  auto parser = Syntax::LRParser(Constants::grammar_filepath, context_);
 
   // process each file separately
   for (auto& [name, path] : files) {
-    SourceLocation begin = source_manager_.load(path);
+    SourceLocation begin = source_manager.load(path);
     lexical_analyzer.set_location(begin);
 
-    ASTBuildContext build_context(source_manager_, types_storage_);
+    auto& module_context = context_.add_module(name);
 
-    auto ast = parser.parse(lexical_analyzer);
-    ImportASTVisitor(ast).traverse();
+    parser.parse(lexical_analyzer, module_context.id);
+
+    compile_info_.emplace(module_context.id, ModuleCompileInfo{module_context});
 
     std::cout << "Module " << name << ":\n";
     std::cout << "AST:\n";
-    ASTPrinter(ast, std::cout, source_manager_).print();
+    ASTPrinter(context_, module_context, std::cout).print();
 
     std::cout << "\n";
     std::cout << "Imports:\n";
-    for (size_t id : ast.imports) {
-      std::cout << ast.string_literals_table[id].quoteless_view() << std::endl;
+    for (StringId id : module_context.imports) {
+      std::cout << context_.get_string(id) << std::endl;
     }
     std::cout << std::endl;
-
-    modules_.emplace(name, ModuleCompileInfo{name, std::move(ast)});
   }
 
-  for (auto& module : modules_ | std::views::values) {
-    if (module.context.imports.empty()) {
-      start_modules_.push_back(&module);
-      continue;
+  for (ModuleContext& module_context : context_.modules) {
+    auto& compile_info = compile_info_.at(module_context.id);
+
+    for (StringId import_id : module_context.imports) {
+      size_t import_module_id =
+          context_.module_names_mapping[context_.get_string(import_id)]->id;
+      compile_info.dependencies.push_back(&compile_info_.at(import_module_id));
+      compile_info_.at(import_module_id).next.push_back(&compile_info);
     }
 
-    for (size_t dependency : module.context.imports) {
-      std::string_view dependency_name =
-          module.context.string_literals_table[dependency].quoteless_view();
-      auto dependency_module = &modules_.at(dependency_name);
-
-      module.dependencies.push_back(dependency_module);
-      dependency_module->next.push_back(&module);
+    if (compile_info.dependencies.empty()) {
+      start_modules_.push_back(&compile_info);
+      continue;
     }
   }
 
@@ -108,8 +109,15 @@ bool TeaFrontend::try_compile_module(ModuleCompileInfo* module) {
     }
   }
 
+  std::cout << "Compiling " << module->context.id << std::endl;
   // actually do compilation
-  // TypeASTVisitor(*module, modules_).traverse();
+  TypesASTVisitor(*module->context.ast_root, context_, module->context)
+      .traverse();
+
+  std::cout << "Scopes:" << std::endl;
+  ScopePrinter(std::cout, context_, *module->context.root_scope).print();
+
+  std::cout << std::endl;
 
   module->is_processed = true;
   return true;
@@ -117,21 +125,19 @@ bool TeaFrontend::try_compile_module(ModuleCompileInfo* module) {
 
 int TeaFrontend::compile(
     const std::unordered_map<std::string, std::filesystem::path>& files) {
-  {
-    build_ast_and_dependencies(files);
+  build_ast_and_dependencies(files);
 
-    std::vector<ModuleCompileInfo*> queue = start_modules_;
-    while (!queue.empty()) {
-      auto current = queue.back();
-      queue.pop_back();
+  std::vector<ModuleCompileInfo*> queue = start_modules_;
+  while (!queue.empty()) {
+    auto current = queue.back();
+    queue.pop_back();
 
-      if (!try_compile_module(current)) {
-        continue;
-      }
+    if (!try_compile_module(current)) {
+      continue;
+    }
 
-      for (auto next : current->next) {
-        queue.push_back(next);
-      }
+    for (auto next : current->next) {
+      queue.push_back(next);
     }
   }
 
