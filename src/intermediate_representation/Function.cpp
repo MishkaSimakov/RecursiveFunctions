@@ -66,6 +66,14 @@ void IR::Function::simplify_blocks_recursive(
   }
 }
 
+IR::Temporary* IR::Function::add_temporary(Type* type) {
+  auto& temp = values.emplace_back(
+      std::make_unique<Temporary>(type, temporaries_count_));
+  ++temporaries_count_;
+
+  return static_cast<Temporary*>(temp.get());
+}
+
 void IR::Function::replace_values(
     const std::unordered_map<Value, Value>& mapping) const {
   for (auto& block : basic_blocks) {

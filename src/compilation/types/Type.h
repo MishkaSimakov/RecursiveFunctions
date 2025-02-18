@@ -5,12 +5,16 @@
 
 #include "utils/Hashers.h"
 
+namespace Front {
 struct Type {
+  enum class Kind { INT, BOOL, CHAR, POINTER, FUNCTION };
+
   constexpr static bool is_primitive = false;
 
   virtual bool operator==(const Type&) const = 0;
   virtual size_t hash() const = 0;
   virtual std::string to_string() const = 0;
+  virtual Kind get_kind() const = 0;
 
   virtual ~Type() = default;
 };
@@ -24,8 +28,8 @@ struct IntType final : Type {
   }
 
   size_t hash() const override { return 0; }
-
   std::string to_string() const override { return "int"; }
+  Kind get_kind() const override { return Kind::INT; }
 };
 
 struct BoolType final : Type {
@@ -37,8 +41,8 @@ struct BoolType final : Type {
   }
 
   size_t hash() const override { return 1; }
-
   std::string to_string() const override { return "bool"; }
+  Kind get_kind() const override { return Kind::BOOL; }
 };
 
 struct CharType final : Type {
@@ -50,8 +54,8 @@ struct CharType final : Type {
   }
 
   size_t hash() const override { return 2; }
-
   std::string to_string() const override { return "char"; }
+  Kind get_kind() const override { return Kind::CHAR; }
 };
 
 struct PointerType final : Type {
@@ -68,8 +72,8 @@ struct PointerType final : Type {
   }
 
   size_t hash() const override { return tuple_hasher_fn(child->hash(), 0); }
-
   std::string to_string() const override { return child->to_string() + "*"; }
+  Kind get_kind() const override { return Kind::POINTER; }
 
   explicit PointerType(Type* child) : child(child) {}
 };
@@ -108,6 +112,9 @@ struct FunctionType final : Type {
                        return_type->to_string());
   }
 
+  Kind get_kind() const override { return Kind::FUNCTION; }
+
   FunctionType(std::vector<Type*> arguments, Type* return_type)
       : arguments(std::move(arguments)), return_type(return_type) {}
 };
+}  // namespace Front

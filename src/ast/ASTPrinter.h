@@ -10,6 +10,7 @@
 #include "ast/ASTVisitor.h"
 #include "utils/Printing.h"
 
+namespace Front {
 class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   const GlobalContext& global_context_;
   const ModuleContext& context_;
@@ -19,11 +20,11 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
                        node.source_range.end.pos_id);
   }
 
-
  public:
   explicit ASTPrinter(const GlobalContext& global_context,
                       const ModuleContext& module_context, std::ostream& os)
-      : ASTVisitor(*module_context.ast_root), TreePrinter(os),
+      : ASTVisitor(*module_context.ast_root),
+        TreePrinter(os),
         global_context_(global_context),
         context_(module_context) {}
 
@@ -78,9 +79,19 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     add_node(fmt::format("StringLiteral {} {}", range_string(value), string));
     return true;
   }
+  bool visit_bool_literal(const BoolLiteral& value) {
+    add_node(
+        fmt::format("BoolLiteral {} {}", range_string(value), value.value));
+    return true;
+  }
   bool visit_id_expression(const IdExpr& value) {
-    std::string_view name = global_context_.get_string(value.id);
-    add_node(fmt::format("IdExpr {} {}", range_string(value), name));
+    auto qualified_name =
+        value.parts | std::views::transform([this](StringId id) {
+          return global_context_.get_string(id);
+        });
+
+    add_node(fmt::format("IdExpr {} {}", range_string(value),
+                         fmt::join(qualified_name, "::")));
     return true;
   }
   bool visit_import_declaration(const ImportDecl& value) {
@@ -89,25 +100,12 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     return true;
   }
   bool visit_call_expression(const CallExpr& value) {
-    std::string_view name = global_context_.get_string(value.id);
-    add_node(fmt::format("CallExpr {} {}", range_string(value), name));
+    add_node(fmt::format("CallExpr {}", range_string(value)));
     return true;
   }
   bool visit_binary_operator(const BinaryOperator& value) {
-    char operator_name;
-    switch (value.op_type) {
-      case BinaryOperator::OpType::PLUS:
-        operator_name = '+';
-        break;
-      case BinaryOperator::OpType::MINUS:
-        operator_name = '-';
-        break;
-      case BinaryOperator::OpType::MULTIPLY:
-        operator_name = '*';
-        break;
-    }
-
-    add_node(fmt::format("BinaryOp {} {}", range_string(value), operator_name));
+    auto op_string = value.get_string_representation();
+    add_node(fmt::format("BinaryOp {} {}", range_string(value), op_string));
     return true;
   }
   bool visit_variable_declaration(const VariableDecl& value) {
@@ -120,9 +118,23 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     add_node(fmt::format("DeclarationStmt {}", range_string(value)));
     return true;
   }
+  bool visit_namespace_declaration(const NamespaceDecl& value) {
+    std::string_view name = global_context_.get_string(value.name);
+    add_node(fmt::format("NamespaceDecl {} {}", range_string(value), name));
+    return true;
+  }
+  bool visit_while_statement(const WhileStmt& value) {
+    add_node(fmt::format("WhileStmt {}", range_string(value)));
+    return true;
+  }
+  bool visit_if_statement(const IfStmt& value) {
+    add_node(fmt::format("IfStmt {}", range_string(value)));
+    return true;
+  }
 
   void print() {
     traverse();
     TreePrinter::print();
   }
 };
+}  // namespace Front

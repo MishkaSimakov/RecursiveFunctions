@@ -8,7 +8,8 @@
 
 #include "errors/Helpers.h"
 
-using enum BinaryOperator::OpType;
+using enum Front::BinaryOperator::OpType;
+using namespace Front;
 #include "syntax/BuildersRegistry.h"
 
 namespace Syntax {
@@ -31,8 +32,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         actions_[states_stack.back()][static_cast<size_t>(current_token.type)];
 
     if (std::holds_alternative<AcceptAction>(action)) {
-      context_.modules[module_id].ast_root = std::unique_ptr<ProgramDecl>(
-          dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
+      context_.modules[module_id].ast_root =
+          std::unique_ptr<ProgramDecl>(
+              dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
       return;
     }
     if (std::holds_alternative<RejectAction>(action)) {
@@ -56,7 +58,8 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
     }
     if (std::holds_alternative<ShiftAction>(action)) {
       states_stack.push_back(std::get<ShiftAction>(action).next_state);
-      nodes_stack.emplace_back(std::make_unique<TokenNode>(current_token));
+      nodes_stack.emplace_back(
+          std::make_unique<TokenNode>(current_token));
 
       current_token = lexical_analyzer.get_token();
     } else {
@@ -68,8 +71,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       auto source_range = SourceRange::merge(nodes_span.front()->source_range,
                                              nodes_span.back()->source_range);
 
-      std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
-          &build_context, source_range, nodes_span);
+      std::unique_ptr<ASTNode> new_node =
+          builders[reduce.production_index](&build_context, source_range,
+                                            nodes_span);
 
       states_stack.resize(states_stack.size() - reduce.remove_count);
       nodes_stack.resize(nodes_stack.size() - reduce.remove_count);

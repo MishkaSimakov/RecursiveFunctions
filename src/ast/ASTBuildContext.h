@@ -8,6 +8,7 @@
 #include "compilation/types/TypesStorage.h"
 #include "sources/SourceManager.h"
 
+namespace Front {
 class ASTBuildContext {
   size_t module_id;
   GlobalContext& context_;
@@ -112,17 +113,26 @@ class ASTBuildContext {
       throw std::runtime_error(
           "Something wrong with lexer: INTEGER_LITERAL is not a number.");
     } else if (ec == std::errc::result_out_of_range) {
-      throw std::runtime_error("Value is too big to be represented by int type.");
+      throw std::runtime_error(
+          "Value is too big to be represented by int type.");
     }
 
     return std::make_unique<IntegerLiteral>(source_range, result);
   }
 
+  // TODO: maybe unite with sequence method
   NodePtr id_expression(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto& token_node = cast_view<TokenNode>(nodes.front());
+    auto& token_node = cast_view<TokenNode>(nodes.back());
     auto id = context_.add_string(get_token_string(token_node));
 
-    return make_node<IdExpr>(source_range, id);
+    std::unique_ptr root(nodes.size() == 1
+                             ? make_node<IdExpr>(source_range)
+                             : cast_move<IdExpr>(std::move(nodes.front())));
+
+    root->source_range.end = source_range.end;
+    root->add_qualifier(id);
+
+    return std::move(root);
   }
 
   NodePtr return_statement(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -213,11 +223,10 @@ class ASTBuildContext {
   }
 
   NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto id_expr = cast_move<IdExpr>(std::move(nodes[0]));
     auto arguments_list = cast_move<NodesList<Expression>>(std::move(nodes[1]));
-    const auto& id_token = cast_view<TokenNode>(nodes[0]);
-    auto id = context_.add_string(get_token_string(id_token));
 
-    return std::make_unique<CallExpr>(source_range, id,
+    return std::make_unique<CallExpr>(source_range, std::move(id_expr),
                                       std::move(arguments_list->nodes));
   }
 
@@ -256,4 +265,47 @@ class ASTBuildContext {
     auto declaration = cast_move<Declaration>(std::move(nodes.front()));
     return make_node<DeclarationStmt>(source_range, std::move(declaration));
   }
+
+  NodePtr namespace_definition(SourceRange source_range,
+                               std::span<NodePtr> nodes) {
+    bool is_exported = nodes.size() == 6;
+    size_t shift = is_exported ? 1 : 0;
+
+    // identifier
+    const auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
+    auto name_id = context_.add_string(get_token_string(id_token));
+
+    auto body = cast_move<NodesList<Declaration>>(std::move(nodes[shift + 4]));
+
+    return make_node<NamespaceDecl>(source_range, name_id,
+                                    std::move(body->nodes), is_exported);
+  }
+
+  NodePtr while_statement(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto condition = cast_move<Expression>(std::move(nodes[2]));
+    auto body = cast_move<CompoundStmt>(std::move(nodes[4]));
+
+    return make_node<WhileStmt>(source_range, std::move(condition),
+                                std::move(body));
+  }
+
+  NodePtr if_statement(SourceRange source_range, std::span<NodePtr> nodes) {
+    bool has_else = nodes.size() == 7;
+    auto condition = cast_move<Expression>(std::move(nodes[2]));
+    auto true_branch = cast_move<CompoundStmt>(std::move(nodes[4]));
+
+    // TODO: make empty ranges and put them here
+    auto false_branch = has_else ? cast_move<CompoundStmt>(std::move(nodes[6]))
+                                 : make_node<CompoundStmt>(source_range);
+
+    return make_node<IfStmt>(source_range, std::move(condition),
+                             std::move(true_branch), std::move(false_branch));
+  }
+
+  NodePtr bool_literal(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto token = cast_view<TokenNode>(nodes.front());
+    bool value = token.token_type == Lexis::TokenType::KW_TRUE;
+    return make_node<BoolLiteral>(source_range, value);
+  }
 };
+}  // namespace Front

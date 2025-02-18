@@ -5,11 +5,12 @@
 #include <vector>
 
 #include "Function.h"
+#include "types/TypesStorage.h"
 
 namespace IR {
 struct Program {
   std::vector<Function> functions;
-  std::unordered_set<std::string> extern_functions;
+  TypesStorage types;
 
   Function* get_function(const std::string& name) {
     // search for that function in defined functions
@@ -19,11 +20,6 @@ struct Program {
 
     if (itr != functions.end()) {
       return &(*itr);
-    }
-
-    // then search in extern defined functions
-    if (extern_functions.contains(name)) {
-      return nullptr;
     }
 
     // if not found then there is error somewhere

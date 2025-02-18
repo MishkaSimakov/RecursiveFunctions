@@ -2,11 +2,12 @@
 
 #include "ASTVisitor.h"
 
+namespace Front {
 void ASTBuildContext::set_scope_recursively(ASTNode& node, Scope* scope) {
   class SetScopeVisitor : public ASTVisitor<SetScopeVisitor> {
     Scope* scope_;
 
-   public:
+  public:
     SetScopeVisitor(ASTNode& root, Scope* scope)
         : ASTVisitor(root), scope_(scope) {}
 
@@ -23,4 +24,5 @@ void ASTBuildContext::set_scope_recursively(ASTNode& node, Scope* scope) {
   };
 
   SetScopeVisitor(node, scope).traverse();
+}
 }

@@ -11,6 +11,11 @@ foreach (directory IN LISTS CoreModuleDirectories)
     list(APPEND CoreFiles ${Files})
 endforeach ()
 
+# temporarily remove compilation/ir folder
+list(FILTER CoreFiles EXCLUDE REGEX "/compilation\/ir/")
+
+message(${CoreFiles})
+
 # we add syntax directory separately because some files are only needed for grammar generation
 list(APPEND CoreFiles
         syntax/lr/LRParser.cpp

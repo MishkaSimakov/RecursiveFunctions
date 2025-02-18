@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+namespace Front {
 TypesStorage& TypesASTVisitor::types() { return context_.types_storage; }
 
 void TypesASTVisitor::scold_user(SourceLocation location,
@@ -11,14 +12,15 @@ void TypesASTVisitor::scold_user(SourceLocation location,
   throw std::runtime_error(message);
 }
 
-Type* TypesASTVisitor::name_lookup(Scope* base_scope, StringId name) const {
+std::pair<Type*, Scope*> TypesASTVisitor::name_lookup(Scope* base_scope,
+                                                      StringId name) const {
   Scope* current_scope = base_scope;
 
   // first we do local lookup
   while (current_scope != nullptr) {
     auto itr = current_scope->symbols.find(name);
     if (itr != current_scope->symbols.end()) {
-      return itr->second.type;
+      return {itr->second.type, current_scope};
     }
 
     current_scope = current_scope->parent;
@@ -28,8 +30,8 @@ Type* TypesASTVisitor::name_lookup(Scope* base_scope, StringId name) const {
   return recursive_global_name_lookup(module_, name);
 }
 
-Type* TypesASTVisitor::recursive_global_name_lookup(const ModuleContext& module,
-                                                    StringId name) const {
+std::pair<Type*, Scope*> TypesASTVisitor::recursive_global_name_lookup(
+    const ModuleContext& module, StringId name) const {
   // TODO: notify when there are conflicting names
   for (StringId import_id : module.imports) {
     const auto& import_module =
@@ -37,17 +39,17 @@ Type* TypesASTVisitor::recursive_global_name_lookup(const ModuleContext& module,
     const auto& symbols = import_module.root_scope->symbols;
     auto itr = symbols.find(name);
     if (itr != symbols.end() && itr->second.is_exported) {
-      return itr->second.type;
+      return {itr->second.type, import_module.root_scope};
     }
 
-    Type* recursive_search_result =
+    auto recursive_search_result =
         recursive_global_name_lookup(import_module, name);
-    if (recursive_search_result != nullptr) {
+    if (recursive_search_result.first != nullptr) {
       return recursive_search_result;
     }
   }
 
-  return nullptr;
+  return {nullptr, nullptr};
 }
 
 void TypesASTVisitor::check_call_arguments(FunctionType* type,
@@ -78,7 +80,7 @@ bool TypesASTVisitor::visit_function_declaration(FunctionDecl& node) {
 
   Type* return_type = node.return_type->value;
 
-  Type* type = *context_.types_storage.get_or_make_type<FunctionType>(
+  Type* type = context_.types_storage.make_type<FunctionType>(
       std::move(arguments), return_type);
   node.scope->add_symbol(node.name, type, node.is_exported);
 
@@ -116,20 +118,20 @@ bool TypesASTVisitor::visit_string_literal(StringLiteral& node) {
 }
 
 bool TypesASTVisitor::visit_id_expression(IdExpr& node) {
-  // we should search for this name in all scopes to determine type
-  Type* id_type = name_lookup(node.scope, node.id);
+  auto [id_type, id_scope] = name_lookup(node.scope, node.parts.front());
 
   if (id_type == nullptr) {
     scold_user(node.source_begin(), "Unknown identifier");
   }
 
   node.type = id_type;
+  node.name_scope = id_scope;
 
   return true;
 }
 
 bool TypesASTVisitor::visit_call_expression(CallExpr& node) {
-  Type* type = name_lookup(node.scope, node.id);
+  auto [type, scope] = name_lookup(node.scope, node.name->parts.front());
   if (type == nullptr) {
     scold_user(node.source_begin(), "Unknown identifier");
   }
@@ -142,6 +144,7 @@ bool TypesASTVisitor::visit_call_expression(CallExpr& node) {
   // throws in case of error
   check_call_arguments(func_type, node);
   node.type = func_type->return_type;
+  node.name->scope = scope;
 
   return true;
 }
@@ -172,3 +175,4 @@ bool TypesASTVisitor::visit_return_statement(ReturnStmt& node) {
   // must check that function type and function return are same
   return true;
 }
+}  // namespace Front

@@ -6,6 +6,7 @@
 #include "compilation/Scope.h"
 #include "compilation/StringId.h"
 
+namespace Front {
 struct ModuleContext {
   size_t id;
 
@@ -19,3 +20,4 @@ struct ModuleContext {
 
   explicit ModuleContext(size_t id) : id(id), is_preprocessed(false) {}
 };
+}  // namespace Front

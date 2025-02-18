@@ -18,6 +18,7 @@
 // 4. Add traverse_* method in ASTVisitor
 // 5. Add visit_* method in ASTPrinter
 
+namespace Front {
 struct ASTNode {
   enum class Kind {
     COMPOUND_STMT,
@@ -27,6 +28,7 @@ struct ASTNode {
     RETURN_STMT,
     INTEGER_LITERAL_EXPR,
     STRING_LITERAL_EXPR,
+    BOOL_LITERAL_EXPR,
     ID_EXPR,
     IMPORT_DECL,
     BINARY_OPERATOR,
@@ -34,6 +36,11 @@ struct ASTNode {
     TYPE_NODE,
     VARIABLE_DECL,
     DECLARATION_STMT,
+    NAMESPACE_DECL,
+    WHILE_STMT,
+    IF_STMT,
+    CONTINUE_STMT,
+    BREAK_STMT,
   };
 
   SourceRange source_range;
@@ -163,6 +170,15 @@ struct IntegerLiteral : Expression {
   Kind get_kind() const override { return Kind::INTEGER_LITERAL_EXPR; }
 };
 
+struct BoolLiteral : Expression {
+  bool value;
+
+  BoolLiteral(SourceRange source_range, bool value)
+      : Expression(source_range), value(value) {}
+
+  Kind get_kind() const override { return Kind::BOOL_LITERAL_EXPR; }
+};
+
 struct StringLiteral : Expression {
   StringId id;
   StringLiteral(SourceRange source_range, StringId id)
@@ -172,10 +188,13 @@ struct StringLiteral : Expression {
 };
 
 struct IdExpr : Expression {
-  StringId id;
+  std::vector<StringId> parts;
+  Scope* name_scope;
 
-  IdExpr(SourceRange source_range, StringId id)
-      : Expression(source_range), id(id) {}
+  IdExpr(SourceRange source_range)
+      : Expression(source_range), name_scope(nullptr) {}
+
+  void add_qualifier(StringId qualifier) { parts.push_back(qualifier); }
 
   Kind get_kind() const override { return Kind::ID_EXPR; }
 };
@@ -190,7 +209,18 @@ struct ImportDecl : Declaration {
 };
 
 struct BinaryOperator : Expression {
-  enum class OpType { PLUS, MINUS, MULTIPLY };
+  enum class OpType {
+    PLUS,
+    MINUS,
+    MULTIPLY,
+    REMAINDER,
+    LESS,
+    GREATER,
+    LESS_EQ,
+    GREATER_EQ,
+    EQUALEQUAL,
+    NOTEQUAL,
+  };
 
   OpType op_type;
   std::unique_ptr<Expression> left;
@@ -204,16 +234,45 @@ struct BinaryOperator : Expression {
         left(std::move(left)),
         right(std::move(right)) {}
 
+  std::string_view get_string_representation() const {
+    switch (op_type) {
+      case OpType::PLUS:
+        return "+";
+      case OpType::MINUS:
+        return "-";
+      case OpType::MULTIPLY:
+        return "*";
+      case OpType::REMAINDER:
+        return "%";
+      case OpType::LESS:
+        return "<";
+      case OpType::GREATER:
+        return ">";
+      case OpType::LESS_EQ:
+        return "<=";
+      case OpType::GREATER_EQ:
+        return ">=";
+      case OpType::EQUALEQUAL:
+        return "==";
+      case OpType::NOTEQUAL:
+        return "!=";
+      default:
+        unreachable("All operators are presented above.");
+    }
+  }
+
   Kind get_kind() const override { return Kind::BINARY_OPERATOR; }
 };
 
 struct CallExpr : Expression {
-  StringId id;
+  std::unique_ptr<IdExpr> name;
   std::vector<std::unique_ptr<Expression>> arguments;
 
-  CallExpr(SourceRange source_range, StringId id,
+  CallExpr(SourceRange source_range, std::unique_ptr<IdExpr> name,
            std::vector<std::unique_ptr<Expression>> arguments)
-      : Expression(source_range), id(id), arguments(std::move(arguments)) {}
+      : Expression(source_range),
+        name(std::move(name)),
+        arguments(std::move(arguments)) {}
 
   Kind get_kind() const override { return Kind::CALL_EXPR; }
 };
@@ -252,3 +311,60 @@ struct DeclarationStmt : Statement {
 
   Kind get_kind() const override { return Kind::DECLARATION_STMT; }
 };
+
+struct NamespaceDecl : Declaration {
+  StringId name;
+  std::vector<std::unique_ptr<Declaration>> body;
+
+  bool is_exported;
+
+  NamespaceDecl(SourceRange source_range, StringId name,
+                std::vector<std::unique_ptr<Declaration>> body,
+                bool is_exported)
+      : Declaration(source_range),
+        name(name),
+        body(std::move(body)),
+        is_exported(is_exported) {}
+
+  Kind get_kind() const override { return Kind::NAMESPACE_DECL; }
+};
+
+struct WhileStmt : Statement {
+  std::unique_ptr<Expression> condition;
+  std::unique_ptr<CompoundStmt> body;
+
+  WhileStmt(SourceRange source_range, std::unique_ptr<Expression> condition,
+            std::unique_ptr<CompoundStmt> body)
+      : Statement(source_range),
+        condition(std::move(condition)),
+        body(std::move(body)) {}
+
+  Kind get_kind() const override { return Kind::WHILE_STMT; }
+};
+
+struct IfStmt : Statement {
+  std::unique_ptr<Expression> condition;
+  std::unique_ptr<CompoundStmt> true_branch;
+  std::unique_ptr<CompoundStmt> false_branch;
+
+  IfStmt(SourceRange source_range, std::unique_ptr<Expression> condition,
+         std::unique_ptr<CompoundStmt> true_branch,
+         std::unique_ptr<CompoundStmt> false_branch)
+      : Statement(source_range),
+        condition(std::move(condition)),
+        true_branch(std::move(true_branch)),
+        false_branch(std::move(false_branch)) {}
+
+  Kind get_kind() const override { return Kind::IF_STMT; }
+};
+
+struct ContinueStmt : Statement {
+  explicit ContinueStmt(SourceRange source_range) : Statement(source_range) {}
+  Kind get_kind() const override { return Kind::CONTINUE_STMT; }
+};
+
+struct BreakStmt : Statement {
+  explicit BreakStmt(SourceRange source_range) : Statement(source_range) {}
+  Kind get_kind() const override { return Kind::BREAK_STMT; }
+};
+}  // namespace Front

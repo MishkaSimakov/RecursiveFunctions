@@ -2,6 +2,7 @@
 
 #include "utils/Printing.h"
 
+namespace Front {
 class ScopePrinter : TreePrinter {
   GlobalContext& context_;
   Scope& root_scope_;
@@ -36,3 +37,4 @@ class ScopePrinter : TreePrinter {
     TreePrinter::print();
   }
 };
+}  // namespace Front

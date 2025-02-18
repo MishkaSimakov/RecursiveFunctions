@@ -2,6 +2,7 @@
 
 #include "ast/Nodes.h"
 
+namespace Front {
 enum class Order { POSTORDER, PREORDER };
 
 template <typename Child, bool IsConst = false,
@@ -125,6 +126,7 @@ class ASTVisitor {
     return true;
   }
   bool traverse_string_literal(wrap_const<StringLiteral>& node) { return true; }
+  bool traverse_bool_literal(wrap_const<BoolLiteral>& node) { return true; }
   bool traverse_id_expression(wrap_const<IdExpr>& node) { return true; }
   bool traverse_import_declaration(wrap_const<ImportDecl>& node) {
     return true;
@@ -140,6 +142,10 @@ class ASTVisitor {
     return true;
   }
   bool traverse_call_expression(wrap_const<CallExpr>& node) {
+    if (!traverse(*node.name)) {
+      return false;
+    }
+
     for (auto& argument : node.arguments) {
       if (!traverse(*argument)) {
         return false;
@@ -148,6 +154,39 @@ class ASTVisitor {
 
     return true;
   }
+  bool traverse_namespace_declaration(wrap_const<NamespaceDecl>& node) {
+    for (auto& declaration : node.body) {
+      if (!traverse(*declaration)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+  bool traverse_while_statement(wrap_const<WhileStmt>& node) {
+    if (!traverse(*node.condition)) {
+      return false;
+    }
+
+    return traverse(*node.body);
+  }
+  bool traverse_if_statement(wrap_const<IfStmt>& node) {
+    if (!traverse(*node.condition)) {
+      return false;
+    }
+    if (!traverse(*node.true_branch)) {
+      return false;
+    }
+    if (!traverse(*node.false_branch)) {
+      return false;
+    }
+
+    return true;
+  }
+  bool traverse_continue_statement(wrap_const<ContinueStmt>& node) {
+    return true;
+  }
+  bool traverse_break_statement(wrap_const<BreakStmt>& node) { return true; }
 
   NodeTraverseType before_traverse(wrap_const<ASTNode>& node) {
     return NodeTraverseType::CONTINUE;
@@ -161,3 +200,4 @@ class ASTVisitor {
 
 #undef NODE
 };
+}  // namespace Front

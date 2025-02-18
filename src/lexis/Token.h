@@ -6,28 +6,36 @@
 namespace Lexis {
 ENUM(TokenType,
      // keywords
-     KW_IMPORT, KW_RETURN, KW_EXPORT, KW_EXTERNAL, KW_IF, KW_ELSE, KW_WHILE,
-     KW_CONTINUE, KW_BREAK, KW_TRUE, KW_FALSE, KW_NULLPTR,
+     KW_BREAK, KW_CONTINUE, KW_ELSE, KW_IMPORT, KW_EXPORT, KW_EXTERN, KW_IF,
+     KW_NAMESPACE, KW_RETURN, KW_USING, KW_WHILE,
+
+     // literals
+     KW_NULLPTR, KW_FALSE, KW_TRUE,
 
      // types
-     KW_INT, KW_BOOL, KW_CHAR,
+     KW_U64, KW_I64, KW_F64, KW_BOOL, KW_CHAR, KW_VOID,
+     // keywords end
 
      IDENTIFIER,  // variable or function name
      NUMBER,      // number literal
      STRING,      // "hello world"
 
      // operators
-     EQUAL,       // operator =
-     PLUS,        // operator +
-     MINUS,       // operator -
-     STAR,        // operator *
-     AMPERSAND,   // operator &
+     EQUAL,       // =
+     PLUS,        // +
+     MINUS,       // -
+     STAR,        // *
+     PERCENT,     // %
+     AMPERSAND,   // &
      LESS,        // <
      GREATER,     // >
      LESS_EQ,     // <=
      GREATER_EQ,  // >=
+     EQUALEQUAL,  // ==
+     NOTEQUAL,    // !=
+     ARROW,       // ->
 
-     ARROW,  // ->
+     COLONCOLON,  // ::
 
      // special symbols
      OPEN_PAREN,   // (

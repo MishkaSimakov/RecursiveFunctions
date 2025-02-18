@@ -10,6 +10,7 @@
 #include "compilation/types/TypesStorage.h"
 #include "sources/SourceManager.h"
 
+namespace Front {
 struct ModuleCompileInfo {
   bool is_processed = false;
   std::vector<ModuleCompileInfo*> next;
@@ -39,3 +40,4 @@ class TeaFrontend {
   int compile(
       const std::unordered_map<std::string, std::filesystem::path>& files);
 };
+}  // namespace Front

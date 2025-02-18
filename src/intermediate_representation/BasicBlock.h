@@ -30,6 +30,13 @@ struct BasicBlock {
     return {children.begin(), children_count()};
   }
 
+  template <typename T, typename... Args>
+    requires std::is_base_of_v<BaseInstruction, T> &&
+             std::is_constructible_v<T, Args...>
+  void append_instruction(Args&&... args) {
+    instructions.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+  }
+
   size_t children_count() const {
     size_t cnt = 0;
 

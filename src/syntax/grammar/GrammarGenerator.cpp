@@ -122,8 +122,8 @@ Grammar parse_grammar(const std::vector<Rule>& text_grammar) {
         } else {
           throw std::runtime_error(fmt::format(
               "Each part of production result must be either token or valid "
-              "nonterm: {:?}.",
-              part));
+              "nonterm. Met {:?} in production {:?}.",
+              part, name));
         }
       }
 
@@ -162,8 +162,12 @@ void GrammarGenerator::generate_grammar(
   auto text_grammar = read_grammar(input_path);
   auto grammar = parse_grammar(text_grammar);
 
-  auto builder = LRTableBuilder(std::move(grammar));
-  builder.save_to(table_path);
+  try {
+    auto builder = LRTableBuilder(std::move(grammar));
+    builder.save_to(table_path);
+  } catch (ActionsConflictException exception) {
+    std::cout << exception.what() << std::endl;
+  }
 
   // now we generate file with builders list
   generate_function_file(builders_path, text_grammar);

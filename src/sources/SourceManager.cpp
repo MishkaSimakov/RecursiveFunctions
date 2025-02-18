@@ -35,6 +35,16 @@ SourceLocation SourceManager::load(const std::filesystem::path& path) {
   return SourceLocation(file_id, 0);
 }
 
+SourceLocation SourceManager::load_text(std::string_view text) {
+  char* loaded_text = new char[text.size() + 1];
+  std::ranges::copy(text, loaded_text);
+
+  size_t file_id = loaded_.size();
+  loaded_.emplace_back(loaded_text, text.size(), std::filesystem::path{});
+
+  return SourceLocation(file_id, 0);
+}
+
 std::string_view SourceManager::get_file_view(SourceLocation location) const {
   if (location.file_id >= loaded_.size()) {
     return {};
@@ -65,7 +75,8 @@ std::string_view SourceManager::get_file_view(SourceRange source_range) const {
   return {file_begin + begin.pos_id, file_begin + end.pos_id + 1};
 }
 
-SourceManager::LineInfo SourceManager::get_line_info(SourceLocation location) const {
+SourceManager::LineInfo SourceManager::get_line_info(
+    SourceLocation location) const {
   auto [begin, size, _] = loaded_[location.file_id];
   const char* line_begin = begin;
   size_t line_index = 0;
@@ -96,16 +107,22 @@ void SourceManager::print_annotations(std::ostream& os) {
   for (const SourceAnnotation& annotation : annotations_) {
     auto [file_id, position] = annotation.position;
     auto [begin, size, path] = loaded_[file_id];
-    auto [line_view, line_index, line_offset] = get_line_info(annotation.position);
+    auto [line_view, line_index, line_offset] =
+        get_line_info(annotation.position);
 
     os << fmt::format("In file {:?} on line {}:\n", path.c_str(), line_index);
     os << "\t" << line_view << "\n";
-    os << "\t" << std::string(line_offset, ' ') << "`-" << annotation.value << "\n";
+    os << "\t" << std::string(line_offset, ' ') << "`-" << annotation.value
+       << "\n";
   }
 }
 
 SourceManager::~SourceManager() {
-  for (auto& [begin, size, _] : loaded_) {
-    munmap(begin, size);
+  for (auto& [begin, size, path] : loaded_) {
+    if (path.empty()) {
+      delete[] begin;
+    } else {
+      munmap(begin, size);
+    }
   }
 }

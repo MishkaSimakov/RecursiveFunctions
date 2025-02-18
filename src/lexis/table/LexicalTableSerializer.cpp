@@ -22,6 +22,7 @@ void LexicalTableSerializer::serialize(std::ostream& os,
     }
   }
 }
+
 std::vector<JumpTableT> LexicalTableSerializer::deserialize(std::istream& is) {
   size_t states_count = read_bytes(is);
   std::vector<JumpTableT> result(states_count);

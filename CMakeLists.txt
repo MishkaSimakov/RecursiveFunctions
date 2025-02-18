@@ -47,7 +47,7 @@ add_custom_command(
         TARGET Cli POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/files
-        ${CMAKE_BINARY_DIR}/files)
+        ${CMAKE_CURRENT_BINARY_DIR}/files)
 
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 

@@ -3,10 +3,11 @@
 #include <unordered_map>
 
 #include "compilation/ModuleContext.h"
+#include "compilation/StringId.h"
 #include "sources/SourceManager.h"
 #include "types/TypesStorage.h"
-#include "compilation/StringId.h"
 
+namespace Front {
 struct GlobalContext {
   SourceManager source_manager;
   TypesStorage types_storage;
@@ -38,3 +39,4 @@ struct GlobalContext {
     return strings_table[index.id_];
   }
 };
+}  // namespace Front

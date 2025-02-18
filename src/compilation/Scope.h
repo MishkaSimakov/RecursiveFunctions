@@ -5,6 +5,7 @@
 #include "compilation/StringId.h"
 #include "compilation/types/Type.h"
 
+namespace Front {
 struct SymbolInfo {
   Type* type;
   bool is_exported;
@@ -22,3 +23,4 @@ struct Scope {
     return was_emplaced;
   }
 };
+}  // namespace Front

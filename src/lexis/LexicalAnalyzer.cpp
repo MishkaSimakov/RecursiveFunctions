@@ -13,10 +13,14 @@ Token LexicalAnalyzer::get_token_internal() {
   SourceLocation begin = location_;
 
   auto view = source_manager_.get_file_view(location_);
+  if (view.empty()) {
+    return Token{TokenType::END};
+  }
 
   while (true) {
+    // we add \0 in the end to finish tokens lookahead
     if (view.empty()) {
-      return Token{TokenType::END};
+      view = "\0";
     }
 
     char symbol = view.front();
@@ -44,7 +48,7 @@ Token LexicalAnalyzer::get_token_internal() {
       return Token{TokenType{finish_jump.token}, {begin, end}};
     }
 
-    return Token{TokenType::ERROR};
+    return Token{TokenType::ERROR, {begin, location_}};
   }
 }
 
@@ -52,6 +56,11 @@ LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path,
                                  const SourceManager& source_manager)
     : jumps_([&path] {
         std::ifstream is(path);
+
+        if (!is) {
+          throw std::runtime_error("Failed to open lexis table.");
+        }
+
         return LexicalTableSerializer::deserialize(is);
       }()),
       source_manager_(source_manager) {}

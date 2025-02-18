@@ -175,14 +175,14 @@ struct BaseInstruction {
 
 template <size_t NArgs, bool use_return>
 struct Instruction : BaseInstruction {
-  [[no_unique_address]] PossiblyEmptyStorage<!use_return, Value> return_value;
-  std::array<Value, NArgs> arguments;
+  [[no_unique_address]] PossiblyEmptyStorage<!use_return, Value*> return_value;
+  std::array<Value*, NArgs> arguments;
 
-  Instruction(Value return_value, std::array<Value, NArgs> arguments)
+  Instruction(Value* return_value, std::array<Value*, NArgs> arguments)
     requires use_return
       : return_value(return_value), arguments(std::move(arguments)) {}
 
-  Instruction(std::array<Value, NArgs> arguments)
+  Instruction(std::array<Value*, NArgs> arguments)
     requires(!use_return)
       : arguments(std::move(arguments)) {}
 
@@ -313,7 +313,7 @@ struct FunctionCall final : VariadicInstruction<true> {
 };
 
 struct Addition final : Instruction<2, true> {
-  Addition(Value return_value, Value left, Value right)
+  Addition(Value* return_value, Value* left, Value* right)
       : Instruction(return_value, {left, right}) {}
 
   std::string to_string() const override {
@@ -397,9 +397,7 @@ struct Phi final : BaseInstruction {
 };
 
 struct Return final : Instruction<1, false> {
-  using Instruction::Instruction;
-
-  explicit Return(Value value) : Instruction({value}) {}
+  explicit Return(Value* value) : Instruction({value}) {}
 
   std::string to_string() const override {
     return fmt::format("return {}", arguments[0]);

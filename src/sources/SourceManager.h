@@ -16,6 +16,8 @@ struct SourceAnnotation {
 struct LoadedFileInfo {
   char* begin;
   size_t size;
+
+  // for pure texts path is empty
   std::filesystem::path path;
 
   LoadedFileInfo(char* begin, size_t size, std::filesystem::path path)
@@ -28,6 +30,7 @@ class SourceManager {
 
  public:
   SourceLocation load(const std::filesystem::path& path);
+  SourceLocation load_text(std::string_view text);
 
   std::string_view get_file_view(SourceLocation location) const;
   std::string_view get_file_view(SourceRange source_range) const;

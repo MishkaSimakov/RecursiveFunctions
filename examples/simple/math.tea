@@ -1,3 +1,19 @@
-export sqrt: (value: int) -> int = {
-    return value;
+export math: namespace = {
+    sqr: (value: i64) -> i64 = {
+        result: i64 = value * value;
+        return result;
+    }
+
+    is_prime: (value: i64) -> bool = {
+        current_divider: i64 = 2;
+        while (sqr(current_divider) <= value) {
+            if (value % current_divider == 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
 }

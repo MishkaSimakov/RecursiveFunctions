@@ -1,14 +1,10 @@
 #pragma once
 
 #include <argparse/argparse.hpp>
-
 #include "ArgumentsReader.h"
 #include "compilation/TeaFrontend.h"
-
 #include "errors/ExceptionsHandler.h"
-
 #include "log/Logger.h"
-
 
 namespace Cli {
 namespace fs = std::filesystem;
@@ -21,7 +17,7 @@ class Main {
 
       Logger::set_level(arguments.verbosity_level);
 
-      auto result = TeaFrontend().compile(arguments.sources);
+      auto result = Front::TeaFrontend().compile(arguments.sources);
       // result must be a bunch of IR files
       // compile each module into IR
 

@@ -9,6 +9,7 @@
 #include "types/TypesASTVisitor.h"
 #include "utils/Constants.h"
 
+namespace Front {
 bool TeaFrontend::has_loops_recursive(
     const ModuleCompileInfo* current,
     std::unordered_map<const ModuleCompileInfo*, int>& colors) {
@@ -143,3 +144,4 @@ int TeaFrontend::compile(
 
   return 0;
 }
+}  // namespace Front

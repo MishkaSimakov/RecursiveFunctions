@@ -7,6 +7,8 @@
 
 #include "BasicBlock.h"
 #include "Value.h"
+#include "compilation/StringId.h"
+#include "types/Type.h"
 
 namespace IR {
 struct Function {
@@ -83,24 +85,22 @@ struct Function {
     }
   };
 
-  std::string name;
+  StringId name;
+  Type* return_type;
+  std::vector<Value*> arguments;
 
   // list because in inline pass pointers must not be invalidated after erase
   std::list<BasicBlock> basic_blocks;
   BasicBlock* begin_block;
-  std::vector<Value> arguments;
   std::vector<BasicBlock*> end_blocks;
 
-  std::unordered_set<std::string> calls;
+  std::vector<std::unique_ptr<Value>> values;
+  size_t temporaries_count_;
 
-  // it is guaranteed that ALL temporaries are contained inside the variable
-  std::unordered_set<Value> temporaries;
+  explicit Function(StringId name)
+      : name(name), begin_block(nullptr), temporaries_count_(0) {}
 
-  explicit Function(std::string name)
-      : name(std::move(name)), begin_block(nullptr) {}
-
-  Function(Function&&) = default;
-  Function& operator=(Function&&) = default;
+  Temporary* add_temporary(Type* type);
 
   void replace_values(const std::unordered_map<Value, Value>&) const;
 

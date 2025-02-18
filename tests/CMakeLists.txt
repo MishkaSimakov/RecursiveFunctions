@@ -16,25 +16,8 @@ enable_testing()
 
 add_executable(
         Tests
-        unit/intermediate_representation/allocation/DependenciesGraphBuilderTests.cpp
-        unit/intermediate_representation/allocation/DependenciesGraphBuilderTestCase.h
-        #        TODO: enable all those tests later
-#        feature/ArithmeticsTests.cpp
-#        feature/FastArithmeticsTests.cpp
-#        feature/IsPrimeTests.cpp
-#        feature/ProgramRunTestCase.h
-#        feature/ArgminTests.cpp
-#        unit/lexis/LexisTests.cpp
-#        unit/syntax/CorrectSyntaxTests.cpp
-#        unit/syntax/SyntaxTestCase.h
-#        unit/syntax/SyntaxNodeTests.cpp
-#        unit/syntax/SyntaxExceptionsTests.cpp
-#        unit/compilation/CompileTreeTestCase.h
-#        unit/compilation/CorrectCompileTreeTests.cpp
-#        unit/preprocessor/PreprocessorTestCase.h
-#        unit/preprocessor/PreprocessorTests.cpp
-#        unit/execution/BytecodeExecutorTests.cpp
-#        unit/compilation/ArgminTests.cpp
+        unit/lexis/LexisTests.cpp
+        unit/lexis/LexisTestCase.h
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)
@@ -52,4 +35,11 @@ add_custom_command(
         ${CMAKE_SOURCE_DIR}/tests/feature/programs/*
         ${CMAKE_CURRENT_BINARY_DIR}/programs
         COMMENT "Cloning test programs files from: ${CMAKE_SOURCE_DIR}/tests/feature/programs/* to ${CMAKE_CURRENT_BINARY_DIR}/programs"
+)
+
+add_custom_command(
+        TARGET Tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/files
+        ${CMAKE_CURRENT_BINARY_DIR}/files
 )

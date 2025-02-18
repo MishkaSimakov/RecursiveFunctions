@@ -17,25 +17,35 @@ int main() {
   generator["id_char"] = "[a-zA-Z0-9_]";
 
   // keywords
+  // keywords
+  generator[TokenType::KW_BREAK] = "break";
+  generator[TokenType::KW_CONTINUE] = "continue";
+  generator[TokenType::KW_ELSE] = "else";
   generator[TokenType::KW_IMPORT] = "import";
   generator[TokenType::KW_EXPORT] = "export";
-  generator[TokenType::KW_EXTERNAL] = "external";
+  generator[TokenType::KW_EXTERN] = "extern";
   generator[TokenType::KW_IF] = "if";
-  generator[TokenType::KW_ELSE] = "else";
-  generator[TokenType::KW_WHILE] = "while";
-  generator[TokenType::KW_CONTINUE] = "continue";
-  generator[TokenType::KW_BREAK] = "break";
-  generator[TokenType::KW_TRUE] = "true";
-  generator[TokenType::KW_FALSE] = "false";
-  generator[TokenType::KW_NULLPTR] = "nullptr";
+  generator[TokenType::KW_NAMESPACE] = "namespace";
   generator[TokenType::KW_RETURN] = "return";
+  generator[TokenType::KW_USING] = "using";
+  generator[TokenType::KW_WHILE] = "while";
 
-  generator[TokenType::KW_INT] = "int";
+  // literals
+  generator[TokenType::KW_NULLPTR] = "nullptr";
+  generator[TokenType::KW_FALSE] = "false";
+  generator[TokenType::KW_TRUE] = "true";
+
+  // types
+  generator[TokenType::KW_U64] = "u64";
+  generator[TokenType::KW_I64] = "i64";
+  generator[TokenType::KW_F64] = "f64";
   generator[TokenType::KW_BOOL] = "bool";
   generator[TokenType::KW_CHAR] = "char";
+  generator[TokenType::KW_VOID] = "void";
+  // keywords end
 
   generator[TokenType::IDENTIFIER] = "{letter}({id_char})*";
-  generator[TokenType::NUMBER] = "({digit}+)+(-{digit}+)";
+  generator[TokenType::NUMBER] = "({digit}+)|(-{digit}+)";
 
   // TODO: string can contain any character + escape sequence
   generator[TokenType::STRING] = "\"({s_char})*\"";
@@ -45,13 +55,18 @@ int main() {
   generator[TokenType::PLUS] = "\\+";
   generator[TokenType::MINUS] = "-";
   generator[TokenType::STAR] = "\\*";
+  generator[TokenType::PERCENT] = "%";
   generator[TokenType::AMPERSAND] = "&";
   generator[TokenType::LESS] = "<";
   generator[TokenType::GREATER] = ">";
   generator[TokenType::LESS_EQ] = "<=";
   generator[TokenType::GREATER_EQ] = ">=";
+  generator[TokenType::EQUALEQUAL] = "==";
+  generator[TokenType::NOTEQUAL] = "!=";
 
   generator[TokenType::ARROW] = "->";
+
+  generator[TokenType::COLONCOLON] = "::";
 
   // special symbols
   generator[TokenType::OPEN_PAREN] = "\\(";

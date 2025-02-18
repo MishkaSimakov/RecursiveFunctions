@@ -2,6 +2,7 @@
 #include "ast/ASTVisitor.h"
 #include "compilation/GlobalContext.h"
 
+namespace Front {
 // This class fills up symbols table inside Scope
 // + calculates type for each expression in AST
 class TypesASTVisitor
@@ -14,9 +15,9 @@ class TypesASTVisitor
   [[noreturn]] void scold_user(SourceLocation location,
                                const std::string& message);
 
-  Type* name_lookup(Scope* base_scope, StringId name) const;
-  Type* recursive_global_name_lookup(const ModuleContext& module,
-                                     StringId name) const;
+  std::pair<Type*, Scope*> name_lookup(Scope* base_scope, StringId name) const;
+  std::pair<Type*, Scope*> recursive_global_name_lookup(
+      const ModuleContext& module, StringId name) const;
 
   void check_call_arguments(FunctionType* type, const CallExpr& call);
 
@@ -38,3 +39,4 @@ class TypesASTVisitor
 
   bool visit_return_statement(ReturnStmt& node);
 };
+}  // namespace Front

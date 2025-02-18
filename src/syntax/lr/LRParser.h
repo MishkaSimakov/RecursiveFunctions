@@ -17,12 +17,17 @@ class LRParser {
   std::vector<std::vector<Action>> actions_;
   std::vector<std::vector<size_t>> goto_;
 
-  GlobalContext& context_;
+  Front::GlobalContext& context_;
 
  public:
-  LRParser(const std::filesystem::path& path, GlobalContext& context)
+  LRParser(const std::filesystem::path& path, Front::GlobalContext& context)
       : context_(context) {
     std::ifstream is(path, std::ios_base::binary);
+
+    if (!is) {
+      throw std::runtime_error("Failed to open lr-table file.");
+    }
+
     std::tie(actions_, goto_) = LRTableSerializer::deserialize(is);
   }
 
