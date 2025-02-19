@@ -118,6 +118,10 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     add_node(fmt::format("DeclarationStmt {}", range_string(value)));
     return true;
   }
+  bool visit_expression_statement(const ExpressionStmt& value) {
+    add_node(fmt::format("ExpressionStmt {}", range_string(value)));
+    return true;
+  }
   bool visit_namespace_declaration(const NamespaceDecl& value) {
     std::string_view name = global_context_.get_string(value.name);
     add_node(fmt::format("NamespaceDecl {} {}", range_string(value), name));

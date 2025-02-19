@@ -78,6 +78,12 @@ class ASTVisitor {
     }
     return true;
   }
+  bool traverse_expression_statement(wrap_const<ExpressionStmt>& node) {
+    if (!traverse(*node.value)) {
+      return false;
+    }
+    return true;
+  }
   bool traverse_type_node(wrap_const<TypeNode>& node) { return true; }
   bool traverse_compound_statement(wrap_const<CompoundStmt>& node) {
     for (auto& stmt : node.statements) {

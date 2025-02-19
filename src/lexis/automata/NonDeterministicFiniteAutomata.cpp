@@ -14,6 +14,13 @@ struct NonDeterministicFiniteAutomata::FiniteAutomataBuilderVisitor final
     auto& end_node = result.add_node();
 
     for (size_t i = 0; i < Charset::kCharactersCount; ++i) {
+      // TODO: move this part to some other place
+      // (or rewrite tokens so that they don't include EOF)
+      // exclude EOF symbol from every token
+      if (i == Charset::kEOF) {
+        continue;
+      }
+
       if (node.match[i]) {
         start_node.jumps.emplace(i, &end_node);
       }

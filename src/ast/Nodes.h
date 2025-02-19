@@ -36,6 +36,7 @@ struct ASTNode {
     TYPE_NODE,
     VARIABLE_DECL,
     DECLARATION_STMT,
+    EXPRESSION_STMT,
     NAMESPACE_DECL,
     WHILE_STMT,
     IF_STMT,
@@ -310,6 +311,16 @@ struct DeclarationStmt : Statement {
       : Statement(source_range), value(std::move(declaration)) {}
 
   Kind get_kind() const override { return Kind::DECLARATION_STMT; }
+};
+
+struct ExpressionStmt : Statement {
+  std::unique_ptr<Expression> value;
+
+  ExpressionStmt(SourceRange source_range,
+                  std::unique_ptr<Expression> expression)
+      : Statement(source_range), value(std::move(expression)) {}
+
+  Kind get_kind() const override { return Kind::EXPRESSION_STMT; }
 };
 
 struct NamespaceDecl : Declaration {

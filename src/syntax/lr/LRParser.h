@@ -16,7 +16,6 @@ namespace Syntax {
 class LRParser {
   std::vector<std::vector<Action>> actions_;
   std::vector<std::vector<size_t>> goto_;
-
   Front::GlobalContext& context_;
 
  public:
@@ -30,6 +29,8 @@ class LRParser {
 
     std::tie(actions_, goto_) = LRTableSerializer::deserialize(is);
   }
+
+  void setup_recovery_tree();
 
   void parse(Lexis::LexicalAnalyzer& lexical_analyzer, size_t module_id) const;
 };

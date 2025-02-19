@@ -16,4 +16,6 @@ TEST_F(LexisTestCase, simple_tests) {
                  {"5", NUMBER}});
 
   test_sequence({{"a", IDENTIFIER}, {" ", WHITESPACE}, {"b", IDENTIFIER}});
+
+  test_sequence({{"// comment !!!", WHITESPACE}});
 }

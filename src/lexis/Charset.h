@@ -5,9 +5,12 @@
 #include <string>
 #include <vector>
 
+// for now \0 is treated as EOF
+// TODO: maybe separate \0 from EOF
 struct Charset {
   using CharacterT = uint8_t;
   static constexpr size_t kCharactersCount = 128;
+  static constexpr size_t kEOF = 0; // EOF symbol id
 
   // this character is guaranteed to not be in charset
   static constexpr CharacterT kReservedCharacter =

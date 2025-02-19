@@ -80,8 +80,8 @@ statement-seq:
 statement:
     compound-statement      [pass<0>]
     iteration-statement     [pass<0>]
-    declaration-statement   [declaration_statement]
-    expression-statement    [pass<0>]
+    declaration-statement   [wrap_pass<Declaration, DeclarationStmt, 0>]
+    expression-statement    [wrap_pass<Expression, ExpressionStmt, 0>]
     jump-statement          [pass<0>]
     selection-statement     [pass<0>]
 

@@ -20,6 +20,7 @@ NODE(CALL_EXPR, CallExpr, call_expression);
 NODE(TYPE_NODE, TypeNode, type_node);
 NODE(VARIABLE_DECL, VariableDecl, variable_declaration);
 NODE(DECLARATION_STMT, DeclarationStmt, declaration_statement);
+NODE(EXPRESSION_STMT, ExpressionStmt, expression_statement);
 NODE(NAMESPACE_DECL, NamespaceDecl, namespace_declaration);
 NODE(WHILE_STMT, WhileStmt, while_statement);
 NODE(IF_STMT, IfStmt, if_statement);

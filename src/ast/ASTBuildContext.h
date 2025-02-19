@@ -260,10 +260,13 @@ class ASTBuildContext {
                                    std::move(initializer));
   }
 
-  NodePtr declaration_statement(SourceRange source_range,
+  template <typename T, typename Wrapper, size_t Index>
+    requires std::is_base_of_v<ASTNode, T> &&
+             std::is_base_of_v<ASTNode, Wrapper>
+  NodePtr wrap_pass(SourceRange source_range,
                                 std::span<NodePtr> nodes) {
-    auto declaration = cast_move<Declaration>(std::move(nodes.front()));
-    return make_node<DeclarationStmt>(source_range, std::move(declaration));
+    auto wrappee = cast_move<T>(std::move(nodes[Index]));
+    return make_node<Wrapper>(source_range, std::move(wrappee));
   }
 
   NodePtr namespace_definition(SourceRange source_range,
