@@ -113,9 +113,10 @@ Grammar parse_grammar(const std::vector<Rule>& text_grammar) {
       GrammarProductionResult grammar_production;
 
       // special syntax for empty production
-      // if (parts.size() == 1 && parts.front() == "empty") {
-        // break;
-      // }
+      if (parts.size() == 1 && parts.front() == "empty") {
+        result.add_rule(nonterminals.at(name), std::move(grammar_production));
+        break;
+      }
 
       for (const auto& part : parts) {
         auto token = TokenType::from_string(part);

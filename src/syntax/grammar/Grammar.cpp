@@ -157,7 +157,7 @@ std::list<GrammarProductionResult> Grammar::generate_reduced_productions(
 void Grammar::check() {
   check_non_producing();
   check_unreachable();
-  check_epsilon_producing();
+  // check_epsilon_producing();
 }
 
 void Grammar::add_rule(NonTerminal from, GrammarProductionResult to) {

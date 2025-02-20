@@ -2,6 +2,7 @@
 
 #include <fcntl.h>
 #include <fmt/format.h>
+#include <sys/errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
@@ -21,10 +22,18 @@ SourceLocation SourceManager::load(const std::filesystem::path& path) {
   }
 
   off_t file_size = statbuf.st_size;
-  void* mapped_ptr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  void* mapped_ptr;
+  if (file_size == 0) {
+    // mmap doesn't accept file_size = 0 so we should treat this case separately
+    // MAP_ANONYMOUS is guaranteed to fill memory with zeros
+    mapped_ptr = mmap(nullptr, 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  } else {
+    mapped_ptr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+  }
 
   if (mapped_ptr == MAP_FAILED) {
-    throw std::runtime_error("Failed to load source file.");
+    throw std::runtime_error(
+        fmt::format("Failed to load source file: {}", strerror(errno)));
   }
 
   char* begin = static_cast<char*>(mapped_ptr);

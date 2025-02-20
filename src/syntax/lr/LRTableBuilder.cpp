@@ -49,6 +49,11 @@ void LRTableBuilder::build_first_table() {
       auto& nonterm_update = update[non_terminal];
 
       for (const auto& production : productions | std::views::keys) {
+        if (production.empty()) {
+          nonterm_update.add(Lexis::TokenType::END);
+          continue;
+        }
+
         auto begin = production.cbegin();
 
         if (begin.is_terminal()) {
