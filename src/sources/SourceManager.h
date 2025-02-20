@@ -24,16 +24,61 @@ struct LoadedFileInfo {
       : begin(begin), size(size), path(std::move(path)) {}
 };
 
+class SourceView {
+  std::string_view string_view_;
+  SourceLocation begin_;
+
+  template <bool ShouldCheck>
+  size_t get_offset(SourceLocation location) const {
+    if constexpr (ShouldCheck) {
+      if (location.file_id != begin_.file_id) {
+        throw std::runtime_error(
+            "Locations must be from the same file when accessing SourceView.");
+      }
+      if (location.pos_id < begin_.pos_id ||
+          begin_.pos_id + string_view_.size() <= location.pos_id) {
+        throw std::runtime_error("Location is outside of SourceView range.");
+      }
+    }
+
+    return location.pos_id - begin_.pos_id;
+  }
+
+ public:
+  SourceView() : begin_(0, 0) {}
+
+  SourceView(std::string_view string_view, SourceLocation begin)
+      : string_view_(string_view), begin_(begin) {}
+
+  const char& operator[](SourceLocation location) const {
+    return string_view_[get_offset<false>(location)];
+  }
+
+  const char& at(SourceLocation location) const {
+    return string_view_[get_offset<true>(location)];
+  }
+
+  std::string_view string_view() const { return string_view_; }
+
+  SourceLocation begin_location() const { return begin_; }
+
+  SourceLocation end_location() const {
+    SourceLocation end = begin_;
+    end.pos_id += string_view_.size();
+    return end;
+  }
+};
+
 class SourceManager {
   std::vector<LoadedFileInfo> loaded_;
   std::vector<SourceAnnotation> annotations_;
 
  public:
-  SourceLocation load(const std::filesystem::path& path);
-  SourceLocation load_text(std::string_view text);
+  SourceView load(const std::filesystem::path& path);
+  SourceView load_text(std::string_view text);
 
-  std::string_view get_file_view(SourceLocation location) const;
-  std::string_view get_file_view(SourceRange source_range) const;
+  SourceView get_file_view(SourceLocation location) const;
+  SourceView get_file_view(SourceRange source_range) const;
 
   struct LineInfo {
     std::string_view view;

@@ -39,14 +39,13 @@ void TeaFrontend::build_ast_and_dependencies(
   auto& source_manager = context_.source_manager;
 
   // setup parser and lexical analyzer, load tables
-  Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath,
-                                          source_manager);
+  Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
   auto parser = Syntax::LRParser(Constants::grammar_filepath, context_);
 
   // process each file separately
   for (auto& [name, path] : files) {
-    SourceLocation begin = source_manager.load(path);
-    lexical_analyzer.set_location(begin);
+    SourceView source_view = source_manager.load(path);
+    lexical_analyzer.set_source_view(source_view);
 
     auto& module_context = context_.add_module(name);
 

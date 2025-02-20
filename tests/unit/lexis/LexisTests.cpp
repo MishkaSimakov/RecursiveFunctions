@@ -18,4 +18,9 @@ TEST_F(LexisTestCase, simple_tests) {
   test_sequence({{"a", IDENTIFIER}, {" ", WHITESPACE}, {"b", IDENTIFIER}});
 
   test_sequence({{"// comment !!!", WHITESPACE}});
+  test_sequence({{"// "
+                  "comment !!!\n", WHITESPACE},
+                 {"identifier", IDENTIFIER},
+                 {";", SEMICOLON},
+                 {"// comment", WHITESPACE}});
 }

@@ -14,17 +14,19 @@ class LexicalAnalyzer {
   static std::unordered_map<std::string_view, TokenType> keywords;
 
   SourceLocation location_{};
-  const SourceManager& source_manager_;
+  SourceView source_view_;
 
-  Token get_token_internal();
+  // for peek_token function
+  mutable std::optional<Token> future_token_;
+
+  Token get_token_internal(SourceLocation location) const;
 
  public:
-  LexicalAnalyzer(const std::filesystem::path& table_path,
-                  const SourceManager& source_manager);
+  LexicalAnalyzer(const std::filesystem::path& table_path);
 
-  void set_location(SourceLocation location);
-  void seek(off_t offset);
+  void set_source_view(SourceView view);
 
   Token get_token();
+  Token peek_token() const;
 };
 }  // namespace Lexis

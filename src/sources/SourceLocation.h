@@ -7,6 +7,8 @@ struct SourceLocation {
   SourceLocation() : file_id(0), pos_id(0) {}
   SourceLocation(uint32_t file_id, uint32_t pos_id)
       : file_id(file_id), pos_id(pos_id) {}
+
+  bool operator==(const SourceLocation&) const = default;
 };
 
 struct SourceRange {

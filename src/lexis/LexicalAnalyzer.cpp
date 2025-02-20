@@ -1,34 +1,30 @@
 #include "LexicalAnalyzer.h"
 
 #include <fstream>
-#include <string_view>
 #include <variant>
 
 #include "lexis/Charset.h"
 #include "lexis/table/LexicalTableSerializer.h"
 
 namespace Lexis {
-Token LexicalAnalyzer::get_token_internal() {
+Token LexicalAnalyzer::get_token_internal(SourceLocation location) const {
   size_t current_state = 0;
-  SourceLocation begin = location_;
+  SourceLocation begin = location;
+  SourceLocation cur_loc = location;
 
-  auto view = source_manager_.get_file_view(location_);
-  if (view.empty()) {
-    return Token{TokenType::END};
+  const SourceLocation end_loc = source_view_.end_location();
+
+  if (cur_loc == end_loc) {
+    return Token{TokenType::END, SourceRange{cur_loc, cur_loc}};
   }
 
   while (true) {
-    // we add \0 in the end to finish tokens lookahead
-    if (view.empty()) {
-      view = "\0";
-    }
-
-    char symbol = view.front();
-    view.remove_prefix(1);
-    ++location_.pos_id;
+    bool reached_end = cur_loc == end_loc;
+    char symbol = reached_end ? '\0' : source_view_[cur_loc];
+    ++cur_loc.pos_id;
 
     if (symbol >= Charset::kCharactersCount) {
-      return Token{TokenType::ERROR};
+      return Token{TokenType::ERROR, SourceRange{cur_loc, cur_loc}};
     }
 
     auto jump = jumps_[current_state][symbol];
@@ -40,17 +36,16 @@ Token LexicalAnalyzer::get_token_internal() {
 
     if (std::holds_alternative<FinishJump>(jump)) {
       FinishJump finish_jump = std::get<FinishJump>(jump);
-      seek(-static_cast<off_t>(finish_jump.forward_shift));
+      cur_loc.pos_id -= finish_jump.forward_shift;
 
-      return Token{TokenType{finish_jump.token}, {begin, location_}};
+      return {Token{TokenType{finish_jump.token}, {begin, cur_loc}}};
     }
 
-    return Token{TokenType::ERROR, {begin, location_}};
+    return Token{TokenType::ERROR, {begin, cur_loc}};
   }
 }
 
-LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path,
-                                 const SourceManager& source_manager)
+LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path)
     : jumps_([&path] {
         std::ifstream is(path);
 
@@ -59,22 +54,29 @@ LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path,
         }
 
         return LexicalTableSerializer::deserialize(is);
-      }()),
-      source_manager_(source_manager) {}
+      }()) {}
 
-void LexicalAnalyzer::set_location(SourceLocation location) {
-  location_ = location;
+void LexicalAnalyzer::set_source_view(SourceView view) {
+  source_view_ = view;
 }
 
-void LexicalAnalyzer::seek(off_t offset) { location_.pos_id += offset; }
-
 Token LexicalAnalyzer::get_token() {
-  Token token;
-  do {
-    token = get_token_internal();
-  } while (token.type == TokenType::WHITESPACE ||
-           token.type == TokenType::COMMENT);
-
+  Token token = peek_token();
+  location_ = token.source_range.end;
+  future_token_.reset();
   return token;
+}
+
+Token LexicalAnalyzer::peek_token() const {
+  if (!future_token_.has_value()) {
+    SourceLocation location = location_;
+    do {
+      future_token_ = get_token_internal(location);
+      location = future_token_->source_range.end;
+    } while (future_token_->type == TokenType::WHITESPACE ||
+             future_token_->type == TokenType::COMMENT);
+  }
+
+  return future_token_.value();
 }
 }  // namespace Lexis

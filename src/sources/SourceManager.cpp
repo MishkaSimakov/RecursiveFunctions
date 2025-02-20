@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <fstream>
 
-SourceLocation SourceManager::load(const std::filesystem::path& path) {
+SourceView SourceManager::load(const std::filesystem::path& path) {
   int fd = open(path.c_str(), O_RDWR);
 
   if (fd == -1) {
@@ -43,35 +43,35 @@ SourceLocation SourceManager::load(const std::filesystem::path& path) {
   size_t file_id = loaded_.size();
   loaded_.emplace_back(begin, file_size, path);
 
-  return SourceLocation(file_id, 0);
+  return get_file_view(SourceLocation(file_id, 0));
 }
 
-SourceLocation SourceManager::load_text(std::string_view text) {
+SourceView SourceManager::load_text(std::string_view text) {
   char* loaded_text = new char[text.size() + 1];
   std::ranges::copy(text, loaded_text);
 
   size_t file_id = loaded_.size();
   loaded_.emplace_back(loaded_text, text.size(), std::filesystem::path{});
 
-  return SourceLocation(file_id, 0);
+  return get_file_view(SourceLocation(file_id, 0));
 }
 
-std::string_view SourceManager::get_file_view(SourceLocation location) const {
+SourceView SourceManager::get_file_view(SourceLocation location) const {
   if (location.file_id >= loaded_.size()) {
-    return {};
+    throw std::runtime_error("Incorrect source location.");
   }
 
   auto [begin, size, _] = loaded_[location.file_id];
   if (size <= location.pos_id) {
-    return {};
+    throw std::runtime_error("Incorrect source location.");
   }
 
   std::string_view view(begin, size);
   view.remove_prefix(location.pos_id);
-  return view;
+  return SourceView(view, location);
 }
 
-std::string_view SourceManager::get_file_view(SourceRange source_range) const {
+SourceView SourceManager::get_file_view(SourceRange source_range) const {
   auto [begin, end] = source_range;
 
   if (begin.pos_id > end.pos_id || begin.file_id != end.file_id ||
@@ -84,7 +84,8 @@ std::string_view SourceManager::get_file_view(SourceRange source_range) const {
     throw std::runtime_error("Incorrect source range.");
   }
 
-  return {file_begin + begin.pos_id, file_begin + end.pos_id};
+  std::string_view content(file_begin + begin.pos_id, file_begin + end.pos_id);
+  return SourceView(content, source_range.begin);
 }
 
 SourceManager::LineInfo SourceManager::get_line_info(
@@ -110,8 +111,7 @@ SourceManager::LineInfo SourceManager::get_line_info(
   return {view, line_index, offset};
 }
 
-void SourceManager::add_annotation(SourceRange range,
-                                   std::string_view text) {
+void SourceManager::add_annotation(SourceRange range, std::string_view text) {
   annotations_.emplace_back(range, text);
 }
 
@@ -132,12 +132,14 @@ void SourceManager::print_annotations(std::ostream& os) {
     // split line view to emphasize wrong part with red
     auto before_error_view = line_view.substr(0, start_offset);
     auto error_view = line_view.substr(start_offset, end_offset - start_offset);
-    std::string emphasized_error = fmt::format(fg(fmt::color::orange), fmt::runtime(error_view));
+    std::string emphasized_error =
+        fmt::format(fg(fmt::color::orange), "{}", error_view);
     auto after_error_view = line_view.substr(end_offset);
 
     os << fmt::format("In file {:?} on line {}:\n", path.c_str(), start_index);
     os << before_error_view << emphasized_error << after_error_view << "\n";
-    os << std::string(start_offset, ' ') << "`-" << annotation.value << std::endl;
+    os << std::string(start_offset, ' ') << "`-" << annotation.value
+       << std::endl;
   }
 }
 

@@ -97,6 +97,7 @@ selection-statement:
 
 jump-statement:
     KW_RETURN expression SEMICOLON [return_statement]
+    KW_RETURN SEMICOLON            [return_statement]
     KW_BREAK SEMICOLON             [construct<BreakStmt>]
     KW_CONTINUE SEMICOLON          [construct<ContinueStmt>]
 

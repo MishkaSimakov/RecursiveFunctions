@@ -40,7 +40,8 @@ class ASTBuildContext {
   }
 
   std::string_view get_token_string(const TokenNode& node) const {
-    return context_.source_manager.get_file_view(node.source_range);
+    return context_.source_manager.get_file_view(node.source_range)
+        .string_view();
   }
 
   Scope* make_scope() { return &module().scopes.emplace_back(); }
@@ -82,7 +83,8 @@ class ASTBuildContext {
     }
 
     if (has_declarations) {
-      auto decl_list = cast_move<NodesList<Declaration>>(std::move(nodes.back()));
+      auto decl_list =
+          cast_move<NodesList<Declaration>>(std::move(nodes.back()));
       program_node->declarations = std::move(decl_list->nodes);
     }
 
@@ -141,8 +143,11 @@ class ASTBuildContext {
   }
 
   NodePtr return_statement(SourceRange source_range, std::span<NodePtr> nodes) {
-    return make_node<ReturnStmt>(source_range,
-                                 cast_move<Expression>(std::move(nodes[1])));
+    std::unique_ptr<Expression> return_value =
+        nodes.size() == 2 ? nullptr
+                          : cast_move<Expression>(std::move(nodes[1]));
+
+    return make_node<ReturnStmt>(source_range, std::move(return_value));
   }
 
   NodePtr parameter_declaration(SourceRange source_range,
@@ -268,8 +273,7 @@ class ASTBuildContext {
   template <typename T, typename Wrapper, size_t Index>
     requires std::is_base_of_v<ASTNode, T> &&
              std::is_base_of_v<ASTNode, Wrapper>
-  NodePtr wrap_pass(SourceRange source_range,
-                                std::span<NodePtr> nodes) {
+  NodePtr wrap_pass(SourceRange source_range, std::span<NodePtr> nodes) {
     auto wrappee = cast_move<T>(std::move(nodes[Index]));
     return make_node<Wrapper>(source_range, std::move(wrappee));
   }

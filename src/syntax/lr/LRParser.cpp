@@ -13,7 +13,16 @@ using namespace Front;
 #include "syntax/BuildersRegistry.h"
 
 namespace Syntax {
-struct RecoveryTree {
+class RecoveryTree {
+ private:
+  [[noreturn]] static void report_unmatched_paren(
+      SourceRange range, SourceManager& source_manager) {
+    source_manager.add_annotation(range, fmt::format("Unmatched parenthesis."));
+    source_manager.print_annotations(std::cout);
+    throw std::runtime_error("Unmatched parenthesis");
+  }
+
+ public:
   struct RecoveryNode {
     RecoveryNode* parent;
     std::vector<std::unique_ptr<RecoveryNode>> children;
@@ -34,8 +43,13 @@ struct RecoveryTree {
   // TODO: this method must be outside of parser
   // returns pointer to node from which just exited
   // nullptr if didn't exit any node
-  RecoveryNode* swallow_token(const Lexis::Token& token, size_t states_count) {
+  RecoveryNode* swallow_token(const Lexis::Token& token, size_t states_count,
+                              SourceManager& source_manager) {
     if (token.type == Lexis::TokenType::END) {
+      if (current != root.get()) {
+        report_unmatched_paren(current->source_range, source_manager);
+      }
+
       current = nullptr;
       return root.get();
     }
@@ -44,7 +58,7 @@ struct RecoveryTree {
       auto& new_node =
           current->children.emplace_back(std::make_unique<RecoveryNode>());
       new_node->parent = current;
-      new_node->source_range.begin = token.source_range.begin;
+      new_node->source_range = token.source_range;
       new_node->prev_states_count = states_count;
 
       current = new_node.get();
@@ -60,13 +74,10 @@ struct RecoveryTree {
 
       // TODO: show this better
       if (current == nullptr) {
-        throw std::runtime_error("Parens don't match");
+        report_unmatched_paren(token.source_range, source_manager);
       }
 
       return old;
-    }
-
-    if (token.type == Lexis::TokenType::SEMICOLON) {
     }
 
     return nullptr;
@@ -89,7 +100,6 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
   Lexis::Token current_token = lexical_analyzer.get_token();
 
   RecoveryTree recovery_tree(current_token.source_range.begin);
-  recovery_tree.swallow_token(current_token, 1);
 
   while (true) {
     Action action =
@@ -132,9 +142,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       // eliminate code after error
       auto* eliminated_node = recovery_tree.current;
       while (true) {
+        auto* exited_node = recovery_tree.swallow_token(
+            current_token, states_stack.size(), source_manager);
         current_token = lexical_analyzer.get_token();
-        auto* exited_node =
-            recovery_tree.swallow_token(current_token, states_stack.size());
 
         if (exited_node == eliminated_node) {
           break;
@@ -150,8 +160,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         nodes_stack.emplace_back(std::make_unique<TokenNode>(current_token));
       }
 
+      recovery_tree.swallow_token(current_token, states_stack.size(),
+                                  source_manager);
       current_token = lexical_analyzer.get_token();
-      recovery_tree.swallow_token(current_token, states_stack.size());
     } else {
       // action is reduce
       auto reduce = std::get<ReduceAction>(action);
