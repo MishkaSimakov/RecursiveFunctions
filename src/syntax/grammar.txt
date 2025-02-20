@@ -1,6 +1,7 @@
 program:
     preamble declaration-seq    [program_declaration]
     declaration-seq             [program_declaration]
+    empty                       [program_declaration]
 
 preamble:
     import-seq [pass<0>]

@@ -31,9 +31,15 @@ struct RecoveryTree {
     current = root.get();
   }
 
+  // TODO: this method must be outside of parser
   // returns pointer to node from which just exited
   // nullptr if didn't exit any node
   RecoveryNode* swallow_token(const Lexis::Token& token, size_t states_count) {
+    if (token.type == Lexis::TokenType::END) {
+      current = nullptr;
+      return root.get();
+    }
+
     if (token.type == Lexis::TokenType::OPEN_BRACE) {
       auto& new_node =
           current->children.emplace_back(std::make_unique<RecoveryNode>());
@@ -51,7 +57,16 @@ struct RecoveryTree {
       RecoveryNode* old = current;
       current->source_range.end = token.source_range.end;
       current = current->parent;
+
+      // TODO: show this better
+      if (current == nullptr) {
+        throw std::runtime_error("Parens don't match");
+      }
+
       return old;
+    }
+
+    if (token.type == Lexis::TokenType::SEMICOLON) {
     }
 
     return nullptr;
@@ -81,8 +96,11 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         actions_[states_stack.back()][static_cast<size_t>(current_token.type)];
 
     if (std::holds_alternative<AcceptAction>(action)) {
-      context_.modules[module_id].ast_root = std::unique_ptr<ProgramDecl>(
-          dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
+      if (!encountered_error) {
+        context_.modules[module_id].ast_root = std::unique_ptr<ProgramDecl>(
+            dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
+      }
+
       break;
     }
     if (std::holds_alternative<RejectAction>(action)) {
@@ -109,7 +127,7 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       // eliminate code before error
       size_t new_stack_size = recovery_tree.current->prev_states_count;
       states_stack.resize(new_stack_size + 1);
-      nodes_stack.resize(new_stack_size);
+      nodes_stack.clear();
 
       // eliminate code after error
       auto* eliminated_node = recovery_tree.current;
@@ -127,27 +145,33 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
     }
     if (std::holds_alternative<ShiftAction>(action)) {
       states_stack.push_back(std::get<ShiftAction>(action).next_state);
-      nodes_stack.emplace_back(std::make_unique<TokenNode>(current_token));
+
+      if (!encountered_error) {
+        nodes_stack.emplace_back(std::make_unique<TokenNode>(current_token));
+      }
 
       current_token = lexical_analyzer.get_token();
       recovery_tree.swallow_token(current_token, states_stack.size());
     } else {
       // action is reduce
       auto reduce = std::get<ReduceAction>(action);
-      auto nodes_span =
-          std::span{nodes_stack.end() - reduce.remove_count, nodes_stack.end()};
 
-      auto source_range = SourceRange::merge(nodes_span.front()->source_range,
-                                             nodes_span.back()->source_range);
+      if (!encountered_error) {
+        auto nodes_span = std::span{nodes_stack.end() - reduce.remove_count,
+                                    nodes_stack.end()};
 
-      std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
-          &build_context, source_range, nodes_span);
+        auto source_range = SourceRange::merge(nodes_span.front()->source_range,
+                                               nodes_span.back()->source_range);
+
+        std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
+            &build_context, source_range, nodes_span);
+
+        nodes_stack.resize(nodes_stack.size() - reduce.remove_count);
+        nodes_stack.push_back(std::move(new_node));
+      }
 
       states_stack.resize(states_stack.size() - reduce.remove_count);
-      nodes_stack.resize(nodes_stack.size() - reduce.remove_count);
-
       states_stack.push_back(goto_[states_stack.back()][reduce.next.get_id()]);
-      nodes_stack.push_back(std::move(new_node));
     }
   }
 
