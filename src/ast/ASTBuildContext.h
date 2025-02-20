@@ -66,7 +66,10 @@ class ASTBuildContext {
   NodePtr program_declaration(SourceRange source_range,
                               std::span<NodePtr> nodes) {
     auto program_node = std::make_unique<ProgramDecl>(source_range);
-    if (nodes.size() == 2) {
+    bool has_imports = nodes.size() == 2;
+    bool has_declarations = nodes.size() >= 1;
+
+    if (has_imports) {
       auto import_list = cast_move<NodesList<ImportDecl>>(std::move(nodes[0]));
       program_node->imports = std::move(import_list->nodes);
 
@@ -78,8 +81,10 @@ class ASTBuildContext {
           std::vector(imports_string_ids.begin(), imports_string_ids.end());
     }
 
-    auto decl_list = cast_move<NodesList<Declaration>>(std::move(nodes.back()));
-    program_node->declarations = std::move(decl_list->nodes);
+    if (has_declarations) {
+      auto decl_list = cast_move<NodesList<Declaration>>(std::move(nodes.back()));
+      program_node->declarations = std::move(decl_list->nodes);
+    }
 
     Scope* root_scope = make_scope();
     set_scope_recursively(*program_node, root_scope);

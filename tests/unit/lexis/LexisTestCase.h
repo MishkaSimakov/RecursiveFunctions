@@ -52,7 +52,7 @@ class LexisTestCase : public ::testing::Test {
                          expected_type.to_string(), token.type.to_string());
 
       ASSERT_EQ(token.source_range.begin.pos_id, prev_offset);
-      ASSERT_EQ(token.source_range.end.pos_id, offset - 1);
+      ASSERT_EQ(token.source_range.end.pos_id, offset);
     }
 
     // the last one should be END

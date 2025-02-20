@@ -117,7 +117,7 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       }
 
       source_manager.add_annotation(
-          current_token.source_range.begin,
+          current_token.source_range,
           fmt::format("Unexpected token {}. Expected: {}",
                       current_token.type.to_string(),
                       fmt::join(expected_tokens, ", ")));
@@ -160,8 +160,12 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         auto nodes_span = std::span{nodes_stack.end() - reduce.remove_count,
                                     nodes_stack.end()};
 
-        auto source_range = SourceRange::merge(nodes_span.front()->source_range,
-                                               nodes_span.back()->source_range);
+        // TODO: make empty range point at correct location
+        SourceRange source_range =
+            nodes_span.empty()
+                ? SourceRange()
+                : SourceRange::merge(nodes_span.front()->source_range,
+                                     nodes_span.back()->source_range);
 
         std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
             &build_context, source_range, nodes_span);

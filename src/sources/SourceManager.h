@@ -6,11 +6,11 @@
 #include "SourceLocation.h"
 
 struct SourceAnnotation {
-  SourceLocation position;
+  SourceRange range;
   std::string value;
 
-  SourceAnnotation(SourceLocation position, std::string_view value)
-      : position(position), value(value) {}
+  SourceAnnotation(SourceRange range, std::string_view value)
+      : range(range), value(value) {}
 };
 
 struct LoadedFileInfo {
@@ -42,7 +42,7 @@ class SourceManager {
   };
   LineInfo get_line_info(SourceLocation location) const;
 
-  void add_annotation(SourceLocation location, std::string_view text);
+  void add_annotation(SourceRange range, std::string_view text);
   void print_annotations(std::ostream& os);
 
   ~SourceManager();

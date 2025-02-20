@@ -1,6 +1,7 @@
 #include "SourceManager.h"
 
 #include <fcntl.h>
+#include <fmt/color.h>
 #include <fmt/format.h>
 #include <sys/errno.h>
 #include <sys/mman.h>
@@ -26,7 +27,8 @@ SourceLocation SourceManager::load(const std::filesystem::path& path) {
   if (file_size == 0) {
     // mmap doesn't accept file_size = 0 so we should treat this case separately
     // MAP_ANONYMOUS is guaranteed to fill memory with zeros
-    mapped_ptr = mmap(nullptr, 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    mapped_ptr =
+        mmap(nullptr, 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   } else {
     mapped_ptr = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
   }
@@ -71,17 +73,18 @@ std::string_view SourceManager::get_file_view(SourceLocation location) const {
 
 std::string_view SourceManager::get_file_view(SourceRange source_range) const {
   auto [begin, end] = source_range;
+
   if (begin.pos_id > end.pos_id || begin.file_id != end.file_id ||
       begin.file_id >= loaded_.size()) {
-    return {};
+    throw std::runtime_error("Incorrect source range.");
   }
 
   auto [file_begin, size, _] = loaded_[begin.file_id];
   if (size <= end.pos_id) {
-    return {};
+    throw std::runtime_error("Incorrect source range.");
   }
 
-  return {file_begin + begin.pos_id, file_begin + end.pos_id + 1};
+  return {file_begin + begin.pos_id, file_begin + end.pos_id};
 }
 
 SourceManager::LineInfo SourceManager::get_line_info(
@@ -107,22 +110,34 @@ SourceManager::LineInfo SourceManager::get_line_info(
   return {view, line_index, offset};
 }
 
-void SourceManager::add_annotation(SourceLocation location,
+void SourceManager::add_annotation(SourceRange range,
                                    std::string_view text) {
-  annotations_.emplace_back(location, text);
+  annotations_.emplace_back(range, text);
 }
 
 void SourceManager::print_annotations(std::ostream& os) {
   for (const SourceAnnotation& annotation : annotations_) {
-    auto [file_id, position] = annotation.position;
+    auto [file_id, position] = annotation.range.begin;
     auto [begin, size, path] = loaded_[file_id];
-    auto [line_view, line_index, line_offset] =
-        get_line_info(annotation.position);
+    auto [line_view, start_index, start_offset] =
+        get_line_info(annotation.range.begin);
 
-    os << fmt::format("In file {:?} on line {}:\n", path.c_str(), line_index);
-    os << "\t" << line_view << "\n";
-    os << "\t" << std::string(line_offset, ' ') << "`-" << annotation.value
-       << "\n";
+    auto [_, end_index, end_offset] = get_line_info(annotation.range.end);
+
+    if (start_index != end_index) {
+      // TODO: implement multi-line annotations
+      throw std::runtime_error("Annotations must be on one line.");
+    }
+
+    // split line view to emphasize wrong part with red
+    auto before_error_view = line_view.substr(0, start_offset);
+    auto error_view = line_view.substr(start_offset, end_offset - start_offset);
+    std::string emphasized_error = fmt::format(fg(fmt::color::orange), fmt::runtime(error_view));
+    auto after_error_view = line_view.substr(end_offset);
+
+    os << fmt::format("In file {:?} on line {}:\n", path.c_str(), start_index);
+    os << before_error_view << emphasized_error << after_error_view << "\n";
+    os << std::string(start_offset, ' ') << "`-" << annotation.value << std::endl;
   }
 }
 

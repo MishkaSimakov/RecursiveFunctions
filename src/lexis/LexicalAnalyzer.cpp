@@ -42,10 +42,7 @@ Token LexicalAnalyzer::get_token_internal() {
       FinishJump finish_jump = std::get<FinishJump>(jump);
       seek(-static_cast<off_t>(finish_jump.forward_shift));
 
-      SourceLocation end = location_;
-      --end.pos_id;
-
-      return Token{TokenType{finish_jump.token}, {begin, end}};
+      return Token{TokenType{finish_jump.token}, {begin, location_}};
     }
 
     return Token{TokenType::ERROR, {begin, location_}};

@@ -12,8 +12,7 @@ class TypesASTVisitor
 
   TypesStorage& types();
 
-  [[noreturn]] void scold_user(SourceLocation location,
-                               const std::string& message);
+  [[noreturn]] void scold_user(SourceRange range, const std::string& message);
 
   std::pair<Type*, Scope*> name_lookup(Scope* base_scope, StringId name) const;
   std::pair<Type*, Scope*> recursive_global_name_lookup(

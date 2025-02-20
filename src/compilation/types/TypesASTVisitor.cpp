@@ -5,9 +5,9 @@
 namespace Front {
 TypesStorage& TypesASTVisitor::types() { return context_.types_storage; }
 
-void TypesASTVisitor::scold_user(SourceLocation location,
+void TypesASTVisitor::scold_user(SourceRange range,
                                  const std::string& message) {
-  context_.source_manager.add_annotation(location, message);
+  context_.source_manager.add_annotation(range, message);
   context_.source_manager.print_annotations(std::cout);
   throw std::runtime_error(message);
 }
@@ -55,14 +55,14 @@ std::pair<Type*, Scope*> TypesASTVisitor::recursive_global_name_lookup(
 void TypesASTVisitor::check_call_arguments(FunctionType* type,
                                            const CallExpr& call) {
   if (type->arguments.size() != call.arguments.size()) {
-    scold_user(call.source_begin(),
+    scold_user(call.source_range,
                fmt::format("Arguments count mismatch: {} != {}",
                            type->arguments.size(), call.arguments.size()));
   }
 
   for (size_t i = 0; i < type->arguments.size(); ++i) {
     if (type->arguments[i] != call.arguments[i]->type) {
-      scold_user(call.arguments[i]->source_begin(),
+      scold_user(call.arguments[i]->source_range,
                  fmt::format("Argument type mismatch: {} != {}",
                              type->arguments[i]->to_string(),
                              call.arguments[i]->type->to_string()));
@@ -92,7 +92,7 @@ bool TypesASTVisitor::visit_variable_declaration(VariableDecl& node) {
 
   if (node.initializer != nullptr && node.initializer->type != type) {
     scold_user(
-        node.initializer->source_begin(),
+        node.initializer->source_range,
         fmt::format("Incompatible initializer and variable types: {} != {}",
                     type->to_string(), node.initializer->type->to_string()));
   }
@@ -121,7 +121,7 @@ bool TypesASTVisitor::visit_id_expression(IdExpr& node) {
   auto [id_type, id_scope] = name_lookup(node.scope, node.parts.front());
 
   if (id_type == nullptr) {
-    scold_user(node.source_begin(), "Unknown identifier");
+    scold_user(node.source_range, "Unknown identifier");
   }
 
   node.type = id_type;
@@ -133,12 +133,12 @@ bool TypesASTVisitor::visit_id_expression(IdExpr& node) {
 bool TypesASTVisitor::visit_call_expression(CallExpr& node) {
   auto [type, scope] = name_lookup(node.scope, node.name->parts.front());
   if (type == nullptr) {
-    scold_user(node.source_begin(), "Unknown identifier");
+    scold_user(node.source_range, "Unknown identifier");
   }
 
   FunctionType* func_type = dynamic_cast<FunctionType*>(type);
   if (func_type == nullptr) {
-    scold_user(node.source_begin(), "Identifier must be of function type");
+    scold_user(node.source_range, "Identifier must be of function type");
   }
 
   // throws in case of error
@@ -153,14 +153,14 @@ bool TypesASTVisitor::visit_binary_operator(BinaryOperator& node) {
   // for now only "int op int" is allowed
   if (*node.left->type != IntType()) {
     scold_user(
-        node.left->source_begin(),
+        node.left->source_range,
         fmt::format(
             "Incompatible type for binary operator. Must be int, got: {}",
             node.left->type->to_string()));
   }
   if (*node.right->type != IntType()) {
     scold_user(
-        node.right->source_begin(),
+        node.right->source_range,
         fmt::format(
             "Incompatible type for binary operator. Must be int, got: {}",
             node.right->type->to_string()));

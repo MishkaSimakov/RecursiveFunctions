@@ -6,7 +6,7 @@
 
 using enum Lexis::TokenType::InternalEnum;
 
-TEST_F(LexisTestCase, empty_string_test) { test_sequence({{"", END}}); }
+TEST_F(LexisTestCase, empty_string_test) { test_sequence({{"", WHITESPACE}}); }
 
 TEST_F(LexisTestCase, simple_tests) {
   test_sequence({{"hello", IDENTIFIER},
