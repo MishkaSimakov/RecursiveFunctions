@@ -18,6 +18,11 @@ add_executable(
         Tests
         unit/lexis/LexisTests.cpp
         unit/lexis/LexisTestCase.h
+
+        unit/syntax/types/TypesTests.cpp
+
+        unit/syntax/SyntaxTestCase.h
+        unit/syntax/SyntaxTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)

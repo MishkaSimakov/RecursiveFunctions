@@ -1,18 +1,9 @@
-export math: namespace = {
-    sqr: () -> i64 = {
-        return;
-        error!!!;
-    }
-
-    is_prime: (value: i64) -> bool = {
-        current_divider: i64 = 2;
-        while (sqr(current_divider) <= value) {
-            if (value % current_divider == 0) {
-                call();
-                return false;
-            }
-        }
-
-        return true;
-    }
+math: namespace = {
+test: () -> void = {
+    error!;
+}
+}
+test: (test, error) -> void = {
+    anothererror!!!
+}
 }

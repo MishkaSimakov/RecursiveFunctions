@@ -38,6 +38,9 @@ class PointersStorage {
     return allocated;
   }
 
+  auto cbegin() const { return storage_.cbegin(); }
+  auto cend() const { return storage_.cend(); }
+
   ~PointersStorage() {
     for (auto value : storage_) {
       delete value;

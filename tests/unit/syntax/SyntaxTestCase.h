@@ -1,55 +1,35 @@
 #pragma once
 
+#include <fmt/format.h>
 #include <gtest/gtest.h>
+#include <lexis/LexicalAnalyzer.h>
+#include <syntax/lr/LRParser.h>
+#include <utils/Constants.h>
 
-#include <filesystem>
-#include <string>
+#include "compilation/GlobalContext.h"
+#include "sources/SourceManager.h"
 
-#include "RecursiveFunctions.h"
+#define ASSERT_STRING_EQ(string_id, expected) \
+  ASSERT_EQ(context_.get_string(string_id), expected)
 
-using Compilation::CompileTreeBuilder, Compilation::CompileNode,
-    Preprocessing::Preprocessor, Preprocessing::TextSource,
-    RecursiveFunctionsSyntax::RuleIdentifiers;
-using std::string;
-
-#define SNTC_IS_SYNTAX_NODE(value)                            \
-  static_assert(std::is_same_v<std::decay_t<decltype(value)>, \
-                               std::unique_ptr<SyntaxNode>>);
-
-#define ASSERT_TREE_EQ(lhs, rhs) \
-  SNTC_IS_SYNTAX_NODE(lhs) SNTC_IS_SYNTAX_NODE(rhs) ASSERT_TRUE(*lhs == *rhs)
-
-#define ASSERT_TREE_NE(lhs, rhs) \
-  SNTC_IS_SYNTAX_NODE(lhs) SNTC_IS_SYNTAX_NODE(rhs) ASSERT_TRUE(*lhs != *rhs)
+#define ASSERT_TYPE_NODE_EQ(ast_node, expected) \
+  ASSERT_EQ(ast_node->value->get_kind(), expected)
 
 class SyntaxTestCase : public ::testing::Test {
  protected:
-  constexpr static auto kSuccessor = "successor";
-  constexpr static auto kArgmin = "argmin";
+  Front::GlobalContext context_;
 
-  SyntaxTestCase() { Logger::disable_category(Logger::ALL); }
+  const Front::ModuleContext& parse(std::string_view program) {
+    Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
+    auto source_view = context_.source_manager.load_text(program);
+    lexical_analyzer.set_source_view(source_view);
 
-  template <typename... Args>
-    requires(std::is_constructible_v<string, Args> && ...)
-  static std::unique_ptr<SyntaxNode> get_tree(Args... program) {
-    auto preprocessor = Preprocessor();
-    preprocessor.add_source<TextSource>("main",
-                                        vector<string>{std::move(program)...});
-    string program_text = preprocessor.process();
+    auto& module_context =
+        context_.add_module(std::to_string(context_.modules.size()));
 
-    auto tokens = LexicalAnalyzer::get_tokens(program_text);
+    Syntax::LRParser parser(Constants::grammar_filepath, context_);
+    parser.parse(lexical_analyzer, module_context.id);
 
-    return SyntaxTreeBuilder::build(tokens,
-                                    RecursiveFunctionsSyntax::GetSyntax(),
-                                    RuleIdentifiers::PROGRAM);
-  }
-
-  template <typename... Args>
-    requires(std::is_same_v<Args, std::unique_ptr<SyntaxNode>> && ...)
-  static auto make_tree(SyntaxNodeType type, string value, Args&&... children) {
-    auto node = std::make_unique<SyntaxNode>(type, std::move(value));
-    (node->children.emplace_back(std::move(children)), ...);
-
-    return node;
+    return module_context;
   }
 };

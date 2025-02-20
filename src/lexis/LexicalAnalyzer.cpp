@@ -72,6 +72,13 @@ Token LexicalAnalyzer::peek_token() const {
     SourceLocation location = location_;
     do {
       future_token_ = get_token_internal(location);
+
+      // when error is encountered we remove only one symbol
+      if (future_token_->type == TokenType::ERROR) {
+        future_token_->source_range.end = future_token_->source_range.begin;
+        ++future_token_->source_range.end.pos_id;
+      }
+
       location = future_token_->source_range.end;
     } while (future_token_->type == TokenType::WHITESPACE ||
              future_token_->type == TokenType::COMMENT);

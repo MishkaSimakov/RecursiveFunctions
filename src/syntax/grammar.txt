@@ -68,6 +68,7 @@ type-name:
     type-name STAR [pointer_type]
     KW_I64 [construct_type<IntType>]
     KW_BOOL [construct_type<BoolType>]
+    KW_VOID [construct_type<VoidType>]
 
 // statements
 compound-statement:
