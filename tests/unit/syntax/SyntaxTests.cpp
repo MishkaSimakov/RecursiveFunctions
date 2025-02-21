@@ -4,9 +4,6 @@
 
 #include "SyntaxTestCase.h"
 
-using namespace Front;
-using TypeKind = Front::Type::Kind;
-
 TEST_F(SyntaxTestCase, empty_program_test) {
   auto& context = parse("");
 
@@ -64,4 +61,34 @@ TEST_F(SyntaxTestCase, function_with_parameters) {
   auto& body = dynamic_cast<CompoundStmt&>(*function.body);
 
   ASSERT_TRUE(body.statements.empty());
+}
+
+TEST_F(SyntaxTestCase, function_call_test) {
+  {
+    auto& statements = parse_function_body("function();");
+
+    ASSERT_EQ(statements.size(), 1);
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& call_expr = dynamic_cast<CallExpr&>(*expr_stmt.value);
+
+    ASSERT_ID_EQ(call_expr.name, "function");
+    ASSERT_TRUE(call_expr.arguments.empty());
+  }
+
+  {
+    auto& statements = parse_function_body("math::sqrt(1234);");
+
+    ASSERT_EQ(statements.size(), 1);
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& call_expr = dynamic_cast<CallExpr&>(*expr_stmt.value);
+
+    ASSERT_ID_EQ(call_expr.name, "math", "sqrt");
+    ASSERT_EQ(call_expr.arguments.size(), 1);
+
+    auto& argument =
+        dynamic_cast<IntegerLiteral&>(*call_expr.arguments.front());
+    ASSERT_EQ(argument.value, 1234);
+  }
 }

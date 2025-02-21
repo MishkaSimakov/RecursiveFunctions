@@ -58,6 +58,7 @@ LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path)
 
 void LexicalAnalyzer::set_source_view(SourceView view) {
   source_view_ = view;
+  location_ = source_view_.begin_location();
 }
 
 Token LexicalAnalyzer::get_token() {

@@ -80,7 +80,7 @@ SourceView SourceManager::get_file_view(SourceRange source_range) const {
   }
 
   auto [file_begin, size, _] = loaded_[begin.file_id];
-  if (size <= end.pos_id) {
+  if (size < end.pos_id) {
     throw std::runtime_error("Incorrect source range.");
   }
 
