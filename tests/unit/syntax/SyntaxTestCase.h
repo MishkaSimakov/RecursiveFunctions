@@ -27,15 +27,20 @@ class SyntaxTestCase : public ::testing::Test {
 
   template <typename... Args>
   bool is_identifier_equal(const std::unique_ptr<IdExpr>& identifier,
-                           Args&&... parts) {
+                           const Args&... parts) {
+    return is_identifier_equal(*identifier);
+  }
+
+  template <typename... Args>
+  bool is_identifier_equal(const IdExpr& identifier, const Args&... parts) {
     std::vector<std::string_view> expected_parts{parts...};
 
-    if (expected_parts.size() != identifier->parts.size()) {
+    if (expected_parts.size() != identifier.parts.size()) {
       return false;
     }
 
     for (size_t i = 0; i < expected_parts.size(); ++i) {
-      if (context_.get_string(identifier->parts[i]) != expected_parts[i]) {
+      if (context_.get_string(identifier.parts[i]) != expected_parts[i]) {
         return false;
       }
     }
@@ -69,4 +74,19 @@ class SyntaxTestCase : public ::testing::Test {
         dynamic_cast<FunctionDecl&>(*context.ast_root->declarations.front());
     return function.body->statements;
   }
+  //
+  // template <typename... Args>
+  //   requires(std::same_as<Args, BinaryOperator::OpType> && ...)
+  // bool check_operators_order(BinaryOperator& bin_op, Args... operators) {
+  //   std::vector<BinaryOperator::OpType> order{operators...};
+  //
+  //   BinaryOperator* current = &bin_op;
+  //   for (BinaryOperator::OpType op: order) {
+  //     if (current->op_type != op) {
+  //       return false;
+  //     }
+  //
+  //     current = current->l
+  //   }
+  // }
 };

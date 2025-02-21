@@ -92,3 +92,21 @@ TEST_F(SyntaxTestCase, function_call_test) {
     ASSERT_EQ(argument.value, 1234);
   }
 }
+
+TEST_F(SyntaxTestCase, expression_test) {
+  {
+    auto& statements = parse_function_body("a + b;");
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& binary_op = dynamic_cast<BinaryOperator&>(*expr_stmt.value);
+
+    ASSERT_EQ(binary_op.op_type, BinaryOperator::OpType::PLUS);
+
+    auto& left = dynamic_cast<IdExpr&>(*binary_op.left);
+    auto& right = dynamic_cast<IdExpr&>(*binary_op.right);
+
+    ASSERT_ID_EQ(left, "a");
+    ASSERT_ID_EQ(right, "b");
+  }
+}
+
