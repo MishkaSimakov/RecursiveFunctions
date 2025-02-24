@@ -70,9 +70,7 @@ struct SymbolNode final : RegexNode {
   std::bitset<Charset::kCharactersCount> match;
 
   SymbolNode(std::bitset<Charset::kCharactersCount> match) : match(match) {}
-  SymbolNode(size_t symbol) {
-    match[symbol] = true;
-  }
+  SymbolNode(size_t symbol) { match[symbol] = true; }
 
   std::unique_ptr<RegexNode> clone() const override {
     return std::make_unique<SymbolNode>(match);
@@ -88,7 +86,7 @@ struct SymbolNode final : RegexNode {
   }
 };
 
-// match left . right
+// match left right
 struct ConcatenationNode final : RegexNode {
   std::unique_ptr<RegexNode> left;
   std::unique_ptr<RegexNode> right;
@@ -111,7 +109,7 @@ struct ConcatenationNode final : RegexNode {
   }
 };
 
-// match left + right
+// match left | right
 struct OrNode final : RegexNode {
   OrNode(std::unique_ptr<RegexNode> left, std::unique_ptr<RegexNode> right)
       : left(std::move(left)), right(std::move(right)) {}

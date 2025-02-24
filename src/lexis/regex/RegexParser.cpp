@@ -6,6 +6,23 @@
 #include <set>
 #include <vector>
 
+bool RegexParser::is_operator(char symbol) {
+  switch (symbol) {
+    case '+':
+    case '*':
+    case '|':
+    case '[':
+    case ']':
+    case '(':
+    case ')':
+    case '-':
+    case '^':
+      return true;
+    default:
+      return false;
+  }
+}
+
 std::string_view::iterator RegexParser::get_matching_paren(
     std::string_view regex) {
   int balance = 0;
@@ -31,50 +48,51 @@ std::string_view::iterator RegexParser::get_closing_bracket(
   return std::find(regex.begin(), regex.end(), ']');
 }
 
-std::unique_ptr<RegexNode> RegexParser::parse_symbols_range(
+std::unique_ptr<RegexNode> RegexParser::parse_character_class(
     std::string_view regex) {
-  std::vector<std::pair<size_t, size_t>> additions;
-  std::set<size_t> exclusions;
+  std::vector<std::pair<size_t, size_t>> ranges;
 
-  for (size_t i = 0; i < regex.size();) {
-    if (regex[i] == '^') {
-      if (i + 1 >= regex.size()) {
-        throw std::runtime_error(
-            "In symbols range: symbol must be presented after exclusion sign "
-            "(^).");
-      }
-
-      exclusions.insert(regex[i + 1]);
-      i += 2;
-      continue;
-    }
-
-    if (i + 1 < regex.size() && regex[i + 1] == '-') {
-      if (i + 2 >= regex.size()) {
-        throw std::runtime_error("In symbols range: unclosed range.");
-      }
-
-      additions.emplace_back(regex[i], regex[i + 2]);
-
-      i += 3;
-    } else {
-      additions.emplace_back(regex[i], regex[i]);
-      ++i;
-    }
+  if (regex.empty()) {
+    throw std::runtime_error("Character class must be non-empty.");
   }
 
-  if (additions.empty() && !exclusions.empty()) {
-    additions.emplace_back(0, Charset::kCharactersCount - 1);
+  bool negated = false;
+  if (regex.front() == '^') {
+    negated = true;
+    regex.remove_prefix(1);
+  }
+
+  while (!regex.empty()) {
+    auto [begin, offset] = read_symbol(regex);
+    regex.remove_prefix(offset);
+
+    char end = begin;
+
+    if (!regex.empty() && regex.front() == '-') {
+      if (regex.size() < 2) {
+        throw std::runtime_error(
+            "Plain symbol was expected after hyphen but nothing was provided.");
+      }
+
+      // remove hyphen
+      regex.remove_prefix(1);
+
+      std::tie(end, offset) = read_symbol(regex);
+      regex.remove_prefix(offset);
+    }
+
+    ranges.emplace_back(begin, end);
   }
 
   std::bitset<Charset::kCharactersCount> result;
-  for (auto [from, to] : additions) {
-    for (size_t i = from; i <= to; ++i) {
-      result[i] = true;
-    }
+  if (negated) {
+    result.set();
   }
-  for (size_t symbol : exclusions) {
-    result[symbol] = false;
+
+  for (auto [from, to] : ranges) {
+    for (size_t i = from; i <= to; ++i) {
+      result[i].flip();
+    }
   }
 
   return std::make_unique<SymbolNode>(result);
@@ -82,7 +100,7 @@ std::unique_ptr<RegexNode> RegexParser::parse_symbols_range(
 
 std::unique_ptr<RegexNode> RegexParser::parse_recursively(
     std::string_view regex) {
-  // search for top-level +
+  // search for top-level |
   for (auto itr = regex.begin(); itr != regex.end(); ++itr) {
     // skip escaped characters
     if (*itr == '\\') {
@@ -138,16 +156,12 @@ std::unique_ptr<RegexNode> RegexParser::parse_recursively(
     regex.remove_prefix(end_itr - regex.begin());
   } else if (regex.front() == '[') {
     auto symbols_range_end = get_closing_bracket(regex);
-    left = parse_symbols_range({regex.begin() + 1, symbols_range_end});
+    left = parse_character_class({regex.begin() + 1, symbols_range_end});
     regex.remove_prefix(symbols_range_end - regex.begin() + 1);
-  } else if (regex.front() == '\\') {
-    // escaped characters are treated like plain symbols
-    regex.remove_prefix(1);
-    left = std::make_unique<SymbolNode>(regex.front());
-    regex.remove_prefix(1);
   } else {
-    left = std::make_unique<SymbolNode>(regex.front());
-    regex.remove_prefix(1);
+    auto [symbol, offset] = read_symbol(regex);
+    left = std::make_unique<SymbolNode>(symbol);
+    regex.remove_prefix(offset);
   }
 
   if (regex.empty()) {
@@ -156,6 +170,29 @@ std::unique_ptr<RegexNode> RegexParser::parse_recursively(
 
   auto right = parse_recursively(regex);
   return std::make_unique<ConcatenationNode>(std::move(left), std::move(right));
+}
+
+std::pair<char, size_t> RegexParser::read_symbol(std::string_view regex) {
+  if (regex.empty()) {
+    throw std::runtime_error(
+        "Plain symbol was expected but nothing was provided.");
+  }
+
+  if (is_operator(regex.front())) {
+    throw std::runtime_error(
+        "Operators are not allowed where plain symbol is expected.");
+  }
+
+  if (regex.front() != '\\') {
+    return {regex.front(), 1};
+  }
+
+  if (regex.size() < 2) {
+    throw std::runtime_error(
+        "Symbol was expected after escape character but nothing was provided.");
+  }
+
+  return {regex[1], 2};
 }
 
 std::unique_ptr<RegexNode> RegexParser::parse(std::string_view regex) {

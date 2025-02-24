@@ -16,10 +16,11 @@ namespace Syntax {
 class RecoveryTree {
  public:
   struct RecoveryNode {
-    RecoveryNode* parent;
-    std::vector<std::unique_ptr<RecoveryNode>> children;
     SourceRange source_range;
     size_t prev_states_count;
+
+    RecoveryNode(SourceRange source_range, size_t prev_states_count)
+        : source_range(source_range), prev_states_count(prev_states_count) {}
   };
 
  private:
@@ -38,22 +39,18 @@ class RecoveryTree {
   // 2. remove tokens after current token (read some tokens from lexical
   // analyzer)
 
-  std::unique_ptr<RecoveryNode> root_;
-  RecoveryNode* current_;
-  SourceManager& source_manager_;
+  std::vector<RecoveryNode> nodes_;
+  std::optional<RecoveryNode> defered_;
 
-  RecoveryNode* defered_{nullptr};
+  SourceManager& source_manager_;
 
  public:
   RecoveryTree(SourceLocation begin, SourceManager& source_manager)
       : source_manager_(source_manager) {
-    root_ = std::make_unique<RecoveryNode>();
-    root_->source_range.begin = begin;
-
-    current_ = root_.get();
+    nodes_.emplace_back(SourceRange{begin, begin}, 0);
   }
 
-  const RecoveryNode& get_current_node() const { return *current_; }
+  const RecoveryNode& get_current_node() const { return nodes_.back(); }
 
   // TODO: this method must be outside of parser
   // returns pointer to node from which just exited
@@ -68,37 +65,30 @@ class RecoveryTree {
     //   return;
     // }
 
-    if (defered_ != nullptr) {
-      current_ = defered_;
-      defered_ = nullptr;
+    if (defered_.has_value()) {
+      nodes_.push_back(defered_.value());
+      defered_.reset();
     }
 
     if (token.type == Lexis::TokenType::OPEN_BRACE) {
-      auto& new_node =
-          current_->children.emplace_back(std::make_unique<RecoveryNode>());
-      new_node->parent = current_;
-      new_node->source_range = token.source_range;
-      new_node->prev_states_count = states_count;
-
-      defered_ = new_node.get();
+      defered_ = RecoveryNode{token.source_range, states_count};
       return;
     }
 
     if (token.type == Lexis::TokenType::CLOSE_BRACE) {
       // it is expected that now we can move to parent if there are no syntax
       // errors
-      current_->source_range.end = token.source_range.end;
-      current_ = current_->parent;
+      nodes_.pop_back();
 
       // TODO: show this better
-      if (current_ == nullptr) {
+      if (nodes_.empty()) {
         report_unmatched_paren(token.source_range);
       }
     }
   }
 
   void prune_subtree(Lexis::LexicalAnalyzer& lexical_analyzer) {
-    RecoveryNode* prune_point = current_;
+    size_t prune_point = nodes_.size() - 1;
 
     // read tokens until we reach prune_point parent
     while (true) {
@@ -113,7 +103,7 @@ class RecoveryTree {
       // skipped
       swallow_token(token, 0);
 
-      if (current_ == prune_point->parent) {
+      if (nodes_.size() == prune_point) {
         return;
       }
 
