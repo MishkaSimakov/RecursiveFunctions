@@ -61,30 +61,24 @@ void LexicalAnalyzer::set_source_view(SourceView view) {
   location_ = source_view_.begin_location();
 }
 
-Token LexicalAnalyzer::get_token() {
-  Token token = peek_token();
-  location_ = token.source_range.end;
-  future_token_.reset();
-  return token;
+Token LexicalAnalyzer::next_token() {
+  do {
+    current_token_ = get_token_internal(location_);
+
+    // when error is encountered we remove only one symbol
+    if (current_token_->type == TokenType::ERROR) {
+      current_token_->source_range.end = current_token_->source_range.begin;
+      ++current_token_->source_range.end.pos_id;
+    }
+
+    location_ = current_token_->source_range.end;
+  } while (current_token_->type == TokenType::WHITESPACE ||
+           current_token_->type == TokenType::COMMENT);
+
+  return current_token_.value();
 }
 
-Token LexicalAnalyzer::peek_token() const {
-  if (!future_token_.has_value()) {
-    SourceLocation location = location_;
-    do {
-      future_token_ = get_token_internal(location);
-
-      // when error is encountered we remove only one symbol
-      if (future_token_->type == TokenType::ERROR) {
-        future_token_->source_range.end = future_token_->source_range.begin;
-        ++future_token_->source_range.end.pos_id;
-      }
-
-      location = future_token_->source_range.end;
-    } while (future_token_->type == TokenType::WHITESPACE ||
-             future_token_->type == TokenType::COMMENT);
-  }
-
-  return future_token_.value();
+Token LexicalAnalyzer::current_token() const {
+  return current_token_.value();
 }
 }  // namespace Lexis

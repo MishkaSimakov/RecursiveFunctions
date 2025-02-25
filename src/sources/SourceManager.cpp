@@ -62,7 +62,7 @@ SourceView SourceManager::get_file_view(SourceLocation location) const {
   }
 
   auto [begin, size, _] = loaded_[location.file_id];
-  if (size <= location.pos_id) {
+  if (size < location.pos_id) {
     throw std::runtime_error("Incorrect source location.");
   }
 

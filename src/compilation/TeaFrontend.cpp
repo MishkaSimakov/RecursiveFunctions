@@ -38,6 +38,8 @@ void TeaFrontend::build_ast_and_dependencies(
     const std::unordered_map<std::string, std::filesystem::path>& files) {
   auto& source_manager = context_.source_manager;
 
+  bool has_syntax_errors = false;
+
   // setup parser and lexical analyzer, load tables
   Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
   auto parser = Syntax::LRParser(Constants::grammar_filepath, context_);
@@ -49,7 +51,21 @@ void TeaFrontend::build_ast_and_dependencies(
 
     auto& module_context = context_.add_module(name);
 
-    parser.parse(lexical_analyzer, module_context.id);
+    try {
+      parser.parse(lexical_analyzer, module_context.id);
+    } catch (Syntax::ParserException exception) {
+      has_syntax_errors = true;
+
+      for (const auto& [position, error] : exception.get_errors()) {
+        source_manager.add_annotation(position, error);
+      }
+
+      source_manager.print_annotations(std::cout);
+    }
+
+    if (has_syntax_errors) {
+      continue;
+    }
 
     compile_info_.emplace(module_context.id, ModuleCompileInfo{module_context});
 
@@ -63,6 +79,10 @@ void TeaFrontend::build_ast_and_dependencies(
       std::cout << context_.get_string(id) << std::endl;
     }
     std::cout << std::endl;
+  }
+
+  if (has_syntax_errors) {
+    throw std::runtime_error("Syntax errors encountered in files.");
   }
 
   for (ModuleContext& module_context : context_.modules) {

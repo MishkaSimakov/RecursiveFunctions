@@ -13,8 +13,7 @@ int main() {
   generator["digit"] = "[0-9]";
   generator["space"] = "[ \t\r\n\v\f]";
   generator["comment_symbol"] = "[^\n]";
-  generator["s_char"] = "[^\"^\n]";  // everything except quote and new line
-  generator["id_char"] = "[a-zA-Z0-9_]";
+  generator["s_char"] = "[^\"\n]";
 
   // keywords
   // keywords
@@ -44,8 +43,8 @@ int main() {
   generator[TokenType::KW_VOID] = "void";
   // keywords end
 
-  generator[TokenType::IDENTIFIER] = "{letter}({id_char})*";
-  generator[TokenType::NUMBER] = "({digit}+)|(-{digit}+)";
+  generator[TokenType::IDENTIFIER] = "[a-zA-Z_]([a-zA-Z0-9_])*";
+  generator[TokenType::NUMBER] = "{digit}+";
 
   // TODO: string can contain any character + escape sequence
   generator[TokenType::STRING] = "\"({s_char})*\"";
@@ -53,7 +52,7 @@ int main() {
   // operators
   generator[TokenType::EQUAL] = "=";
   generator[TokenType::PLUS] = "\\+";
-  generator[TokenType::MINUS] = "-";
+  generator[TokenType::MINUS] = "\\-";
   generator[TokenType::STAR] = "\\*";
   generator[TokenType::PERCENT] = "%";
   generator[TokenType::AMPERSAND] = "&";
@@ -64,7 +63,7 @@ int main() {
   generator[TokenType::EQUALEQUAL] = "==";
   generator[TokenType::NOTEQUAL] = "!=";
 
-  generator[TokenType::ARROW] = "->";
+  generator[TokenType::ARROW] = "\\->";
 
   generator[TokenType::COLONCOLON] = "::";
 

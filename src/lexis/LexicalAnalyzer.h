@@ -15,9 +15,7 @@ class LexicalAnalyzer {
 
   SourceLocation location_{};
   SourceView source_view_;
-
-  // for peek_token function
-  mutable std::optional<Token> future_token_;
+  std::optional<Token> current_token_;
 
   Token get_token_internal(SourceLocation location) const;
 
@@ -26,7 +24,7 @@ class LexicalAnalyzer {
 
   void set_source_view(SourceView view);
 
-  Token get_token();
-  Token peek_token() const;
+  Token next_token();
+  Token current_token() const;
 };
 }  // namespace Lexis

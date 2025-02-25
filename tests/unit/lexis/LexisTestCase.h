@@ -23,7 +23,7 @@ class LexisTestCase : public ::testing::Test {
     auto analyzer = setup_analyzer(program);
 
     for (auto expected_type : tokens) {
-      auto current_token = analyzer.get_token();
+      auto current_token = analyzer.next_token();
       ASSERT_EQ(current_token.type, expected_type);
     }
   }
@@ -46,9 +46,9 @@ class LexisTestCase : public ::testing::Test {
         continue;
       }
 
-      // test peek_token + get_token
+      // test current_token + get_token
       for (size_t i = 0; i < 5; ++i) {
-        auto token = i < 4 ? analyzer.peek_token() : analyzer.get_token();
+        auto token = i == 0 ? analyzer.next_token() : analyzer.current_token();
         ASSERT_EQ(token.type, expected_type)
             << fmt::format("Token types don't match. Expected {}, got {}",
                            expected_type.to_string(), token.type.to_string());
@@ -59,7 +59,7 @@ class LexisTestCase : public ::testing::Test {
     }
 
     // the last one should be END
-    auto end_token = analyzer.get_token();
+    auto end_token = analyzer.next_token();
     ASSERT_EQ(end_token.type, Lexis::TokenType::END)
         << "Expected END token in the end. Got: " << end_token.type.to_string();
   }

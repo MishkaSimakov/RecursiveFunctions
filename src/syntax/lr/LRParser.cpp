@@ -6,137 +6,123 @@
 #include <functional>
 #include <span>
 
-#include "errors/Helpers.h"
-
 using enum Front::BinaryOperator::OpType;
 using namespace Front;
 #include "syntax/BuildersRegistry.h"
 
 namespace Syntax {
+
+// Recovery tree helps to recover from syntax errors.
+// When LRParser encounters error some part of program must be removed to
+// continue execution. Part of program before error is removed using
+// `prev_states_count` value. Part after error is removed using `prune_subtree`
+// method.
+// Order: when LRParser process token, RecoveryTree has already processed it.
+// In some cases recovery algorithm can brake. Then parser would not recover
+// from error and just crash.
 class RecoveryTree {
  public:
-  struct RecoveryNode {
-    SourceRange source_range;
-    size_t prev_states_count;
+  enum class NodeType { ROOT, BRACE, SEMICOLON };
 
-    RecoveryNode(SourceRange source_range, size_t prev_states_count)
-        : source_range(source_range), prev_states_count(prev_states_count) {}
+  struct RecoveryNode {
+    size_t prev_states_count;
+    NodeType type;
+
+    RecoveryNode(size_t prev_states_count, NodeType type)
+        : prev_states_count(prev_states_count), type(type) {}
   };
 
  private:
-  [[noreturn]] void report_unmatched_paren(SourceRange range) {
-    source_manager_.add_annotation(range,
-                                   fmt::format("Unmatched parenthesis."));
-    source_manager_.print_annotations(std::cout);
-    throw std::runtime_error("Unmatched parenthesis");
-  }
-
-  // LRParser and RecoveryTreeBuilder must work in parallel
-  // when error occured RecoveryTree must find the deepest node that conteins
-  // that token then the whole subtree should be removed In order to achieve
-  // that I should:
-  // 1. remove tokens before current token (remove some states from state_stack)
-  // 2. remove tokens after current token (read some tokens from lexical
-  // analyzer)
-
   std::vector<RecoveryNode> nodes_;
-  std::optional<RecoveryNode> defered_;
-
-  SourceManager& source_manager_;
+  bool is_broken_ = false;
 
  public:
-  RecoveryTree(SourceLocation begin, SourceManager& source_manager)
-      : source_manager_(source_manager) {
-    nodes_.emplace_back(SourceRange{begin, begin}, 0);
-  }
+  RecoveryTree() { nodes_.emplace_back(1, NodeType::ROOT); }
 
   const RecoveryNode& get_current_node() const { return nodes_.back(); }
 
   // TODO: this method must be outside of parser
-  // returns pointer to node from which just exited
-  // nullptr if didn't exit any node
-  void swallow_token(const Lexis::Token& token, size_t states_count) {
-    // if (token.type == Lexis::TokenType::END) {
-    //   if (current_ != root_.get()) {
-    //     report_unmatched_paren(current_->source_range);
-    //   }
-    //
-    //   current_ = nullptr;
-    //   return;
-    // }
-
-    if (defered_.has_value()) {
-      nodes_.push_back(defered_.value());
-      defered_.reset();
-    }
-
-    if (token.type == Lexis::TokenType::OPEN_BRACE) {
-      defered_ = RecoveryNode{token.source_range, states_count};
+  void swallow_token(Lexis::TokenType token, size_t states_count) {
+    if (is_broken_) {
       return;
     }
 
-    if (token.type == Lexis::TokenType::CLOSE_BRACE) {
-      // it is expected that now we can move to parent if there are no syntax
-      // errors
+    if (token == Lexis::TokenType::OPEN_BRACE) {
+      nodes_.emplace_back(states_count, NodeType::BRACE);
+    } else if (token == Lexis::TokenType::CLOSE_BRACE) {
       nodes_.pop_back();
 
-      // TODO: show this better
       if (nodes_.empty()) {
-        report_unmatched_paren(token.source_range);
+        // parens are not balanced => our recovery algorithm doesn't work :(
+        is_broken_ = true;
+        return;
       }
+    } else if (token == Lexis::TokenType::SEMICOLON) {
+      // defered_ = NodeType::SEMICOLON;
     }
   }
 
+  bool is_broken() const { return is_broken_; }
+
   void prune_subtree(Lexis::LexicalAnalyzer& lexical_analyzer) {
-    size_t prune_point = nodes_.size() - 1;
+    size_t prune_point = nodes_.size();
+    Lexis::TokenType token_type = lexical_analyzer.current_token().type;
 
     // read tokens until we reach prune_point parent
     while (true) {
-      auto token = lexical_analyzer.peek_token();
-
-      if (token.type == Lexis::TokenType::END) {
-        // TODO: maybe throw error?
+      if (token_type == Lexis::TokenType::END) {
         return;
+      }
+
+      if (nodes_.size() == prune_point) {
+        // when we prune subtree with braces we should leave CLOSE_BRACE token:
+        // before: f: () -> void = { error! }
+        // after:  f: () -> void = {        }
+        if (token_type == Lexis::TokenType::CLOSE_BRACE) {
+          return;
+        }
+
+        // but with semicolon we should skip SEMICOLON token too
+        // before: f: () -> void = { error!; call(); }
+        // after:  f: () -> void = {         call(); }
+        if (token_type == Lexis::TokenType::SEMICOLON) {
+          lexical_analyzer.next_token();
+          return;
+        }
       }
 
       // states count here doesn't matter, all nodes, created here, will be
       // skipped
-      swallow_token(token, 0);
-
-      if (nodes_.size() == prune_point) {
-        return;
-      }
+      swallow_token(token_type, 0);
 
       // shift lexical_analyzer to next token
-      lexical_analyzer.get_token();
+      token_type = lexical_analyzer.next_token().type;
     }
   }
 };
 
 void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
                      size_t module_id) const {
-  auto& source_manager = context_.source_manager;
   ASTBuildContext build_context(module_id, context_);
   std::vector<size_t> states_stack;
 
-  bool encountered_error = false;
+  std::vector<std::pair<SourceRange, std::string>> errors;
 
   // TODO: make this memory allocation more efficient
   // maybe implement something like a deque
   std::vector<std::unique_ptr<ASTNode>> nodes_stack;
 
   states_stack.push_back(0);
-  Lexis::Token current_token = lexical_analyzer.get_token();
+  Lexis::Token current_token = lexical_analyzer.next_token();
 
-  RecoveryTree recovery_tree(current_token.source_range.begin, source_manager);
-  recovery_tree.swallow_token(current_token, 1);
+  RecoveryTree recovery_tree;
 
   while (true) {
     Action action =
         actions_[states_stack.back()][static_cast<size_t>(current_token.type)];
 
     if (std::holds_alternative<AcceptAction>(action)) {
-      if (!encountered_error) {
+      if (errors.empty()) {
         context_.modules[module_id].ast_root = std::unique_ptr<ProgramDecl>(
             dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
       }
@@ -144,8 +130,6 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       break;
     }
     if (std::holds_alternative<RejectAction>(action)) {
-      encountered_error = true;
-
       std::vector<std::string_view> expected_tokens;
       for (auto type : Lexis::TokenType::values) {
         size_t type_id = static_cast<size_t>(type);
@@ -156,49 +140,57 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
         }
       }
 
-      source_manager.add_annotation(
-          current_token.source_range,
-          fmt::format("Unexpected token {}. Expected: {}",
-                      current_token.type.to_string(),
-                      fmt::join(expected_tokens, ", ")));
+      errors.emplace_back(current_token.source_range,
+                          fmt::format("Unexpected token {}. Expected: {}",
+                                      current_token.type.to_string(),
+                                      fmt::join(expected_tokens, ", ")));
 
-      // try to recover by eliminating whole RecoveryTree branch
+      // try to recover using RecoveryTree
+      // if it is broken then there is nothing we can do
+      if (recovery_tree.is_broken()) {
+        break;
+      }
 
       // eliminate code before error
       const auto& eliminated_node = recovery_tree.get_current_node();
       size_t new_stack_size = eliminated_node.prev_states_count;
-      states_stack.resize(new_stack_size + 1);
+      states_stack.resize(new_stack_size);
       nodes_stack.clear();
 
       // eliminate code after error
       recovery_tree.prune_subtree(lexical_analyzer);
-      current_token = lexical_analyzer.get_token();
+
+      // RecoveryTree can brake after skipping some tokens.
+      // Therefore we have to check again.
+      if (recovery_tree.is_broken()) {
+        break;
+      }
+
+      current_token = lexical_analyzer.current_token();
 
       continue;
     }
     if (std::holds_alternative<ShiftAction>(action)) {
       states_stack.push_back(std::get<ShiftAction>(action).next_state);
 
-      if (!encountered_error) {
+      if (errors.empty()) {
         nodes_stack.emplace_back(std::make_unique<TokenNode>(current_token));
       }
 
-      current_token = lexical_analyzer.get_token();
-      recovery_tree.swallow_token(current_token, states_stack.size());
+      recovery_tree.swallow_token(current_token.type, states_stack.size());
+      current_token = lexical_analyzer.next_token();
     } else {
       // action is reduce
       auto reduce = std::get<ReduceAction>(action);
 
-      if (!encountered_error) {
+      if (errors.empty()) {
         auto nodes_span = std::span{nodes_stack.end() - reduce.remove_count,
                                     nodes_stack.end()};
 
-        // TODO: make empty range point at correct location
         SourceRange source_range =
             nodes_span.empty()
                 ? SourceRange()
-                : SourceRange::merge(nodes_span.front()->source_range,
-                                     nodes_span.back()->source_range);
+                : SourceRange::empty_at(nodes_span.front()->source_range.begin);
 
         std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
             &build_context, source_range, nodes_span);
@@ -212,9 +204,8 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
     }
   }
 
-  if (encountered_error) {
-    source_manager.print_annotations(std::cout);
-    throw std::runtime_error("Syntax errors.");
+  if (!errors.empty()) {
+    throw ParserException(std::move(errors));
   }
 }
 }  // namespace Syntax

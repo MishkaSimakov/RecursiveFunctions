@@ -25,6 +25,7 @@ add_executable(
 
         unit/syntax/types/TypesTests.cpp
 
+        unit/syntax/RecoveryTests.cpp
         unit/syntax/SyntaxTestCase.h
         unit/syntax/SyntaxTests.cpp
 )

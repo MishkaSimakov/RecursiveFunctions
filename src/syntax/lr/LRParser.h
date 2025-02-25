@@ -13,6 +13,17 @@
 #include "lexis/LexicalAnalyzer.h"
 
 namespace Syntax {
+class ParserException final : public std::runtime_error {
+  std::vector<std::pair<SourceRange, std::string>> errors_;
+
+ public:
+  explicit ParserException(
+      std::vector<std::pair<SourceRange, std::string>> errors)
+      : std::runtime_error("Parser error."), errors_(std::move(errors)) {}
+
+  const auto& get_errors() const { return errors_; }
+};
+
 class LRParser {
   std::vector<std::vector<Action>> actions_;
   std::vector<std::vector<size_t>> goto_;

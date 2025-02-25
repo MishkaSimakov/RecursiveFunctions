@@ -28,7 +28,7 @@ class SyntaxTestCase : public ::testing::Test {
   template <typename... Args>
   bool is_identifier_equal(const std::unique_ptr<IdExpr>& identifier,
                            const Args&... parts) {
-    return is_identifier_equal(*identifier);
+    return is_identifier_equal(*identifier, parts...);
   }
 
   template <typename... Args>

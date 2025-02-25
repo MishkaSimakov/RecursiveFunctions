@@ -47,7 +47,7 @@ TEST_F(SyntaxTestCase, function_with_parameters) {
   ASSERT_STRING_EQ(function.name, "function");
   ASSERT_FALSE(function.is_exported);
   ASSERT_EQ(function.parameters.size(), 2);
-  ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::BOOL);
+  ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::INT);
 
   auto& first_param = function.parameters[0];
   auto& second_param = function.parameters[1];

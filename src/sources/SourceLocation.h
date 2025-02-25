@@ -19,6 +19,10 @@ struct SourceRange {
   SourceRange(SourceLocation begin, SourceLocation end)
       : begin(begin), end(end) {}
 
+  static SourceRange empty_at(SourceLocation location) {
+    return {location, location};
+  }
+
   static SourceRange merge(SourceRange first, SourceRange second) {
     return SourceRange(first.begin, second.end);
   }
