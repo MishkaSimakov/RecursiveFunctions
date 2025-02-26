@@ -147,6 +147,9 @@ class ASTVisitor {
 
     return true;
   }
+  bool traverse_unary_operator(wrap_const<UnaryOperator>& node) {
+    return traverse(*node.value);
+  }
   bool traverse_call_expression(wrap_const<CallExpr>& node) {
     if (!traverse(*node.name)) {
       return false;

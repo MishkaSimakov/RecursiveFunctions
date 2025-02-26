@@ -232,6 +232,14 @@ class ASTBuildContext {
                                             std::move(right));
   }
 
+  template <UnaryOperator::OpType type>
+  NodePtr unary_op(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto value = cast_move<Expression>(std::move(nodes.back()));
+
+    return std::make_unique<UnaryOperator>(source_range, type,
+                                           std::move(value));
+  }
+
   NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes) {
     auto id_expr = cast_move<IdExpr>(std::move(nodes[0]));
     auto arguments_list = cast_move<NodesList<Expression>>(std::move(nodes[1]));
@@ -307,8 +315,9 @@ class ASTBuildContext {
     auto true_branch = cast_move<CompoundStmt>(std::move(nodes[4]));
 
     // TODO: make empty ranges and put them here
-    auto false_branch = has_else ? cast_move<CompoundStmt>(std::move(nodes[6]))
-                                 : make_node<CompoundStmt>(nodes.back()->source_range);
+    auto false_branch =
+        has_else ? cast_move<CompoundStmt>(std::move(nodes[6]))
+                 : make_node<CompoundStmt>(nodes.back()->source_range);
 
     return make_node<IfStmt>(source_range, std::move(condition),
                              std::move(true_branch), std::move(false_branch));

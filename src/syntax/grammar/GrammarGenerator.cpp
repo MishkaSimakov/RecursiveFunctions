@@ -148,8 +148,8 @@ void generate_function_file(const std::filesystem::path& path,
     throw std::runtime_error("Failed to open functions file.");
   }
 
-  os << "const std::function<std::unique_ptr<ASTNode>(ASTBuildContext*, "
-        "SourceRange, std::span<std::unique_ptr<ASTNode>>)> builders[] {\n";
+  os << "std::unique_ptr<ASTNode> (ASTBuildContext::*const "
+        "builders[])(SourceRange, std::span<std::unique_ptr<ASTNode>>) = {\n";
 
   for (const auto& [name, productions] : text_grammar) {
     for (const auto& [_, builder] : productions) {

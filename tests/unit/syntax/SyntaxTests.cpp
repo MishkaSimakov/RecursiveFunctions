@@ -110,3 +110,59 @@ TEST_F(SyntaxTestCase, expression_test) {
   }
 }
 
+TEST_F(SyntaxTestCase, minus_tests) {
+  {
+    auto& statements = parse_function_body("a - b;");
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& binary_op = dynamic_cast<BinaryOperator&>(*expr_stmt.value);
+
+    ASSERT_EQ(binary_op.op_type, BinaryOperator::OpType::MINUS);
+
+    auto& left = dynamic_cast<IdExpr&>(*binary_op.left);
+    auto& right = dynamic_cast<IdExpr&>(*binary_op.right);
+
+    ASSERT_ID_EQ(left, "a");
+    ASSERT_ID_EQ(right, "b");
+  }
+
+  {
+    auto& statements = parse_function_body("-x;");
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& unary_op = dynamic_cast<UnaryOperator&>(*expr_stmt.value);
+
+    ASSERT_EQ(unary_op.op_type, UnaryOperator::OpType::MINUS);
+
+    auto& value = dynamic_cast<IdExpr&>(*unary_op.value);
+    ASSERT_ID_EQ(value, "x");
+  }
+
+  {
+    auto& statements = parse_function_body("--x;");
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& unary_op = dynamic_cast<UnaryOperator&>(*expr_stmt.value);
+
+    ASSERT_EQ(unary_op.op_type, UnaryOperator::OpType::PREDECREMENT);
+
+    auto& value = dynamic_cast<IdExpr&>(*unary_op.value);
+    ASSERT_ID_EQ(value, "x");
+  }
+
+  {
+    auto& statements = parse_function_body("x - --y;");
+
+    auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+    auto& binary_op = dynamic_cast<BinaryOperator&>(*expr_stmt.value);
+
+    ASSERT_EQ(binary_op.op_type, BinaryOperator::OpType::MINUS);
+
+    ASSERT_ID_EQ(dynamic_cast<IdExpr&>(*binary_op.left), "x");
+
+    auto& right = dynamic_cast<UnaryOperator&>(*binary_op.right);
+    ASSERT_EQ(right.op_type, UnaryOperator::OpType::PREDECREMENT);
+
+    ASSERT_ID_EQ(dynamic_cast<IdExpr&>(*right.value), "y");
+  }
+}

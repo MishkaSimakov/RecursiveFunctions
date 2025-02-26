@@ -62,6 +62,8 @@ int main() {
   generator[TokenType::GREATER_EQ] = ">=";
   generator[TokenType::EQUALEQUAL] = "==";
   generator[TokenType::NOTEQUAL] = "!=";
+  generator[TokenType::PLUSPLUS] = "\\+\\+";
+  generator[TokenType::MINUSMINUS] = "\\-\\-";
 
   generator[TokenType::ARROW] = "\\->";
 

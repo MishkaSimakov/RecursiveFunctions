@@ -108,6 +108,11 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     add_node(fmt::format("BinaryOp {} {}", range_string(value), op_string));
     return true;
   }
+  bool visit_unary_operator(const UnaryOperator& value) {
+    auto op_string = value.get_string_representation();
+    add_node(fmt::format("UnaryOp {} {}", range_string(value), op_string));
+    return true;
+  }
   bool visit_variable_declaration(const VariableDecl& value) {
     std::string_view name = global_context_.get_string(value.name);
     add_node(fmt::format("VariableDecl {} {} {}", range_string(value), name,

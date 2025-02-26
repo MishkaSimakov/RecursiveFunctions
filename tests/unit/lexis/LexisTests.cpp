@@ -48,3 +48,11 @@ TEST_F(LexisTestCase, test_identifier_token) {
       "asldkfjwriqu923874213ADFVBADBDA____asdfhkasdhjfh123123_asadfASDF";
   test_sequence({{very_long, IDENTIFIER}});
 }
+
+TEST_F(LexisTestCase, test_lexer_is_greedy) {
+  test_sequence({{"++", PLUSPLUS}, {"+", PLUS}, {"x", IDENTIFIER}});
+  test_sequence({{"++", PLUSPLUS},
+                 {"++", PLUSPLUS},
+                 {"++", PLUSPLUS},
+                 {"x", IDENTIFIER}});
+}

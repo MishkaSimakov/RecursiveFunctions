@@ -31,7 +31,8 @@ struct ASTNode {
     BOOL_LITERAL_EXPR,
     ID_EXPR,
     IMPORT_DECL,
-    BINARY_OPERATOR,
+    BINARY_OPERATOR_EXPR,
+    UNARY_OPERATOR_EXPR,
     CALL_EXPR,
     TYPE_NODE,
     VARIABLE_DECL,
@@ -262,7 +263,40 @@ struct BinaryOperator : Expression {
     }
   }
 
-  Kind get_kind() const override { return Kind::BINARY_OPERATOR; }
+  Kind get_kind() const override { return Kind::BINARY_OPERATOR_EXPR; }
+};
+
+struct UnaryOperator : Expression {
+  enum class OpType {
+    PLUS,
+    MINUS,
+    PREINCREMENT,
+    PREDECREMENT,
+  };
+
+  OpType op_type;
+  std::unique_ptr<Expression> value;
+
+  UnaryOperator(SourceRange source_range, OpType op_type,
+                std::unique_ptr<Expression> value)
+      : Expression(source_range), op_type(op_type), value(std::move(value)) {}
+
+  std::string_view get_string_representation() const {
+    switch (op_type) {
+      case OpType::PLUS:
+        return "+";
+      case OpType::MINUS:
+        return "-";
+      case OpType::PREINCREMENT:
+        return "++";
+      case OpType::PREDECREMENT:
+        return "--";
+      default:
+        unreachable("All operators are presented above.");
+    }
+  }
+
+  Kind get_kind() const override { return Kind::UNARY_OPERATOR_EXPR; }
 };
 
 struct CallExpr : Expression {
@@ -317,7 +351,7 @@ struct ExpressionStmt : Statement {
   std::unique_ptr<Expression> value;
 
   ExpressionStmt(SourceRange source_range,
-                  std::unique_ptr<Expression> expression)
+                 std::unique_ptr<Expression> expression)
       : Statement(source_range), value(std::move(expression)) {}
 
   Kind get_kind() const override { return Kind::EXPRESSION_STMT; }

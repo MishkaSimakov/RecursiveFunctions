@@ -3,7 +3,6 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include <functional>
 #include <span>
 
 using enum Front::BinaryOperator::OpType;
@@ -192,8 +191,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
                 ? SourceRange()
                 : SourceRange::empty_at(nodes_span.front()->source_range.begin);
 
-        std::unique_ptr<ASTNode> new_node = builders[reduce.production_index](
-            &build_context, source_range, nodes_span);
+        std::unique_ptr<ASTNode> new_node =
+            (build_context.*builders[reduce.production_index])(source_range,
+                                                               nodes_span);
 
         nodes_stack.resize(nodes_stack.size() - reduce.remove_count);
         nodes_stack.push_back(std::move(new_node));

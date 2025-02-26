@@ -129,8 +129,15 @@ primary-expression:
     OPEN_PAREN expression CLOSE_PAREN   [pass<1>]
     call-expression                     [pass<0>]
 
+unary-expression:
+    primary-expression          [pass<0>]
+    PLUS unary-expression       [unary_op<UnaryOperator::OpType::PLUS>]
+    MINUS unary-expression      [unary_op<UnaryOperator::OpType::MINUS>]
+    PLUSPLUS unary-expression   [unary_op<UnaryOperator::OpType::PREINCREMENT>]
+    MINUSMINUS unary-expression [unary_op<UnaryOperator::OpType::PREDECREMENT>]
+
 multiply-expression:
-    primary-expression                              [pass<0>]
+    unary-expression                                [pass<0>]
     multiply-expression STAR primary-expression     [binary_op<MULTIPLY>]
     multiply-expression PERCENT primary-expression  [binary_op<REMAINDER>]
 

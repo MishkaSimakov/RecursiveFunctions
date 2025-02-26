@@ -34,6 +34,8 @@ ENUM(TokenType,
      EQUALEQUAL,  // ==
      NOTEQUAL,    // !=
      ARROW,       // ->
+     PLUSPLUS,    // ++
+     MINUSMINUS,  // --
 
      COLONCOLON,  // ::
 
