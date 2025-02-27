@@ -236,6 +236,18 @@ struct BinaryOperator : Expression {
         left(std::move(left)),
         right(std::move(right)) {}
 
+  bool is_arithmetic() const {
+    switch (op_type) {
+      case OpType::PLUS:
+      case OpType::MINUS:
+      case OpType::MULTIPLY:
+      case OpType::REMAINDER:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   std::string_view get_string_representation() const {
     switch (op_type) {
       case OpType::PLUS:

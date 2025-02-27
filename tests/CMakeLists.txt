@@ -32,7 +32,7 @@ add_executable(
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)
 
-target_link_libraries(Tests RecursiveFunctions LexisTools)
+target_link_libraries(Tests TeaLang LexisTools)
 target_link_libraries(Tests GTest::gtest_main)
 
 include(GoogleTest)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(RecursiveFunctions)
+project(TeaLang)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -24,8 +24,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 
 add_subdirectory(src)
-target_link_libraries(RecursiveFunctions fmt::fmt)
-target_link_libraries(RecursiveFunctions argparse::argparse)
+target_link_libraries(TeaLang fmt::fmt)
+target_link_libraries(TeaLang argparse::argparse)
 
 # add executable for compiling grammar and lexis
 add_subdirectory(src/syntax)
@@ -40,7 +40,7 @@ add_executable(Cli main.cpp)
 target_sources(Cli PUBLIC ${CliFiles})
 
 target_include_directories(Cli PUBLIC src)
-target_link_libraries(Cli RecursiveFunctions)
+target_link_libraries(Cli TeaLang)
 
 # copy compiler files into build destination
 add_custom_command(
@@ -51,7 +51,7 @@ add_custom_command(
 
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 
-set_target_properties(Cli PROPERTIES OUTPUT_NAME "recurator")
+set_target_properties(Cli PROPERTIES OUTPUT_NAME "tlang")
 
 if (COMMAND install)
     install(TARGETS Cli)

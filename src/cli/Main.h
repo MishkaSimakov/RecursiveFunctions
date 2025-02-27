@@ -1,10 +1,16 @@
 #pragma once
 
+#include <lexis/LexicalAnalyzer.h>
+#include <syntax/lr/LRParser.h>
+#include <utils/Constants.h>
+
 #include <argparse/argparse.hpp>
+
 #include "ArgumentsReader.h"
+#include "ast/ASTPrinter.h"
 #include "compilation/TeaFrontend.h"
 #include "errors/ExceptionsHandler.h"
-#include "log/Logger.h"
+#include "interpretation/ASTInterpreter.h"
 
 namespace Cli {
 namespace fs = std::filesystem;
@@ -15,43 +21,39 @@ class Main {
     return ExceptionsHandler::execute([argc, argv] {
       auto arguments = ArgumentsReader::read(argc, argv);
 
-      Logger::set_level(arguments.verbosity_level);
+      if (arguments.sources.size() != 1) {
+        throw std::runtime_error("Only one source file must be provided.");
+      }
 
-      auto result = Front::TeaFrontend().compile(arguments.sources);
-      // result must be a bunch of IR files
-      // compile each module into IR
+      Front::GlobalContext context;
+      auto& source_manager = context.source_manager;
 
-      //   if (arguments.emit_type == CompilerEmitType::IR) {
-      //     FilesystemManager::get_instance().save_to_file(arguments.output,
-      //                                                    IR::IRPrinter{ir});
-      //     return;
-      //   }
-      //
-      //   auto optimized = OptimizeIRStage().apply(std::move(ir));
-      //   if (arguments.emit_type == CompilerEmitType::ASSEMBLY) {
-      //     FilesystemManager::get_instance().save_to_file(
-      //         arguments.output, Assembly::AssemblyPrinter(optimized));
-      //     return;
-      //   }
-      //
-      //   if (arguments.emit_type == CompilerEmitType::COMPILED) {
-      //     auto saved_asm = FilesystemManager::get_instance().save_temporary(
-      //         Assembly::AssemblyPrinter(optimized));
-      //
-      //     // we must find std to link our program with it
-      //     // for now we just search for ./std
-      //     fs::path std_path = Constants::std_filepath;
-      //
-      //     if (!fs::is_regular_file(std_path)) {
-      //       throw std::runtime_error("Unable to find std library files.");
-      //     }
-      //
-      //     auto& output_path = arguments.output.replace_extension(".o");
-      //     auto compile_command =
-      //         fmt::format("g++ -o {} {} {}", output_path.string(),
-      //                     saved_asm.path.string(), std_path.string());
-      //     std::system(compile_command.c_str());
-      //   }
+      Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
+      auto parser = Syntax::LRParser(Constants::grammar_filepath, context);
+
+      auto& [name, path] = *arguments.sources.begin();
+      SourceView source_view = source_manager.load(path);
+      lexical_analyzer.set_source_view(source_view);
+
+      auto& module_context = context.add_module(name);
+
+      try {
+        parser.parse(lexical_analyzer, module_context.id);
+      } catch (Syntax::ParserException exception) {
+        for (const auto& [position, error] : exception.get_errors()) {
+          source_manager.add_annotation(position, error);
+        }
+
+        source_manager.print_annotations(std::cout);
+        throw;
+      }
+
+      if (arguments.dump_ast) {
+        Front::ASTPrinter(context, module_context, std::cout).print();
+      } else {
+        Interpretation::ASTInterpreter(context, module_context)
+            .traverse();
+      }
     });
   }
 };

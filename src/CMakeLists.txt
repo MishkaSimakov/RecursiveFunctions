@@ -1,5 +1,5 @@
 set(CoreModuleDirectories
-        log filesystem ast sources errors compilation
+        log filesystem ast sources errors compilation interpretation
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)
@@ -14,8 +14,6 @@ endforeach ()
 # temporarily remove compilation/ir folder
 list(FILTER CoreFiles EXCLUDE REGEX "/compilation\/ir/")
 
-message(${CoreFiles})
-
 # we add syntax directory separately because some files are only needed for grammar generation
 list(APPEND CoreFiles
         syntax/lr/LRParser.cpp
@@ -29,5 +27,5 @@ list(APPEND CoreFiles
         lexis/table/LexicalTableSerializer.cpp
 )
 
-add_library(RecursiveFunctions ${CoreFiles})
-target_include_directories(RecursiveFunctions PUBLIC ${PROJECT_SOURCE_DIR}/src)
+add_library(TeaLang ${CoreFiles})
+target_include_directories(TeaLang PUBLIC ${PROJECT_SOURCE_DIR}/src)

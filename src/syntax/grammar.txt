@@ -133,6 +133,7 @@ unary-expression:
     primary-expression          [pass<0>]
     PLUS unary-expression       [unary_op<UnaryOperator::OpType::PLUS>]
     MINUS unary-expression      [unary_op<UnaryOperator::OpType::MINUS>]
+    // TODO: maybe should remove prefix increment/decrement and unary plus
     PLUSPLUS unary-expression   [unary_op<UnaryOperator::OpType::PREINCREMENT>]
     MINUSMINUS unary-expression [unary_op<UnaryOperator::OpType::PREDECREMENT>]
 

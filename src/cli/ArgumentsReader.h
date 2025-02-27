@@ -7,18 +7,13 @@
 #include <vector>
 
 namespace Cli {
-enum class CompilerEmitType { PREPROCESSOR, IR, ASSEMBLY, COMPILED };
-
 // import name / filepath
 using SourcesList = std::unordered_map<std::string, std::filesystem::path>;
 
 struct CompilerArguments {
   SourcesList sources;
-
-  size_t verbosity_level;
-  bool debug;
   std::filesystem::path output;
-  CompilerEmitType emit_type;
+  bool dump_ast;
 };
 
 class ArgumentsReader {

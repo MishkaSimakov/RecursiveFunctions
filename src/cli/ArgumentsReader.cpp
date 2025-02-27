@@ -98,10 +98,9 @@ std::filesystem::path Cli::ArgumentsReader::parse_output(
 }
 
 Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
-  argparse::ArgumentParser parser("interpeter");
+  argparse::ArgumentParser parser("compiler");
   parser.add_description(
-      "Compiler for general recursive functions "
-      "(https://en.wikipedia.org/wiki/General_recursive_function).");
+      "Compiler for TeaLang ☕️");
 
   parser.add_argument("sources")
       .nargs(argparse::nargs_pattern::at_least_one)
@@ -111,26 +110,31 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
           "automatically or <directory path> to include all files in "
           "directory recursively.");
 
-  size_t verbosity = 0;
-  parser.add_argument("-v")
-      .action([&](const auto&) { ++verbosity; })
-      .append()
+  // size_t verbosity = 0;
+  // parser.add_argument("-v")
+  //     .action([&](const auto&) { ++verbosity; })
+  //     .append()
+  //     .default_value(false)
+  //     .implicit_value(true)
+  //     .nargs(0)
+  //     .help(
+  //         "increase program verbosity. -v - show only warnings, -vv - show "
+  //         "info and "
+  //         "warnings, -vvv - show all log messages.");
+  //
+  // parser.add_argument("-o", "--output")
+  //     .default_value(std::filesystem::current_path().string())
+  //     .help("specify output file name");
+
+  // parser.add_argument("-d", "--debug")
+  //     .default_value(false)
+  //     .implicit_value(true)
+  //     .help("turn on debug mode");
+
+  parser.add_argument("--dump-ast")
       .default_value(false)
       .implicit_value(true)
-      .nargs(0)
-      .help(
-          "increase program verbosity. -v - show only warnings, -vv - show "
-          "info and "
-          "warnings, -vvv - show all log messages.");
-
-  parser.add_argument("-o", "--output")
-      .default_value(std::filesystem::current_path().string())
-      .help("specify output file name");
-
-  parser.add_argument("-d", "--debug")
-      .default_value(false)
-      .implicit_value(true)
-      .help("turn on debug mode");
+      .help("dumps AST tree for provided files");
 
   try {
     parser.parse_args(argc, argv);
@@ -138,15 +142,13 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
     throw ArgumentsParseException(err.what());
   }
 
-  // fill arguments object
   CompilerArguments arguments;
   arguments.sources =
       parse_source_paths(parser.get<std::vector<std::string>>("sources"));
-  arguments.output = parse_output(parser.get("output"));
-
-  arguments.debug = parser.get<bool>("debug");
-  arguments.verbosity_level = verbosity;
-  arguments.emit_type = CompilerEmitType::COMPILED;
+  arguments.dump_ast = parser.get<bool>("dump-ast");
+  // arguments.output = parse_output(parser.get("output"));
+  // arguments.verbosity_level = verbosity;
+  // arguments.emit_type = CompilerEmitType::COMPILED;
 
   return arguments;
 }

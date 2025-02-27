@@ -314,10 +314,9 @@ class ASTBuildContext {
     auto condition = cast_move<Expression>(std::move(nodes[2]));
     auto true_branch = cast_move<CompoundStmt>(std::move(nodes[4]));
 
-    // TODO: make empty ranges and put them here
     auto false_branch =
         has_else ? cast_move<CompoundStmt>(std::move(nodes[6]))
-                 : make_node<CompoundStmt>(nodes.back()->source_range);
+                 : make_node<CompoundStmt>(SourceRange::empty_at(true_branch->source_range.end));
 
     return make_node<IfStmt>(source_range, std::move(condition),
                              std::move(true_branch), std::move(false_branch));
