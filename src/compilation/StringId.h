@@ -1,22 +1,27 @@
 #pragma once
 
-#include <unordered_map>
+#include <set>
+#include <string>
 
 namespace Front {
-struct GlobalContext;
+struct ModuleContext;
 }
 
 class StringId {
-  size_t id_;
+  using IteratorT = std::set<std::string>::const_iterator;
+  IteratorT itr_;
 
-  explicit StringId(size_t id) : id_(id) {}
+  explicit StringId(IteratorT itr) : itr_(itr) {}
 
-  friend struct Front::GlobalContext;
+  friend struct Front::ModuleContext;
 
  public:
-  bool operator==(StringId other) const { return other.id_ == id_; }
+  bool operator==(StringId other) const { return other.itr_ == itr_; }
 
-  size_t hash() const noexcept { return std::hash<size_t>()(id_); }
+  size_t hash() const noexcept {
+    // TODO: this is really bad, remove iterators hashing somehow
+    return std::hash<const std::string*>()(&*itr_);
+  }
 };
 
 template <>

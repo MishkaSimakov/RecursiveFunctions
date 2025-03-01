@@ -1,11 +1,12 @@
 #include "ASTInterpreter.h"
 
 bool Interpretation::ASTInterpreter::visit_function_declaration(
-    const FunctionDecl& value) const {
+    const FunctionDecl& value) {
   if (global_context_.get_string(value.name) != "main" ||
       !value.parameters.empty() ||
       value.return_type->value->get_kind() != Type::Kind::VOID) {
-    throw std::runtime_error("Only \"main: () -> void\" function is allowed.");
+    throw InterpreterException(
+        value, "Only \"main: () -> void\" function is allowed.");
   }
 
   return true;
@@ -14,23 +15,24 @@ bool Interpretation::ASTInterpreter::visit_function_declaration(
 bool Interpretation::ASTInterpreter::visit_variable_declaration(
     const VariableDecl& value) {
   if (current_nesting_level_ != 0) {
-    throw std::runtime_error(
-        "Variable declaration must not appear in nested scope.");
+    throw InterpreterException(
+        value, "Variable declaration must not appear in nested scope.");
   }
 
   if (value.type->value->get_kind() != Type::Kind::INT &&
       value.type->value->get_kind() != Type::Kind::BOOL) {
-    throw std::runtime_error("Only i64 and bool variables are allowed.");
+    throw InterpreterException(value,
+                               "Only i64 and bool variables are allowed.");
   }
 
   if (variables_.contains(value.name)) {
-    throw std::runtime_error(
-        fmt::format("Redefinition of variable {}.",
-                    global_context_.get_string(value.name)));
+    throw InterpreterException(
+        value, fmt::format("Redefinition of variable {}.",
+                           global_context_.get_string(value.name)));
   }
 
   if (value.initializer == nullptr) {
-    throw std::runtime_error("Value must be assigned to variable.");
+    throw InterpreterException(value, "Value must be assigned to variable.");
   }
 
   assign_variable(value, values_.at(value.initializer.get()));
@@ -46,7 +48,7 @@ bool Interpretation::ASTInterpreter::traverse_if_statement(
 
   ExpressionValue condition_value = values_.at(value.condition.get());
   if (!std::holds_alternative<bool>(condition_value)) {
-    throw std::runtime_error("Bool condition must have bool type.");
+    throw InterpreterException(value, "Bool condition must have bool type.");
   }
 
   ++current_nesting_level_;
@@ -67,11 +69,11 @@ bool Interpretation::ASTInterpreter::traverse_if_statement(
 bool Interpretation::ASTInterpreter::traverse_call_expression(
     const CallExpr& value) {
   if (!is_print_function(*value.name)) {
-    throw std::runtime_error("Unknown function.");
+    throw InterpreterException(value, "Unknown function.");
   }
 
   if (value.arguments.size() != 1) {
-    throw std::runtime_error("Wrong number of arguments.");
+    throw InterpreterException(value, "Wrong number of arguments.");
   }
 
   // evaluate argument
@@ -86,12 +88,12 @@ bool Interpretation::ASTInterpreter::traverse_call_expression(
 bool Interpretation::ASTInterpreter::visit_id_expression(const IdExpr& value) {
   // we dont allow qualified names
   if (value.parts.size() != 1) {
-    throw std::runtime_error("Qualified names are not allowed.");
+    throw InterpreterException(value, "Qualified names are not allowed.");
   }
 
   auto name = value.parts.front();
   if (!variables_.contains(name)) {
-    throw std::runtime_error("Unknown variable name.");
+    throw InterpreterException(value, "Unknown variable name.");
   }
 
   values_[&value] = variables_[name];
@@ -114,8 +116,8 @@ bool Interpretation::ASTInterpreter::visit_binary_operator(
     // all operands must be of int type
     if (!std::holds_alternative<int64_t>(left) ||
         !std::holds_alternative<int64_t>(right)) {
-      throw std::runtime_error(
-          "All operands of arithmetic operator must be of i64 type.");
+      throw InterpreterException(
+          value, "All operands of arithmetic operator must be of i64 type.");
     }
 
     int64_t left_int = std::get<int64_t>(left);
@@ -145,7 +147,7 @@ bool Interpretation::ASTInterpreter::visit_binary_operator(
     }();
   } else {
     if (left.index() != right.index()) {
-      throw std::runtime_error("Types of arguments must be equal.");
+      throw InterpreterException(value, "Types of arguments must be equal.");
     }
 
     values_[&value] = std::visit(

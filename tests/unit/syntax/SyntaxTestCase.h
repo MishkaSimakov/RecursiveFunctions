@@ -12,6 +12,10 @@
 using namespace Front;
 using TypeKind = Front::Type::Kind;
 
+#define ASSERT_SOURCE_RANGE(range, expected_from, expected_to) \
+  ASSERT_EQ(range.begin.pos_id, expected_from);                \
+  ASSERT_EQ(range.end.pos_id, expected_to);
+
 #define ASSERT_STRING_EQ(string_id, expected) \
   ASSERT_EQ(context_.get_string(string_id), expected)
 

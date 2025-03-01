@@ -10,6 +10,23 @@
 namespace Interpretation {
 using namespace Front;
 
+class InterpreterException final : public std::runtime_error {
+  SourceRange range_;
+
+ public:
+  InterpreterException(SourceRange range, std::string_view message)
+      : std::runtime_error(message.data()), range_(range) {}
+
+  InterpreterException(const ASTNode& node, std::string_view message)
+      : InterpreterException(node.source_range, message) {}
+
+  InterpreterException(const std::unique_ptr<ASTNode>& node,
+                       std::string_view message)
+      : InterpreterException(node->source_range, message) {}
+
+  const SourceRange& get_range() const { return range_; }
+};
+
 using ExpressionValue = std::variant<int64_t, bool>;
 
 inline bool is_compatible_with(ExpressionValue value, const Type& type) {
@@ -35,7 +52,8 @@ class ASTInterpreter
 
   void assign_variable(const VariableDecl& variable, ExpressionValue value) {
     if (!is_compatible_with(value, *variable.type->value)) {
-      throw std::runtime_error("Incompatible types in variable assignment.");
+      throw InterpreterException(variable,
+                                 "Incompatible types in variable assignment.");
     }
 
     variables_[variable.name] = value;
@@ -57,18 +75,18 @@ class ASTInterpreter
 
  public:
   explicit ASTInterpreter(const GlobalContext& global_context,
-                                 const ModuleContext& module_context)
+                          const ModuleContext& module_context)
       : ASTVisitor(*module_context.ast_root), global_context_(global_context) {}
 
-  [[noreturn]] bool visit_namespace_declaration(const NamespaceDecl&) {
-    throw std::runtime_error("Namespaces are not implemented.");
+  [[noreturn]] bool visit_namespace_declaration(const NamespaceDecl& value) {
+    throw InterpreterException(value, "Namespaces are not implemented.");
   }
 
-  [[noreturn]] bool visit_import_declaration(const ImportDecl&) {
-    throw std::runtime_error("Imports are not allowed.");
+  [[noreturn]] bool visit_import_declaration(const ImportDecl& value) {
+    throw InterpreterException(value, "Imports are not allowed.");
   }
 
-  bool visit_function_declaration(const FunctionDecl& value) const;
+  bool visit_function_declaration(const FunctionDecl& value);
   bool visit_variable_declaration(const VariableDecl& value);
 
   bool traverse_if_statement(const IfStmt& value);

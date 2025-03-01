@@ -18,10 +18,6 @@ using Syntax::ParserException;
     FAIL() << "Expression: " #expression "should have thrown."; \
   } catch (exception)
 
-#define ASSERT_SOURCE_RANGE(range, expected_from, expected_to) \
-  ASSERT_EQ(range.begin.pos_id, expected_from);                \
-  ASSERT_EQ(range.end.pos_id, expected_to);
-
 TEST_F(SyntaxTestCase, test_it_recovers_from_errors_in_braces_block) {
   {
     auto program = "f:()->void={error!} g:()->void={another!}";

@@ -101,7 +101,7 @@ class RecoveryTree {
 };
 
 void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
-                     size_t module_id) const {
+                     ModuleContext& module_context) const {
   ASTBuildContext build_context(module_id, context_);
   std::vector<size_t> states_stack;
 
@@ -188,8 +188,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
 
         SourceRange source_range =
             nodes_span.empty()
-                ? SourceRange()
-                : SourceRange::empty_at(nodes_span.front()->source_range.begin);
+                ? SourceRange::empty_at(current_token.source_range.begin)
+                : SourceRange::merge(nodes_span.front()->source_range,
+                                     nodes_span.back()->source_range);
 
         std::unique_ptr<ASTNode> new_node =
             (build_context.*builders[reduce.production_index])(source_range,

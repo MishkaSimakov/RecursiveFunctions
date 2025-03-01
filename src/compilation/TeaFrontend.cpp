@@ -52,7 +52,7 @@ void TeaFrontend::build_ast_and_dependencies(
     auto& module_context = context_.add_module(name);
 
     try {
-      parser.parse(lexical_analyzer, module_context.id);
+      parser.parse(lexical_analyzer, module_context);
     } catch (Syntax::ParserException exception) {
       has_syntax_errors = true;
 

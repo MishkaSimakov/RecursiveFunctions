@@ -13,7 +13,7 @@ class ASTBuildContext {
   size_t module_id;
   GlobalContext& context_;
 
-  TypesStorage& types() { return context_.types_storage; }
+  TypesStorage& types() { return module().types_storage; }
   ModuleContext& module() { return context_.modules[module_id]; }
 
   template <typename T, typename... Args>

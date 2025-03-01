@@ -3,7 +3,7 @@
 #include <iostream>
 
 namespace Front {
-TypesStorage& TypesASTVisitor::types() { return context_.types_storage; }
+TypesStorage& TypesASTVisitor::types() { return module_.types_storage; }
 
 void TypesASTVisitor::scold_user(SourceRange range,
                                  const std::string& message) {

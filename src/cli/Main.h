@@ -51,8 +51,14 @@ class Main {
       if (arguments.dump_ast) {
         Front::ASTPrinter(context, module_context, std::cout).print();
       } else {
-        Interpretation::ASTInterpreter(context, module_context)
-            .traverse();
+        try {
+          Interpretation::ASTInterpreter(context, module_context).traverse();
+        } catch (Interpretation::InterpreterException exception) {
+          source_manager.add_annotation(exception.get_range(),
+                                        exception.what());
+          source_manager.print_annotations(std::cout);
+          throw;
+        }
       }
     });
   }

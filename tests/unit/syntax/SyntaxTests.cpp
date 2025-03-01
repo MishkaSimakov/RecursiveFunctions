@@ -166,3 +166,35 @@ TEST_F(SyntaxTestCase, minus_tests) {
     ASSERT_ID_EQ(dynamic_cast<IdExpr&>(*right.value), "y");
   }
 }
+
+TEST_F(SyntaxTestCase, test_nodes_range) {
+  auto& context =
+      parse("function: (x: i64) -> void = { if (x == 0) { call(); } }");
+
+  auto& root = *context.ast_root;
+  ASSERT_SOURCE_RANGE(root.source_range, 0, 56);
+
+  auto& function = dynamic_cast<FunctionDecl&>(*root.declarations.front());
+  ASSERT_SOURCE_RANGE(function.source_range, 0, 56);
+
+  // check function arguments
+  {
+    auto& parameter = *function.parameters.front();
+    ASSERT_SOURCE_RANGE(parameter.source_range, 11, 17);
+
+    auto& parameter_type = *parameter.type;
+    ASSERT_SOURCE_RANGE(parameter_type.source_range, 14, 17);
+  }
+
+  // check function body
+  {
+    auto& body = *function.body;
+    ASSERT_SOURCE_RANGE(body.source_range, 29, 56);
+
+    auto& if_stmt = static_cast<IfStmt&>(*body.statements.front());
+    ASSERT_SOURCE_RANGE(if_stmt.condition->source_range, 35, 41);
+
+    ASSERT_SOURCE_RANGE(if_stmt.true_branch->source_range, 43, 54);
+    ASSERT_SOURCE_RANGE(if_stmt.false_branch->source_range, 54, 54);
+  }
+}
