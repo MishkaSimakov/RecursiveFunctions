@@ -2,7 +2,7 @@
 
 bool Interpretation::ASTInterpreter::visit_function_declaration(
     const FunctionDecl& value) {
-  if (global_context_.get_string(value.name) != "main" ||
+  if (context_.get_string(value.name) != "main" ||
       !value.parameters.empty() ||
       value.return_type->value->get_kind() != Type::Kind::VOID) {
     throw InterpreterException(
@@ -28,7 +28,7 @@ bool Interpretation::ASTInterpreter::visit_variable_declaration(
   if (variables_.contains(value.name)) {
     throw InterpreterException(
         value, fmt::format("Redefinition of variable {}.",
-                           global_context_.get_string(value.name)));
+                           context_.get_string(value.name)));
   }
 
   if (value.initializer == nullptr) {

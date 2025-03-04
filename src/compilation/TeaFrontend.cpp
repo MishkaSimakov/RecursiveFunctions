@@ -1,58 +1,78 @@
 #include "TeaFrontend.h"
 
+#include <deque>
 #include <iostream>
 
 #include "ast/ASTPrinter.h"
-#include "compilation/ScopePrinter.h"
+#include "compilation/semantics/SemanticAnalyzer.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
-#include "types/TypesASTVisitor.h"
 #include "utils/Constants.h"
 
 namespace Front {
-bool TeaFrontend::has_loops_recursive(
-    const ModuleCompileInfo* current,
-    std::unordered_map<const ModuleCompileInfo*, int>& colors) {
-  // colors:
-  // 0 - unvisited
-  // 1 - in current DFS path
-  // 2 - visited but not on path
+enum class DFSState { UNVISITED, VISITING, VISITED };
 
-  int& color = colors[current];
-  if (color != 0) {
-    return color == 2;
+std::vector<std::string_view> has_loops_recursive(
+    const ModuleContext& current,
+    std::unordered_map<std::string_view, DFSState>& colors) {
+  DFSState& color = colors[current.name];
+  if (color == DFSState::VISITING) {
+    return {current.name};
+  }
+  if (color == DFSState::VISITED) {
+    return {};
   }
 
-  color = 1;
-  for (auto child : current->next) {
-    if (has_loops_recursive(child, colors)) {
-      return true;
+  color = DFSState::VISITING;
+  for (auto child : current.dependents) {
+    auto result = has_loops_recursive(child, colors);
+
+    if (!result.empty()) {
+      result.push_back(current.name);
+      return result;
     }
   }
-  color = 2;
+  color = DFSState::VISITED;
 
-  return false;
+  return {};
 }
 
-void TeaFrontend::build_ast_and_dependencies(
-    const std::unordered_map<std::string, std::filesystem::path>& files) {
-  auto& source_manager = context_.source_manager;
+std::vector<std::string_view> TeaFrontend::find_loops() const {
+  std::unordered_map<std::string_view, DFSState> colors;
 
+  for (const auto& [name, module] : context_.get_modules()) {
+    if (colors[name] == DFSState::VISITED) {
+      continue;
+    }
+
+    auto result = has_loops_recursive(module, colors);
+    if (!result.empty()) {
+      return result;
+    }
+  }
+
+  return {};
+}
+
+void TeaFrontend::build_ast() {
+  auto& source_manager = context_.source_manager;
   bool has_syntax_errors = false;
 
-  // setup parser and lexical analyzer, load tables
+  // setup parser and lexical analyzer and parser
+  // loading of tables occurs only once
   Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
-  auto parser = Syntax::LRParser(Constants::grammar_filepath, context_);
+  auto parser = Syntax::LRParser(Constants::grammar_filepath);
 
-  // process each file separately
-  for (auto& [name, path] : files) {
+  // build ASTTree for each file separately
+  // TODO: this can be easily parallelized
+  for (const auto& [name, path] : files_) {
+    auto& module_context = context_.get_module(name);
+
     SourceView source_view = source_manager.load(path);
     lexical_analyzer.set_source_view(source_view);
 
-    auto& module_context = context_.add_module(name);
-
     try {
-      parser.parse(lexical_analyzer, module_context);
+      parser.parse(lexical_analyzer, module_context, source_view);
     } catch (Syntax::ParserException exception) {
       has_syntax_errors = true;
 
@@ -67,99 +87,92 @@ void TeaFrontend::build_ast_and_dependencies(
       continue;
     }
 
-    compile_info_.emplace(module_context.id, ModuleCompileInfo{module_context});
+    // processing imports
+    for (const auto& import_decl : module_context.ast_root->imports) {
+      std::string_view import_name = module_context.get_string(import_decl->id);
 
-    std::cout << "Module " << name << ":\n";
-    std::cout << "AST:\n";
-    ASTPrinter(context_, module_context, std::cout).print();
+      if (!context_.has_module(import_name)) {
+        throw std::runtime_error(fmt::format(
+            "Compile error. Unknown module {:?} (imported in module {:?}).",
+            import_name, module_context.name));
+      }
 
-    std::cout << "\n";
-    std::cout << "Imports:\n";
-    for (StringId id : module_context.imports) {
-      std::cout << context_.get_string(id) << std::endl;
+      ModuleContext& import_context = context_.get_module(import_name);
+
+      module_context.dependencies.push_back(import_context);
+
+      // TODO: this is bad for parallelization
+      import_context.dependents.push_back(module_context);
     }
-    std::cout << std::endl;
   }
 
   if (has_syntax_errors) {
     throw std::runtime_error("Syntax errors encountered in files.");
   }
 
-  for (ModuleContext& module_context : context_.modules) {
-    auto& compile_info = compile_info_.at(module_context.id);
-
-    for (StringId import_id : module_context.imports) {
-      size_t import_module_id =
-          context_.module_names_mapping[context_.get_string(import_id)]->id;
-      compile_info.dependencies.push_back(&compile_info_.at(import_module_id));
-      compile_info_.at(import_module_id).next.push_back(&compile_info);
-    }
-
-    if (compile_info.dependencies.empty()) {
-      start_modules_.push_back(&compile_info);
-      continue;
-    }
-  }
-
-  if (has_loops()) {
-    throw std::runtime_error("Loops in imports are not allowed.");
+  // check that there is no import loops
+  auto loop = find_loops();
+  if (!loop.empty()) {
+    throw std::runtime_error(fmt::format(
+        "Compile error. Found loop in imports: {}.", fmt::join(loop, " -> ")));
   }
 }
 
-bool TeaFrontend::has_loops() const {
-  std::unordered_map<const ModuleCompileInfo*, int> colors;
+void TeaFrontend::build_symbols_table() {
+  std::deque<std::string_view> queue;
 
-  for (auto module : start_modules_) {
-    if (colors[module] == 2) {
-      continue;
-    }
-
-    if (has_loops_recursive(module, colors)) {
-      return true;
+  for (const auto& [name, module] : context_.get_modules()) {
+    if (module.dependencies.empty()) {
+      queue.push_back(name);
     }
   }
 
-  return false;
-}
-
-bool TeaFrontend::try_compile_module(ModuleCompileInfo* module) {
-  for (auto dependency : module->dependencies) {
-    if (!dependency->is_processed) {
-      return false;
-    }
-  }
-
-  std::cout << "Compiling " << module->context.id << std::endl;
-  // actually do compilation
-  TypesASTVisitor(*module->context.ast_root, context_, module->context)
-      .traverse();
-
-  std::cout << "Scopes:" << std::endl;
-  ScopePrinter(std::cout, context_, *module->context.root_scope).print();
-
-  std::cout << std::endl;
-
-  module->is_processed = true;
-  return true;
-}
-
-int TeaFrontend::compile(
-    const std::unordered_map<std::string, std::filesystem::path>& files) {
-  build_ast_and_dependencies(files);
-
-  std::vector<ModuleCompileInfo*> queue = start_modules_;
   while (!queue.empty()) {
-    auto current = queue.back();
-    queue.pop_back();
+    std::string_view current_name = queue.front();
+    queue.pop_front();
 
-    if (!try_compile_module(current)) {
+    // check that all dependencies are already processed
+    ModuleContext& current_module = context_.get_module(current_name);
+    bool has_unprocessed_dependencies = false;
+    for (const auto& dependency : current_module.dependencies) {
+      if (!dependency.get().has_symbols_table) {
+        has_unprocessed_dependencies = true;
+        break;
+      }
+    }
+
+    if (has_unprocessed_dependencies) {
+      queue.push_back(current_name);
       continue;
     }
 
-    for (auto next : current->next) {
-      queue.push_back(next);
+    // build symbols table for module
+    try {
+      auto analyzer = SemanticAnalyzer(context_, current_module);
+      analyzer.analyze();
+    } catch (SemanticAnalyzerException exception) {
+      for (const auto& [position, error] : exception.errors) {
+        context_.source_manager.add_annotation(position, error);
+      }
+
+      context_.source_manager.print_annotations(std::cout);
+      throw;
     }
   }
+}
+
+int TeaFrontend::compile() {
+  // Creating context for each module before building ast
+  // this way we can store links to imported modules
+  for (const auto& name : files_ | std::views::keys) {
+    context_.add_module(name);
+  }
+
+  // For each module build ASTTree and store links to imported modules
+  build_ast();
+
+  // For each module build symbol table
+  build_symbols_table();
 
   return 0;
 }

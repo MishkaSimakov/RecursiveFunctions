@@ -21,23 +21,19 @@ struct ModuleCompileInfo {
 };
 
 class TeaFrontend {
+  const std::unordered_map<std::string, std::filesystem::path>& files_;
   GlobalContext context_;
 
-  std::vector<ModuleCompileInfo*> start_modules_;
-  std::unordered_map<size_t, ModuleCompileInfo> compile_info_;
+  std::vector<std::string_view> find_loops() const;
 
-  static bool has_loops_recursive(
-      const ModuleCompileInfo* current,
-      std::unordered_map<const ModuleCompileInfo*, int>& colors);
-  bool has_loops() const;
-
-  void build_ast_and_dependencies(
-      const std::unordered_map<std::string, std::filesystem::path>& files);
-
-  bool try_compile_module(ModuleCompileInfo* job);
+  void build_ast();
+  void build_symbols_table();
 
  public:
-  int compile(
-      const std::unordered_map<std::string, std::filesystem::path>& files);
+  explicit TeaFrontend(
+      const std::unordered_map<std::string, std::filesystem::path>& files)
+      : files_(files) {}
+
+  int compile();
 };
 }  // namespace Front

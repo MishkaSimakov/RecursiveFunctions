@@ -1,24 +1,32 @@
 #pragma once
-#include <deque>
-#include <unordered_map>
+#include <map>
 
 #include "compilation/ModuleContext.h"
-#include "compilation/StringId.h"
 #include "sources/SourceManager.h"
-#include "types/TypesStorage.h"
 
 namespace Front {
 struct GlobalContext {
+ private:
+  std::map<std::string, ModuleContext, std::less<>> modules_;
+
+ public:
   SourceManager source_manager;
 
-  std::unordered_map<std::string_view, ModuleContext*> module_names_mapping;
-  std::deque<ModuleContext> modules;
-
-  ModuleContext& add_module(std::string_view name) {
-    size_t index = modules.size();
-    auto& module = modules.emplace_back(index);
-    module_names_mapping.emplace(name, &module);
-    return module;
+  ModuleContext& add_module(std::string name) {
+    auto [itr, was_emplaced] = modules_.emplace(name, ModuleContext{});
+    itr->second.name = name;
+    return itr->second;
   }
+
+  bool has_module(std::string_view name) const {
+    return modules_.contains(name);
+  }
+
+  ModuleContext& get_module(std::string_view name) {
+    auto itr = modules_.find(name);
+    return itr->second;
+  }
+
+  const auto& get_modules() const { return modules_; }
 };
 }  // namespace Front

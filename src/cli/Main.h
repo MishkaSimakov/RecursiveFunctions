@@ -25,41 +25,43 @@ class Main {
         throw std::runtime_error("Only one source file must be provided.");
       }
 
-      Front::GlobalContext context;
-      auto& source_manager = context.source_manager;
+      Front::TeaFrontend(arguments.sources).compile();
 
-      Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
-      auto parser = Syntax::LRParser(Constants::grammar_filepath, context);
-
-      auto& [name, path] = *arguments.sources.begin();
-      SourceView source_view = source_manager.load(path);
-      lexical_analyzer.set_source_view(source_view);
-
-      auto& module_context = context.add_module(name);
-
-      try {
-        parser.parse(lexical_analyzer, module_context.id);
-      } catch (Syntax::ParserException exception) {
-        for (const auto& [position, error] : exception.get_errors()) {
-          source_manager.add_annotation(position, error);
-        }
-
-        source_manager.print_annotations(std::cout);
-        throw;
-      }
-
-      if (arguments.dump_ast) {
-        Front::ASTPrinter(context, module_context, std::cout).print();
-      } else {
-        try {
-          Interpretation::ASTInterpreter(context, module_context).traverse();
-        } catch (Interpretation::InterpreterException exception) {
-          source_manager.add_annotation(exception.get_range(),
-                                        exception.what());
-          source_manager.print_annotations(std::cout);
-          throw;
-        }
-      }
+      // Front::GlobalContext context;
+      // auto& source_manager = context.source_manager;
+      //
+      // Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
+      // auto parser = Syntax::LRParser(Constants::grammar_filepath);
+      //
+      // auto& [name, path] = *arguments.sources.begin();
+      // SourceView source_view = source_manager.load(path);
+      // lexical_analyzer.set_source_view(source_view);
+      //
+      // auto& module_context = context.add_module(name);
+      //
+      // try {
+      //   parser.parse(lexical_analyzer, module_context, source_view);
+      // } catch (Syntax::ParserException exception) {
+      //   for (const auto& [position, error] : exception.get_errors()) {
+      //     source_manager.add_annotation(position, error);
+      //   }
+      //
+      //   source_manager.print_annotations(std::cout);
+      //   throw;
+      // }
+      //
+      // if (arguments.dump_ast) {
+      //   Front::ASTPrinter(module_context, std::cout).print();
+      // } else {
+      //   try {
+      //     Interpretation::ASTInterpreter(module_context).interpret();
+      //   } catch (Interpretation::InterpreterException exception) {
+      //     source_manager.add_annotation(exception.get_range(),
+      //                                   exception.what());
+      //     source_manager.print_annotations(std::cout);
+      //     throw;
+      //   }
+      // }
     });
   }
 };

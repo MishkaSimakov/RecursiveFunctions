@@ -45,7 +45,7 @@ inline void print_function_implementation(ExpressionValue value) {
 
 class ASTInterpreter
     : public ASTVisitor<ASTInterpreter, true, Order::POSTORDER> {
-  const GlobalContext& global_context_;
+  const ModuleContext& context_;
   size_t current_nesting_level_{0};
   std::unordered_map<StringId, ExpressionValue> variables_;
   std::unordered_map<const Expression*, ExpressionValue> values_;
@@ -66,7 +66,7 @@ class ASTInterpreter
       return false;
     }
 
-    if (global_context_.get_string(name.parts.front()) != "print") {
+    if (context_.get_string(name.parts.front()) != "print") {
       return false;
     }
 
@@ -74,9 +74,7 @@ class ASTInterpreter
   }
 
  public:
-  explicit ASTInterpreter(const GlobalContext& global_context,
-                          const ModuleContext& module_context)
-      : ASTVisitor(*module_context.ast_root), global_context_(global_context) {}
+  explicit ASTInterpreter(const ModuleContext& context) : context_(context) {}
 
   [[noreturn]] bool visit_namespace_declaration(const NamespaceDecl& value) {
     throw InterpreterException(value, "Namespaces are not implemented.");
@@ -106,5 +104,7 @@ class ASTInterpreter
   bool visit_id_expression(const IdExpr& value);
 
   bool visit_binary_operator(const BinaryOperator& value);
+
+  void interpret() { traverse(*context_.ast_root); }
 };
 }  // namespace Interpretation

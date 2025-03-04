@@ -16,14 +16,10 @@ class ASTVisitor {
   template <typename T>
   using wrap_const = std::conditional_t<IsConst, const T, T>;
 
-  wrap_const<ASTNode>& root_;
-
  public:
   enum class NodeTraverseType { CONTINUE, STOP, SKIP_NODE };
 
-  explicit ASTVisitor(wrap_const<ASTNode>& root) : root_(root) {}
-
-  bool traverse() { return traverse(root_); }
+  ASTVisitor() = default;
 
   bool traverse(wrap_const<ASTNode>& node) {
     auto traverse_type = child().before_traverse(node);
@@ -34,6 +30,9 @@ class ASTVisitor {
     switch (node.get_kind()) {
 #define NODE(kind, type, snake_case)                                           \
   case ASTNode::Kind::kind:                                                    \
+    if (!child().before_##snake_case(static_cast<wrap_const<type>&>(node))) {  \
+      return false;                                                            \
+    }                                                                          \
     if constexpr (DFSOrder == Order::PREORDER) {                               \
       if (!child().visit_##snake_case(static_cast<wrap_const<type>&>(node))) { \
         return false;                                                          \
@@ -47,6 +46,9 @@ class ASTVisitor {
       if (!child().visit_##snake_case(static_cast<wrap_const<type>&>(node))) { \
         return false;                                                          \
       }                                                                        \
+    }                                                                          \
+    if (!child().after_##snake_case(static_cast<wrap_const<type>&>(node))) {   \
+      return false;                                                            \
     }                                                                          \
     break;
 
@@ -202,8 +204,12 @@ class ASTVisitor {
   }
   bool after_traverse(wrap_const<ASTNode>& node) { return true; }
 
-#define NODE(kind, type, snake_case) \
-  bool visit_##snake_case(wrap_const<type>&) { return true; }
+  // before_* and after_* are experimental
+  // TODO: consider removing visit_*, leaving only before_* + after_*
+#define NODE(kind, type, snake_case)                           \
+  bool visit_##snake_case(wrap_const<type>&) { return true; }  \
+  bool before_##snake_case(wrap_const<type>&) { return true; } \
+  bool after_##snake_case(wrap_const<type>&) { return true; }
 
 #include "ast/NodesList.h"
 

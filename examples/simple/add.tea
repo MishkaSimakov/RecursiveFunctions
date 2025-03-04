@@ -1,6 +1,9 @@
+math: namespace = {
+    sqr: (value: i64) -> i64 = {
+        return value * value;
+    }
+}
+
 main: () -> void = {
-    func(
-        10,
-        11
-    );
+    result: i64 = math::sqr(123);
 }

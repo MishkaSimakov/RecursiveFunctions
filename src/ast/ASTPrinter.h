@@ -12,7 +12,6 @@
 
 namespace Front {
 class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
-  const GlobalContext& global_context_;
   const ModuleContext& context_;
 
   std::string range_string(const ASTNode& node) {
@@ -21,12 +20,8 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   }
 
  public:
-  explicit ASTPrinter(const GlobalContext& global_context,
-                      const ModuleContext& module_context, std::ostream& os)
-      : ASTVisitor(*module_context.ast_root),
-        TreePrinter(os),
-        global_context_(global_context),
-        context_(module_context) {}
+  explicit ASTPrinter(const ModuleContext& module_context, std::ostream& os)
+      : TreePrinter(os), context_(module_context) {}
 
   NodeTraverseType before_traverse(const ASTNode&) {
     move_cursor_down();
@@ -50,7 +45,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     return true;
   }
   bool visit_parameter_declaration(const ParameterDecl& value) {
-    std::string_view name = global_context_.get_string(value.id);
+    std::string_view name = context_.get_string(value.id);
     add_node(fmt::format("ParamDecl {} {}", range_string(value), name));
     return true;
   }
@@ -60,7 +55,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
       specifiers.push_back("export");
     }
 
-    std::string_view name = global_context_.get_string(value.name);
+    std::string_view name = context_.get_string(value.name);
     add_node(fmt::format("FuncDecl {} {} {}", range_string(value), name,
                          fmt::join(specifiers, " ")));
     return true;
@@ -75,7 +70,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     return true;
   }
   bool visit_string_literal(const StringLiteral& value) {
-    const auto& string = global_context_.get_string(value.id);
+    const auto& string = context_.get_string(value.id);
     add_node(fmt::format("StringLiteral {} {}", range_string(value), string));
     return true;
   }
@@ -87,7 +82,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   bool visit_id_expression(const IdExpr& value) {
     auto qualified_name =
         value.parts | std::views::transform([this](StringId id) {
-          return global_context_.get_string(id);
+          return context_.get_string(id);
         });
 
     add_node(fmt::format("IdExpr {} {}", range_string(value),
@@ -95,7 +90,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     return true;
   }
   bool visit_import_declaration(const ImportDecl& value) {
-    const auto& string = global_context_.get_string(value.id);
+    const auto& string = context_.get_string(value.id);
     add_node(fmt::format("ImportDecl {} {}", range_string(value), string));
     return true;
   }
@@ -114,7 +109,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     return true;
   }
   bool visit_variable_declaration(const VariableDecl& value) {
-    std::string_view name = global_context_.get_string(value.name);
+    std::string_view name = context_.get_string(value.name);
     add_node(fmt::format("VariableDecl {} {} {}", range_string(value), name,
                          value.type->value->to_string()));
     return true;
@@ -128,7 +123,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     return true;
   }
   bool visit_namespace_declaration(const NamespaceDecl& value) {
-    std::string_view name = global_context_.get_string(value.name);
+    std::string_view name = context_.get_string(value.name);
     add_node(fmt::format("NamespaceDecl {} {}", range_string(value), name));
     return true;
   }
@@ -142,7 +137,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   }
 
   void print() {
-    traverse();
+    traverse(*context_.ast_root);
     TreePrinter::print();
   }
 };

@@ -59,6 +59,12 @@ class SourceView {
   }
 
   std::string_view string_view() const { return string_view_; }
+  std::string_view string_view(SourceRange range) const {
+    size_t begin_offset = get_offset<false>(range.begin);
+    size_t end_offset = get_offset<false>(range.end);
+
+    return string_view_.substr(begin_offset, end_offset - begin_offset);
+  }
 
   SourceLocation begin_location() const { return begin_; }
 

@@ -3,10 +3,8 @@
 
 #include <memory>
 #include <ranges>
-#include <string>
 #include <vector>
 
-#include "compilation/Scope.h"
 #include "compilation/types/Type.h"
 #include "errors/Helpers.h"
 #include "lexis/Token.h"
@@ -19,8 +17,11 @@
 // 5. Add visit_* method in ASTPrinter
 
 namespace Front {
+struct Scope;
+
 struct ASTNode {
-  enum class Kind {
+  // clang-format off
+  ENUM(Kind,
     COMPOUND_STMT,
     PROGRAM_DECL,
     PARAMETER_DECL,
@@ -42,14 +43,13 @@ struct ASTNode {
     WHILE_STMT,
     IF_STMT,
     CONTINUE_STMT,
-    BREAK_STMT,
-  };
+    BREAK_STMT
+  );
+  // clang-format on
 
   SourceRange source_range;
-  Scope* scope;
 
-  ASTNode(SourceRange source_range)
-      : source_range(source_range), scope(nullptr) {}
+  explicit ASTNode(SourceRange source_range) : source_range(source_range) {}
 
   SourceLocation source_begin() const { return source_range.begin; }
   SourceLocation source_end() const { return source_range.end; }
@@ -87,7 +87,7 @@ struct TypeNode : ASTNode {
 };
 
 struct Expression : ASTNode {
-  Type* type;
+  Type* type{nullptr};
 
   using ASTNode::ASTNode;
 };
@@ -137,6 +137,8 @@ struct FunctionDecl : Declaration {
   std::vector<std::unique_ptr<ParameterDecl>> parameters;
   std::unique_ptr<TypeNode> return_type;
   std::unique_ptr<CompoundStmt> body;
+
+  Scope* subscope;
 
   bool is_exported;
 
@@ -191,10 +193,9 @@ struct StringLiteral : Expression {
 
 struct IdExpr : Expression {
   std::vector<StringId> parts;
-  Scope* name_scope;
+  Declaration* declaration{nullptr};
 
-  IdExpr(SourceRange source_range)
-      : Expression(source_range), name_scope(nullptr) {}
+  IdExpr(SourceRange source_range) : Expression(source_range) {}
 
   void add_qualifier(StringId qualifier) { parts.push_back(qualifier); }
 

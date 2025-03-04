@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/Nodes.h"
 #include "compilation/StringId.h"
 #include "compilation/types/Type.h"
 
@@ -9,10 +10,34 @@ namespace Front {
 // 1. variable name
 // 2. named type (class, typedef etc.)
 // 3. function name
+// 4. namespace
+struct Scope;
+
+// Variable, Function or Parameter
+// this symbols are in the end of qualified id
+struct TerminalSymbol {
+  Type* type;
+};
+
+struct NamespaceSymbol {
+  Scope* subscope;
+};
 
 struct SymbolInfo {
-  Type* type;
-  bool is_exported;
+ private:
+  using NodeKind = ASTNode::Kind;
+
+ public:
+  Declaration& declaration;
+  std::variant<TerminalSymbol, NamespaceSymbol> data;
+
+  static SymbolInfo make_namespace(NamespaceDecl& decl, Scope* subscope) {
+    return SymbolInfo{decl, NamespaceSymbol{subscope}};
+  }
+
+  static SymbolInfo make_terminal(Declaration& decl, Type* type) {
+    return SymbolInfo{decl, TerminalSymbol{type}};
+  }
 };
 
 struct Scope {
@@ -21,10 +46,6 @@ struct Scope {
 
   std::unordered_map<StringId, SymbolInfo> symbols;
 
-  bool add_symbol(StringId string_id, Type* type, bool is_exported) {
-    auto [itr, was_emplaced] =
-        symbols.emplace(string_id, SymbolInfo{type, is_exported});
-    return was_emplaced;
-  }
+  explicit Scope(Scope* parent) : parent(parent) {}
 };
 }  // namespace Front

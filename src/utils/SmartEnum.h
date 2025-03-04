@@ -47,6 +47,11 @@ struct EnumInfo;
       return static_cast<size_t>(value_);                                    \
     }                                                                        \
                                                                              \
+    template <InternalEnum... Variants>                                      \
+    bool in() {                                                              \
+      return ((value_ == Variants) || ...);                                  \
+    }                                                                        \
+                                                                             \
     bool operator==(InternalEnum other) const { return value_ == other; }    \
     bool operator==(name other) const { return value_ == other.value_; }     \
                                                                              \

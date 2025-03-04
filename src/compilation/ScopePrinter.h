@@ -4,8 +4,7 @@
 
 namespace Front {
 class ScopePrinter : TreePrinter {
-  GlobalContext& context_;
-  Scope& root_scope_;
+  const ModuleContext& context_;
 
   void traverse_scope_recursively(Scope& scope) {
     add_node(fmt::format("Scope  {}", static_cast<void*>(&scope)));
@@ -17,7 +16,7 @@ class ScopePrinter : TreePrinter {
                            info.type->to_string(),
                            info.is_exported ? "exported" : "local"));
     }
-    for (Scope* child : scope.children) {
+    for (const auto& child : scope.children) {
       traverse_scope_recursively(*child);
     }
 
@@ -25,13 +24,12 @@ class ScopePrinter : TreePrinter {
   }
 
  public:
-  explicit ScopePrinter(std::ostream& os, GlobalContext& context,
-                        Scope& root_scope)
-      : TreePrinter(os), context_(context), root_scope_(root_scope) {}
+  explicit ScopePrinter(std::ostream& os, const ModuleContext& context)
+      : TreePrinter(os), context_(context) {}
 
   void print() {
     move_cursor_down();
-    traverse_scope_recursively(root_scope_);
+    traverse_scope_recursively(*context_.root_scope);
     move_cursor_up();
 
     TreePrinter::print();

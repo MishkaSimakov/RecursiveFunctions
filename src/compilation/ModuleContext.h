@@ -9,21 +9,22 @@
 
 namespace Front {
 struct ModuleContext {
-  size_t id;
+  std::string name;
 
   TypesStorage types_storage;
   std::unique_ptr<ProgramDecl> ast_root;
-  std::vector<StringId> imports;
-
   std::unique_ptr<Scope> root_scope;
 
   // I use std::less<void> to compare std::string with std::string_view without
   // creating new string from string_view
   std::set<std::string, std::less<>> strings_table;
 
-  bool is_preprocessed;
+  std::vector<std::reference_wrapper<ModuleContext>> dependencies;
+  std::vector<std::reference_wrapper<ModuleContext>> dependents;
 
-  explicit ModuleContext(size_t id) : id(id), is_preprocessed(false) {}
+  bool has_symbols_table{false};
+
+  ModuleContext() = default;
 
   StringId add_string(std::string_view string) {
     auto [itr, _] = strings_table.emplace(string);

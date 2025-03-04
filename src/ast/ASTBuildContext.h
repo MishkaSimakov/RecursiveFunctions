@@ -10,11 +10,11 @@
 
 namespace Front {
 class ASTBuildContext {
-  size_t module_id;
-  GlobalContext& context_;
+  ModuleContext& context_;
+  SourceView module_source_;
 
-  TypesStorage& types() { return module().types_storage; }
-  ModuleContext& module() { return context_.modules[module_id]; }
+  TypesStorage& types() { return context_.types_storage; }
+  ModuleContext& module() { return context_; }
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<ASTNode, T>
@@ -40,18 +40,14 @@ class ASTBuildContext {
   }
 
   std::string_view get_token_string(const TokenNode& node) const {
-    return context_.source_manager.get_file_view(node.source_range)
-        .string_view();
+    return module_source_.string_view(node.source_range);
   }
-
-  Scope* make_scope() { return &module().scopes.emplace_back(); }
-  void set_scope_recursively(ASTNode& node, Scope* scope);
 
  public:
   using NodePtr = std::unique_ptr<ASTNode>;
 
-  explicit ASTBuildContext(size_t module_id, GlobalContext& context)
-      : module_id(module_id), context_(context) {}
+  ASTBuildContext(ModuleContext& context, SourceView module_source)
+      : context_(context), module_source_(module_source) {}
 
   template <typename T>
   NodePtr construct(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -73,13 +69,6 @@ class ASTBuildContext {
     if (has_imports) {
       auto import_list = cast_move<NodesList<ImportDecl>>(std::move(nodes[0]));
       program_node->imports = std::move(import_list->nodes);
-
-      auto imports_string_ids =
-          program_node->imports |
-          std::views::transform(
-              [](const std::unique_ptr<ImportDecl>& node) { return node->id; });
-      module().imports =
-          std::vector(imports_string_ids.begin(), imports_string_ids.end());
     }
 
     if (has_declarations) {
@@ -87,10 +76,6 @@ class ASTBuildContext {
           cast_move<NodesList<Declaration>>(std::move(nodes.back()));
       program_node->declarations = std::move(decl_list->nodes);
     }
-
-    Scope* root_scope = make_scope();
-    set_scope_recursively(*program_node, root_scope);
-    module().root_scope = root_scope;
 
     return std::move(program_node);
   }
@@ -169,10 +154,6 @@ class ASTBuildContext {
 
     statements->source_range = source_range;
 
-    // create new scope
-    Scope* scope = make_scope();
-    set_scope_recursively(*statements, scope);
-
     return std::move(statements);
   }
 
@@ -193,11 +174,6 @@ class ASTBuildContext {
         cast_move<NodesList<ParameterDecl>>(std::move(nodes[shift + 2]));
     auto return_type = cast_move<TypeNode>(std::move(nodes[shift + 3]));
     auto body = cast_move<CompoundStmt>(std::move(nodes[shift + 5]));
-
-    // arguments lie in the same scope as function body
-    for (auto& param : parameters->nodes) {
-      set_scope_recursively(*param, body->scope);
-    }
 
     return make_node<FunctionDecl>(
         source_range, name_id, std::move(parameters->nodes),
@@ -316,7 +292,8 @@ class ASTBuildContext {
 
     auto false_branch =
         has_else ? cast_move<CompoundStmt>(std::move(nodes[6]))
-                 : make_node<CompoundStmt>(SourceRange::empty_at(true_branch->source_range.end));
+                 : make_node<CompoundStmt>(
+                       SourceRange::empty_at(true_branch->source_range.end));
 
     return make_node<IfStmt>(source_range, std::move(condition),
                              std::move(true_branch), std::move(false_branch));
