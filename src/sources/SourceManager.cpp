@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 
 SourceView SourceManager::load(const std::filesystem::path& path) {
   int fd = open(path.c_str(), O_RDWR);
@@ -47,6 +48,7 @@ SourceView SourceManager::load(const std::filesystem::path& path) {
 }
 
 SourceView SourceManager::load_text(std::string_view text) {
+  std::cout << "loading text" << std::endl;
   char* loaded_text = new char[text.size() + 1];
   std::ranges::copy(text, loaded_text);
 
@@ -144,8 +146,11 @@ void SourceManager::print_annotations(std::ostream& os) {
 }
 
 SourceManager::~SourceManager() {
+  std::cout << "~SourceManager" << std::endl;
+
   for (auto& [begin, size, path] : loaded_) {
     if (path.empty()) {
+      std::cout << "deleting text" << std::endl;
       delete[] begin;
     } else {
       munmap(begin, size);
