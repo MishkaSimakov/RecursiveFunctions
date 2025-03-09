@@ -1,5 +1,5 @@
 set(CoreModuleDirectories
-        log filesystem ast sources errors compilation interpretation
+        log ast sources errors compilation interpretation
 )
 
 foreach (directory IN LISTS CoreModuleDirectories)
@@ -13,6 +13,7 @@ endforeach ()
 
 # temporarily remove compilation/ir folder
 list(FILTER CoreFiles EXCLUDE REGEX "/compilation\/ir/")
+list(FILTER CoreFiles EXCLUDE REGEX "/compilation\/semantics/")
 
 # we add syntax directory separately because some files are only needed for grammar generation
 list(APPEND CoreFiles
