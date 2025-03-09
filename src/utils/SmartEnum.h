@@ -32,7 +32,9 @@ struct EnumInfo;
           ++i;                                                               \
         }                                                                    \
       }                                                                      \
-      result.back() = string.substr(current_begin);                          \
+      if (string.back() != ',') {                                            \
+        result.back() = string.substr(current_begin);                        \
+      }                                                                      \
                                                                              \
       return result;                                                         \
     }();                                                                     \
@@ -48,7 +50,7 @@ struct EnumInfo;
     }                                                                        \
                                                                              \
     template <InternalEnum... Variants>                                      \
-    bool in() {                                                              \
+    bool in() const {                                                        \
       return ((value_ == Variants) || ...);                                  \
     }                                                                        \
                                                                              \

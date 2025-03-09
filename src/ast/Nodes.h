@@ -43,7 +43,7 @@ struct ASTNode {
     WHILE_STMT,
     IF_STMT,
     CONTINUE_STMT,
-    BREAK_STMT
+    BREAK_STMT,
   );
   // clang-format on
 
@@ -212,7 +212,8 @@ struct ImportDecl : Declaration {
 };
 
 struct BinaryOperator : Expression {
-  enum class OpType {
+  // clang-format off
+  ENUM(OpType,
     PLUS,
     MINUS,
     MULTIPLY,
@@ -223,7 +224,8 @@ struct BinaryOperator : Expression {
     GREATER_EQ,
     EQUALEQUAL,
     NOTEQUAL,
-  };
+  );
+  // clang-format on
 
   OpType op_type;
   std::unique_ptr<Expression> left;
@@ -238,15 +240,17 @@ struct BinaryOperator : Expression {
         right(std::move(right)) {}
 
   bool is_arithmetic() const {
-    switch (op_type) {
-      case OpType::PLUS:
-      case OpType::MINUS:
-      case OpType::MULTIPLY:
-      case OpType::REMAINDER:
-        return true;
-      default:
-        return false;
-    }
+    return op_type
+        .in<OpType::PLUS, OpType::MINUS, OpType::MULTIPLY, OpType::REMAINDER>();
+  }
+
+  bool is_inequality() const {
+    return op_type.in<OpType::LESS, OpType::LESS_EQ, OpType::GREATER,
+                      OpType::GREATER_EQ>();
+  }
+
+  bool is_equality() const {
+    return op_type.in<OpType::EQUALEQUAL, OpType::NOTEQUAL>();
   }
 
   std::string_view get_string_representation() const {

@@ -1,9 +1,29 @@
+println: (value: bool) -> void = {}
+
 math: namespace = {
     sqr: (value: i64) -> i64 = {
         return value * value;
     }
+
+    is_prime: (value: i64) -> bool = {
+        if (value < 2) {
+            return false;
+        }
+
+        divider: i64 = 2;
+        while (divider * divider <= value) {
+            if (value % divider == 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 main: () -> void = {
-    result: i64 = math::sqr(123);
+    current: i64 = 0;
+    while (current < 100) {
+        println(math::is_prime(current));
+    }
 }

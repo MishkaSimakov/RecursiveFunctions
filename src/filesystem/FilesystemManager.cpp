@@ -4,7 +4,6 @@
 #include <random>
 
 std::unique_ptr<FilesystemManager> FilesystemManager::instance_{nullptr};
-std::mutex FilesystemManager::mutex_{};
 
 FilesystemManager::FilesystemManager() {
   auto now = std::chrono::system_clock::now();
@@ -71,8 +70,6 @@ FilesystemManager::Resource& FilesystemManager::get_or_create_resource(
 }
 
 FilesystemManager& FilesystemManager::get_instance() {
-  std::lock_guard guard(mutex_);
-
   if (instance_ == nullptr) {
     instance_ = std::unique_ptr<FilesystemManager>(new FilesystemManager());
   }

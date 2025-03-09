@@ -28,6 +28,8 @@ add_executable(
         unit/syntax/RecoveryTests.cpp
         unit/syntax/SyntaxTestCase.h
         unit/syntax/SyntaxTests.cpp
+
+        unit/utils/SmartEnumTests.cpp
 )
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)

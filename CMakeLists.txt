@@ -23,9 +23,22 @@ add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 
+# -- llvm --
+list(APPEND CMAKE_DIR
+        /opt/homebrew/Cellar/llvm
+)
+
+find_package(LLVM REQUIRED CONFIG)
+
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
+llvm_map_components_to_libnames(llvm_libs support core irreader)
+# -- end of llvm --
+
 add_subdirectory(src)
-target_link_libraries(TeaLang fmt::fmt)
-target_link_libraries(TeaLang argparse::argparse)
+target_link_libraries(TeaLang fmt::fmt argparse::argparse ${llvm_libs})
+target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
 
 # add executable for compiling grammar and lexis
 add_subdirectory(src/syntax)

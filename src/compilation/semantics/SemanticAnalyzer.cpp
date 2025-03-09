@@ -49,7 +49,8 @@ std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::qualified_name_lookup(
     base_scope = std::get<NamespaceSymbol>(next_symbol->data).subscope;
   }
 
-  return name_lookup(base_scope, parts.back(), false);
+  bool has_qualifiers = parts.size() > 1;
+  return name_lookup(base_scope, parts.back(), !has_qualifiers);
 }
 
 std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::recursive_global_name_lookup(

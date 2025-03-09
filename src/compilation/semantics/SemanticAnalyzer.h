@@ -99,8 +99,7 @@ class SemanticAnalyzer
   // bool before_while_statement(WhileStmt& node);
   // bool after_while_statement(WhileStmt& node);
 
-  // bool before_if_statement(IfStmt& node);
-  // bool after_if_statement(IfStmt& node);
+  bool traverse_if_statement(IfStmt& node);
 
   // bool before_break_statement(BreakStmt& node);
   // bool after_break_statement(BreakStmt& node);

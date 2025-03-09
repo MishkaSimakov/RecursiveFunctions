@@ -5,7 +5,7 @@
 
 #include <span>
 
-using enum Front::BinaryOperator::OpType;
+using enum Front::BinaryOperator::OpType::InternalEnum;
 using namespace Front;
 #include "syntax/BuildersRegistry.h"
 

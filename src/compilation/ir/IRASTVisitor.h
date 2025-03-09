@@ -3,19 +3,11 @@
 #include "compilation/ModuleContext.h"
 #include "intermediate_representation/Program.h"
 
+using namespace llvm;
+
 namespace Front {
 class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
-  GlobalContext& context_;
-  ModuleContext& module_;
-
-  IR::Program program_;
-  IR::Function* current_function_;
-  IR::BasicBlock* current_basic_block_;
-  IR::Value* result_location_;
-
-  std::unordered_map<std::pair<StringId, Scope*>, IR::Temporary*>
-      function_symbols_mapping_;
-
+  std::unique_ptr<LLVMContext>
   IR::Type* map_type(Type* type);
 
   // compiler must not pass through some kind of nodes. If it does, then I've

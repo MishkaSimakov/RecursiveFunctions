@@ -2,8 +2,7 @@
 
 bool Interpretation::ASTInterpreter::visit_function_declaration(
     const FunctionDecl& value) {
-  if (context_.get_string(value.name) != "main" ||
-      !value.parameters.empty() ||
+  if (context_.get_string(value.name) != "main" || !value.parameters.empty() ||
       value.return_type->value->get_kind() != Type::Kind::VOID) {
     throw InterpreterException(
         value, "Only \"main: () -> void\" function is allowed.");
@@ -26,9 +25,9 @@ bool Interpretation::ASTInterpreter::visit_variable_declaration(
   }
 
   if (variables_.contains(value.name)) {
-    throw InterpreterException(
-        value, fmt::format("Redefinition of variable {}.",
-                           context_.get_string(value.name)));
+    throw InterpreterException(value,
+                               fmt::format("Redefinition of variable {:?}.",
+                                           context_.get_string(value.name)));
   }
 
   if (value.initializer == nullptr) {

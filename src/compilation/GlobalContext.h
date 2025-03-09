@@ -24,6 +24,12 @@ struct GlobalContext {
 
   ModuleContext& get_module(std::string_view name) {
     auto itr = modules_.find(name);
+
+    if (itr == modules_.end()) {
+      throw std::runtime_error(fmt::format(
+          "Unknown module {:?} requested in ModuleContext::get_module.", name));
+    }
+
     return itr->second;
   }
 
