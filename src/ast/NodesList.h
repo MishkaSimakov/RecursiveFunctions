@@ -20,6 +20,7 @@ NODE(UNARY_OPERATOR_EXPR, UnaryOperator, unary_operator);
 NODE(CALL_EXPR, CallExpr, call_expression);
 NODE(TYPE_NODE, TypeNode, type_node);
 NODE(VARIABLE_DECL, VariableDecl, variable_declaration);
+NODE(ASSIGNMENT_STMT, AssignmentStmt, assignment_statement);
 NODE(DECLARATION_STMT, DeclarationStmt, declaration_statement);
 NODE(EXPRESSION_STMT, ExpressionStmt, expression_statement);
 NODE(NAMESPACE_DECL, NamespaceDecl, namespace_declaration);

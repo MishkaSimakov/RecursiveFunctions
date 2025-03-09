@@ -5,7 +5,7 @@
 
 namespace Front {
 class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
-  GlobalContext& context_;
+  GlobalContext& contexwt_;
   ModuleContext& module_;
 
   IR::Program program_;

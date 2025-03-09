@@ -114,6 +114,11 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
                          value.type->value->to_string()));
     return true;
   }
+  bool visit_assignment_statement(const AssignmentStmt& value) {
+    std::string_view name = context_.get_string(value.id);
+    add_node(fmt::format("AssignmentStmt {} {}", range_string(value), name));
+    return true;
+  }
   bool visit_declaration_statement(const DeclarationStmt& value) {
     add_node(fmt::format("DeclarationStmt {}", range_string(value)));
     return true;

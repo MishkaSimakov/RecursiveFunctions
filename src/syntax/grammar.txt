@@ -82,15 +82,18 @@ statement-seq:
 statement:
     compound-statement      [pass<0>]
     iteration-statement     [pass<0>]
+    assignment-statement    [pass<0>]
     declaration-statement   [wrap_pass<Declaration, DeclarationStmt, 0>]
     expression-statement    [wrap_pass<Expression, ExpressionStmt, 0>]
     jump-statement          [pass<0>]
     selection-statement     [pass<0>]
 
-// for now only variable declaration
 declaration-statement:
     IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
     IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
+
+assignment-statement:
+    IDENTIFIER EQUAL expression SEMICOLON [variable_assignment]
 
 selection-statement:
     KW_IF OPEN_PAREN expression CLOSE_PAREN compound-statement                            [if_statement]

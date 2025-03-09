@@ -29,34 +29,37 @@ class InterpreterException final : public std::runtime_error {
 
 using ExpressionValue = std::variant<int64_t, bool>;
 
-inline bool is_compatible_with(ExpressionValue value, const Type& type) {
-  return std::visit(
-      Overloaded{
-          [&type](int64_t) { return type.get_kind() == Type::Kind::INT; },
-          [&type](bool) { return type.get_kind() == Type::Kind::BOOL; }},
-      value);
-}
-
-inline void print_function_implementation(ExpressionValue value) {
-  std::visit(
-      [](auto value) { std::cout << std::boolalpha << value << std::endl; },
-      value);
-}
-
 class ASTInterpreter
     : public ASTVisitor<ASTInterpreter, true, Order::POSTORDER> {
   const ModuleContext& context_;
+  std::ostream& os_;
+
   size_t current_nesting_level_{0};
-  std::unordered_map<StringId, ExpressionValue> variables_;
+  std::unordered_map<StringId, std::pair<ExpressionValue, Type*>> variables_;
   std::unordered_map<const Expression*, ExpressionValue> values_;
 
-  void assign_variable(const VariableDecl& variable, ExpressionValue value) {
-    if (!is_compatible_with(value, *variable.type->value)) {
-      throw InterpreterException(variable,
+  static bool is_compatible_with(ExpressionValue value, const Type& type) {
+    return std::visit(
+        Overloaded{
+            [&type](int64_t) { return type.get_kind() == Type::Kind::INT; },
+            [&type](bool) { return type.get_kind() == Type::Kind::BOOL; }},
+        value);
+  }
+
+  void print_function_implementation(ExpressionValue value) const {
+    std::visit(
+        [this](auto value) { os_ << std::boolalpha << value << std::endl; },
+        value);
+  }
+
+  void assign_variable(SourceRange assignment_range, StringId name,
+                       ExpressionValue value) {
+    if (!is_compatible_with(value, *variables_.at(name).second)) {
+      throw InterpreterException(assignment_range,
                                  "Incompatible types in variable assignment.");
     }
 
-    variables_[variable.name] = value;
+    variables_[name].first = value;
   }
 
   bool is_print_function(const IdExpr& name) const {
@@ -74,7 +77,8 @@ class ASTInterpreter
   }
 
  public:
-  explicit ASTInterpreter(const ModuleContext& context) : context_(context) {}
+  explicit ASTInterpreter(const ModuleContext& context, std::ostream& os)
+      : context_(context), os_(os) {}
 
   [[noreturn]] bool visit_namespace_declaration(const NamespaceDecl& value) {
     throw InterpreterException(value, "Namespaces are not implemented.");
@@ -86,6 +90,7 @@ class ASTInterpreter
 
   bool visit_function_declaration(const FunctionDecl& value);
   bool visit_variable_declaration(const VariableDecl& value);
+  bool visit_assignment_statement(const AssignmentStmt& value);
 
   bool traverse_if_statement(const IfStmt& value);
 

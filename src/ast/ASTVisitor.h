@@ -74,6 +74,13 @@ class ASTVisitor {
 
     return true;
   }
+  bool traverse_assignment_statement(wrap_const<AssignmentStmt>& node) {
+    if (!traverse(*node.value)) {
+      return false;
+    }
+
+    return true;
+  }
   bool traverse_declaration_statement(wrap_const<DeclarationStmt>& node) {
     if (!traverse(*node.value)) {
       return false;

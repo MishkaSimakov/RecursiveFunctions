@@ -27,6 +27,12 @@ std::string_view::iterator RegexParser::get_matching_paren(
     std::string_view regex) {
   int balance = 0;
   for (auto itr = regex.begin(); itr != regex.end(); ++itr) {
+    // skip escaped characters
+    if (*itr == '\\') {
+      ++itr;
+      continue;
+    }
+
     if (*itr == '(') {
       ++balance;
     } else if (*itr == ')') {
@@ -45,7 +51,19 @@ std::string_view::iterator RegexParser::get_matching_paren(
 
 std::string_view::iterator RegexParser::get_closing_bracket(
     std::string_view regex) {
-  return std::find(regex.begin(), regex.end(), ']');
+  for (auto itr = regex.begin(); itr != regex.end(); ++itr) {
+    // skip escaped characters
+    if (*itr == '\\') {
+      ++itr;
+      continue;
+    }
+
+    if (*itr == ']') {
+      return itr;
+    }
+  }
+
+  return regex.end();
 }
 
 std::unique_ptr<RegexNode> RegexParser::parse_character_class(

@@ -17,7 +17,7 @@ using TypeKind = Front::Type::Kind;
   ASSERT_EQ(range.end.pos_id, expected_to);
 
 #define ASSERT_STRING_EQ(string_id, expected) \
-  ASSERT_EQ(context_.get_string(string_id), expected)
+  ASSERT_EQ(module().get_string(string_id), expected)
 
 #define ASSERT_TYPE_NODE_EQ(ast_node, expected) \
   ASSERT_EQ(ast_node->value->get_kind(), expected)
@@ -26,8 +26,11 @@ using TypeKind = Front::Type::Kind;
   ASSERT_TRUE(is_identifier_equal(id_node, __VA_ARGS__))
 
 class SyntaxTestCase : public ::testing::Test {
- protected:
+ private:
   GlobalContext context_;
+
+ protected:
+  const ModuleContext& module() { return context_.get_module("main"); }
 
   template <typename... Args>
   bool is_identifier_equal(const std::unique_ptr<IdExpr>& identifier,
@@ -44,7 +47,7 @@ class SyntaxTestCase : public ::testing::Test {
     }
 
     for (size_t i = 0; i < expected_parts.size(); ++i) {
-      if (context_.get_string(identifier.parts[i]) != expected_parts[i]) {
+      if (module().get_string(identifier.parts[i]) != expected_parts[i]) {
         return false;
       }
     }
@@ -53,15 +56,17 @@ class SyntaxTestCase : public ::testing::Test {
   }
 
   const ModuleContext& parse(std::string_view program) {
+    // reset global context for each parse
+    context_ = GlobalContext();
+
     Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
     auto source_view = context_.source_manager.load_text(program);
     lexical_analyzer.set_source_view(source_view);
 
-    auto& module_context =
-        context_.add_module(std::to_string(context_.modules.size()));
+    auto& module_context = context_.add_module("main");
 
-    Syntax::LRParser parser(Constants::grammar_filepath, context_);
-    parser.parse(lexical_analyzer, module_context.id);
+    Syntax::LRParser parser(Constants::grammar_filepath);
+    parser.parse(lexical_analyzer, module_context, source_view);
 
     return module_context;
   }

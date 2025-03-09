@@ -2,8 +2,7 @@
 
 bool Interpretation::ASTInterpreter::visit_function_declaration(
     const FunctionDecl& value) {
-  if (context_.get_string(value.name) != "main" ||
-      !value.parameters.empty() ||
+  if (context_.get_string(value.name) != "main" || !value.parameters.empty() ||
       value.return_type->value->get_kind() != Type::Kind::VOID) {
     throw InterpreterException(
         value, "Only \"main: () -> void\" function is allowed.");
@@ -19,23 +18,45 @@ bool Interpretation::ASTInterpreter::visit_variable_declaration(
         value, "Variable declaration must not appear in nested scope.");
   }
 
-  if (value.type->value->get_kind() != Type::Kind::INT &&
-      value.type->value->get_kind() != Type::Kind::BOOL) {
+  Type* type = value.type->value;
+  if (type->get_kind() != Type::Kind::INT &&
+      type->get_kind() != Type::Kind::BOOL) {
     throw InterpreterException(value,
                                "Only i64 and bool variables are allowed.");
   }
 
   if (variables_.contains(value.name)) {
-    throw InterpreterException(
-        value, fmt::format("Redefinition of variable {}.",
-                           context_.get_string(value.name)));
+    throw InterpreterException(value,
+                               fmt::format("Redefinition of variable {}.",
+                                           context_.get_string(value.name)));
   }
 
+  ExpressionValue initializer;
   if (value.initializer == nullptr) {
-    throw InterpreterException(value, "Value must be assigned to variable.");
+    if (type->get_kind() == Type::Kind::INT) {
+      initializer = int64_t{0};
+    } else {
+      initializer = false;
+    }
+  } else {
+    initializer = values_.at(value.initializer.get());
   }
 
-  assign_variable(value, values_.at(value.initializer.get()));
+  variables_[value.name].second = type;
+  assign_variable(value.source_range, value.name, initializer);
+  return true;
+}
+
+bool Interpretation::ASTInterpreter::visit_assignment_statement(
+    const AssignmentStmt& value) {
+  if (!variables_.contains(value.id)) {
+    throw InterpreterException(
+        value, fmt::format("Assignment to undefined variable {:?}.",
+                           context_.get_string(value.id)));
+  }
+
+  assign_variable(value.source_range, value.id, values_[value.value.get()]);
+
   return true;
 }
 
@@ -96,7 +117,7 @@ bool Interpretation::ASTInterpreter::visit_id_expression(const IdExpr& value) {
     throw InterpreterException(value, "Unknown variable name.");
   }
 
-  values_[&value] = variables_[name];
+  values_[&value] = variables_[name].first;
 
   return true;
 }

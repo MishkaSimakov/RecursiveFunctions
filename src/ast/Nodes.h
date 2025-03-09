@@ -37,6 +37,7 @@ struct ASTNode {
     CALL_EXPR,
     TYPE_NODE,
     VARIABLE_DECL,
+    ASSIGNMENT_STMT,
     DECLARATION_STMT,
     EXPRESSION_STMT,
     NAMESPACE_DECL,
@@ -339,6 +340,17 @@ struct VariableDecl : Declaration {
         initializer(std::move(initializer)) {}
 
   Kind get_kind() const override { return Kind::VARIABLE_DECL; }
+};
+
+struct AssignmentStmt : Statement {
+  StringId id;
+  std::unique_ptr<Expression> value;
+
+  AssignmentStmt(SourceRange source_range, StringId id,
+                 std::unique_ptr<Expression> value)
+      : Statement(source_range), id(id), value(std::move(value)) {}
+
+  Kind get_kind() const override { return Kind::ASSIGNMENT_STMT; }
 };
 
 struct ProgramDecl : Declaration {
