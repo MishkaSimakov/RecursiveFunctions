@@ -12,26 +12,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: Bacondish2023/setup-googletest@v1
-      with:
-        tag: v1.14.0
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
-    - name: configure
-      run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-Werror" ..
-    - name: build lexer + parser
-      run: cd build && \
-           cmake --build . --target CompileLexisTable && ./src/lexis/CompileLexisTable && \
-           cmake --build . --target CompileGrammar && ./src/syntax/CompileGrammar
-    - name: make
-      run: cd build && cmake --build . -t Tests
-    - name: Run Test
-      run: cd build/tests && ./Tests --gtest_output="xml:report.xml"
-    - name: Test Report
-      uses: dorny/test-reporter@v1
-      if: success() || failure()
-      with:
-        name: Test Report
-        path: build/tests/report.xml
-        reporter: jest-junit
+      - uses: Bacondish2023/setup-googletest@v1
+        with:
+          tag: v1.14.0
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: configure
+        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-Werror" ..
+      - name: build lexer + parser
+        run: cd build && cmake --build . --target CompileLexisTable && ./src/lexis/CompileLexisTable && cmake --build . --target CompileGrammar && ./src/syntax/CompileGrammar
+      - name: make
+        run: cd build && cmake --build . -t Tests
+      - name: Run Test
+        run: cd build/tests && ./Tests --gtest_output="xml:report.xml"
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()
+        with:
+          name: Test Report
+          path: build/tests/report.xml
+          reporter: jest-junit
