@@ -1,13 +1,13 @@
 #include "SemanticAnalyzer.h"
 
 namespace Front {
-bool SemanticAnalyzer::before_compound_statement(CompoundStmt& node) {
-  start_nested_scope();
-  return true;
-}
+bool SemanticAnalyzer::traverse_compound_statement(CompoundStmt& node) {
+  NestedScopeRAII scope_guard(current_scope_);
 
-bool SemanticAnalyzer::after_compound_statement(CompoundStmt& node) {
-  end_nested_scope();
+  for (auto& stmt : node.statements) {
+    traverse(*stmt);
+  }
+
   return true;
 }
 }  // namespace Front

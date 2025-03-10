@@ -13,10 +13,13 @@ namespace Front {
 // 4. namespace
 struct Scope;
 
-// Variable, Function or Parameter
-// this symbols are in the end of qualified id
-struct TerminalSymbol {
+// Variable or Parameter, these symbols are in the end of qualified id
+struct VariableSymbol {
   Type* type;
+};
+
+struct FunctionSymbol {
+  FunctionType* type;
 };
 
 struct NamespaceSymbol {
@@ -29,23 +32,47 @@ struct SymbolInfo {
 
  public:
   Declaration& declaration;
-  std::variant<TerminalSymbol, NamespaceSymbol> data;
+  std::variant<VariableSymbol, FunctionSymbol, NamespaceSymbol> data;
 
-  static SymbolInfo make_namespace(NamespaceDecl& decl, Scope* subscope) {
-    return SymbolInfo{decl, NamespaceSymbol{subscope}};
+  SymbolInfo(Declaration& declaration,
+             std::variant<VariableSymbol, FunctionSymbol, NamespaceSymbol> data)
+      : declaration(declaration), data(data) {}
+
+  bool is_variable() const {
+    return std::holds_alternative<VariableSymbol>(data);
   }
 
-  static SymbolInfo make_terminal(Declaration& decl, Type* type) {
-    return SymbolInfo{decl, TerminalSymbol{type}};
+  bool is_function() const {
+    return std::holds_alternative<FunctionSymbol>(data);
   }
 };
 
 struct Scope {
+  SymbolInfo* parent_symbol{nullptr};
   std::vector<std::unique_ptr<Scope>> children;
   Scope* parent{nullptr};
 
   std::unordered_map<StringId, SymbolInfo> symbols;
 
   explicit Scope(Scope* parent) : parent(parent) {}
+
+  bool has_symbol(StringId name) const { return symbols.contains(name); }
+
+  SymbolInfo& add_namespace(StringId name, NamespaceDecl& decl,
+                            Scope* subscope) {
+    return symbols.emplace(name, SymbolInfo{decl, NamespaceSymbol{subscope}})
+        .first->second;
+  }
+
+  SymbolInfo& add_variable(StringId name, Declaration& decl, Type* type) {
+    return symbols.emplace(name, SymbolInfo{decl, VariableSymbol{type}})
+        .first->second;
+  }
+
+  SymbolInfo& add_function(StringId name, Declaration& decl,
+                           FunctionType* type) {
+    return symbols.emplace(name, SymbolInfo{decl, FunctionSymbol{type}})
+        .first->second;
+  }
 };
 }  // namespace Front

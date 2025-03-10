@@ -44,11 +44,6 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
     add_node(fmt::format("ProgramDecl {}", range_string(value)));
     return true;
   }
-  bool visit_parameter_declaration(const ParameterDecl& value) {
-    std::string_view name = context_.get_string(value.id);
-    add_node(fmt::format("ParamDecl {} {}", range_string(value), name));
-    return true;
-  }
   bool visit_function_declaration(const FunctionDecl& value) {
     std::vector<std::string> specifiers;
     if (value.is_exported) {

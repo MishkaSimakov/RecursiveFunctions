@@ -17,14 +17,11 @@
 // 5. Add visit_* method in ASTPrinter
 
 namespace Front {
-struct Scope;
-
 struct ASTNode {
   // clang-format off
   ENUM(Kind,
     COMPOUND_STMT,
     PROGRAM_DECL,
-    PARAMETER_DECL,
     FUNCTION_DECL,
     RETURN_STMT,
     INTEGER_LITERAL_EXPR,
@@ -104,17 +101,6 @@ struct CompoundStmt : Statement {
   Kind get_kind() const override { return Kind::COMPOUND_STMT; }
 };
 
-struct ParameterDecl : Declaration {
-  StringId id;
-  std::unique_ptr<TypeNode> type;
-
-  ParameterDecl(SourceRange source_range, StringId id,
-                std::unique_ptr<TypeNode> type)
-      : Declaration(source_range), id(id), type(std::move(type)) {}
-
-  Kind get_kind() const override { return Kind::PARAMETER_DECL; }
-};
-
 template <typename NodeT = ASTNode>
   requires std::is_base_of_v<ASTNode, NodeT>
 struct NodesList : ASTNode {
@@ -130,30 +116,6 @@ struct NodesList : ASTNode {
     unreachable(
         "NodesList<T> node doesn't appear anywhere except ASTBuildContext.");
   }
-};
-
-struct FunctionDecl : Declaration {
-  StringId name;
-  std::vector<std::unique_ptr<ParameterDecl>> parameters;
-  std::unique_ptr<TypeNode> return_type;
-  std::unique_ptr<CompoundStmt> body;
-
-  Scope* subscope;
-
-  bool is_exported;
-
-  FunctionDecl(SourceRange source_range, StringId name,
-               std::vector<std::unique_ptr<ParameterDecl>> parameters,
-               std::unique_ptr<TypeNode> return_type,
-               std::unique_ptr<CompoundStmt> body, bool is_exported)
-      : Declaration(source_range),
-        name(name),
-        parameters(std::move(parameters)),
-        return_type(std::move(return_type)),
-        body(std::move(body)),
-        is_exported(is_exported) {}
-
-  Kind get_kind() const override { return Kind::FUNCTION_DECL; }
 };
 
 struct ReturnStmt : Statement {
@@ -343,6 +305,27 @@ struct VariableDecl : Declaration {
         initializer(std::move(initializer)) {}
 
   Kind get_kind() const override { return Kind::VARIABLE_DECL; }
+};
+
+struct FunctionDecl : Declaration {
+  StringId name;
+  std::vector<std::unique_ptr<VariableDecl>> parameters;
+  std::unique_ptr<TypeNode> return_type;
+  std::unique_ptr<CompoundStmt> body;
+  bool is_exported;
+
+  FunctionDecl(SourceRange source_range, StringId name,
+               std::vector<std::unique_ptr<VariableDecl>> parameters,
+               std::unique_ptr<TypeNode> return_type,
+               std::unique_ptr<CompoundStmt> body, bool is_exported)
+      : Declaration(source_range),
+        name(name),
+        parameters(std::move(parameters)),
+        return_type(std::move(return_type)),
+        body(std::move(body)),
+        is_exported(is_exported) {}
+
+  Kind get_kind() const override { return Kind::FUNCTION_DECL; }
 };
 
 struct ProgramDecl : Declaration {

@@ -15,6 +15,8 @@ struct ModuleContext {
   std::unique_ptr<ProgramDecl> ast_root;
   std::unique_ptr<Scope> root_scope;
 
+  std::unordered_map<const IdExpr*, SymbolInfo*> symbols_info;
+
   // I use std::less<void> to compare std::string with std::string_view without
   // creating new string from string_view
   std::set<std::string, std::less<>> strings_table;

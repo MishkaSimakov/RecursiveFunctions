@@ -29,7 +29,7 @@ std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::name_lookup(
     current_scope = current_scope->parent;
   }
 
-  // if hasn't found then start global lookup in imported modules
+  // if it hasn't found then start global lookup in imported modules
   return recursive_global_name_lookup(context_, id);
 }
 
@@ -100,6 +100,30 @@ bool SemanticAnalyzer::after_traverse(ASTNode& node) {
           "Program logic error. Type of expression is not calculated after "
           "traversal.");
     }
+  }
+
+  return true;
+}
+
+bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
+  if (current_scope_->parent_symbol == nullptr ||
+      !current_scope_->parent_symbol->is_function()) {
+    scold_user(node, "Return statements are allowed only in function scope.");
+  }
+
+  const auto& function =
+      std::get<FunctionSymbol>(current_scope_->parent_symbol->data);
+
+  if (node.value->type != function.type->return_type) {
+    auto left_type = node.value->type->to_string();
+    auto right_type = function.type->return_type->to_string();
+
+    scold_user(
+        node,
+        fmt::format(
+            "Expression type in return statement must be equal to function "
+            "type. {:?} != {:?}.",
+            left_type, right_type));
   }
 
   return true;

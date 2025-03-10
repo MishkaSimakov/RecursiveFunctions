@@ -142,8 +142,8 @@ class ASTBuildContext {
     const auto& token_node = cast_view<TokenNode>(nodes.front());
     auto name_id = context_.add_string(get_token_string(token_node));
 
-    return make_node<ParameterDecl>(source_range, name_id,
-                                    std::move(decl_type));
+    return make_node<VariableDecl>(source_range, name_id, std::move(decl_type),
+                                   nullptr);
   }
 
   NodePtr compound_statement(SourceRange source_range,
@@ -171,7 +171,7 @@ class ASTBuildContext {
     auto name_id = context_.add_string(get_token_string(id_token));
 
     auto parameters =
-        cast_move<NodesList<ParameterDecl>>(std::move(nodes[shift + 2]));
+        cast_move<NodesList<VariableDecl>>(std::move(nodes[shift + 2]));
     auto return_type = cast_move<TypeNode>(std::move(nodes[shift + 3]));
     auto body = cast_move<CompoundStmt>(std::move(nodes[shift + 5]));
 

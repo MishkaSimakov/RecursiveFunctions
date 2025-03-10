@@ -20,6 +20,8 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<llvm::IRBuilder<>> llvm_ir_builder_;
 
+  std::unordered_map<const Declaration*, llvm::AllocaInst*> local_variables_;
+
   ModuleContext& module_;
 
   llvm::Value* current_expr_value_{nullptr};
@@ -31,8 +33,7 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
   }
 
   llvm::Type* map_type(Type* type) const;
-
-  llvm::Value* compile_expression(Expression* expr);
+  llvm::Value* compile_expression(const Expression& expr);
 
  public:
   IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
@@ -42,6 +43,9 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
         llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
         module_(module) {}
 
+  bool traverse_variable_declaration(const VariableDecl& value);
+  bool traverse_id_expression(const IdExpr& value);
+  bool traverse_binary_operator(const BinaryOperator& value);
   bool traverse_function_declaration(const FunctionDecl& value);
   bool traverse_return_statement(const ReturnStmt& value);
   bool visit_integer_literal(const IntegerLiteral& value);

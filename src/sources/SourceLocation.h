@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct SourceLocation {
   uint32_t file_id;
   uint32_t pos_id;

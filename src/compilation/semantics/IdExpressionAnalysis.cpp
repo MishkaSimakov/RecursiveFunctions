@@ -7,13 +7,17 @@ bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
     scold_user(node, "Unknown identifier.");
   }
 
-  if (!std::holds_alternative<TerminalSymbol>(info->data)) {
+  if (info->is_variable()) {
+    node.type = std::get<VariableSymbol>(info->data).type;
+  } else if (info->is_function()) {
+    node.type = std::get<FunctionSymbol>(info->data).type;
+  } else {
     scold_user(
         node,
         "Identifier must refer to variable, function or function parameter.");
   }
 
-  node.type = std::get<TerminalSymbol>(info->data).type;
+  context_.symbols_info[&node] = info;
 
   return true;
 }

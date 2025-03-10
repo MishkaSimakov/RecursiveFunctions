@@ -9,14 +9,16 @@ bool SemanticAnalyzer::traverse_if_statement(IfStmt& node) {
                "Condition of if statement must be of boolean type.");
   }
 
-  start_nested_scope();
-  traverse(*node.true_branch);
-  end_nested_scope();
+  {
+    NestedScopeRAII scope_guard(current_scope_);
+    traverse(*node.true_branch);
+  }
 
-  start_nested_scope();
-  traverse(*node.false_branch);
-  end_nested_scope();
-  
+  {
+    NestedScopeRAII scope_guard(current_scope_);
+    traverse(*node.false_branch);
+  }
+
   return true;
 }
 }  // namespace Front

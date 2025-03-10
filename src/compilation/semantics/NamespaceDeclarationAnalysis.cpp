@@ -1,23 +1,22 @@
 #include "SemanticAnalyzer.h"
 
 namespace Front {
-bool SemanticAnalyzer::before_namespace_declaration(NamespaceDecl& node) {
-  auto namespace_parent_scope = current_scope_;
-  auto namespace_subscope = start_nested_scope();
-
-  auto [_, was_emplaced] = namespace_parent_scope->symbols.emplace(
-      node.name, SymbolInfo::make_namespace(node, namespace_subscope));
-
-  if (!was_emplaced) {
+bool SemanticAnalyzer::traverse_namespace_declaration(NamespaceDecl& node) {
+  if (current_scope_->parent->has_symbol(node.name)) {
     auto name = context_.get_string(node.name);
     scold_user(node, fmt::format("Redefinition of namespace {}", name));
   }
 
-  return true;
-}
+  NestedScopeRAII scope_guard(current_scope_);
 
-bool SemanticAnalyzer::after_namespace_declaration(NamespaceDecl& node) {
-  end_nested_scope();
+  auto& info =
+      current_scope_->parent->add_namespace(node.name, node, current_scope_);
+  current_scope_->parent_symbol = &info;
+
+  for (auto& decl : node.body) {
+    traverse(*decl);
+  }
+
   return true;
 }
 }  // namespace Front

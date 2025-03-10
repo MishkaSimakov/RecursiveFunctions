@@ -1,6 +1,7 @@
 #pragma once
 #include "ast/ASTVisitor.h"
 #include "compilation/GlobalContext.h"
+#include "utils/OneShotObject.h"
 
 namespace Front {
 struct SemanticAnalyzerException : std::runtime_error {
@@ -11,13 +12,12 @@ struct SemanticAnalyzerException : std::runtime_error {
       : std::runtime_error("Semantic error."), errors(std::move(errors)) {}
 };
 
-// This class performs semantic analysis
-// Threew main tasks are solved here:
-// 1. Calculate scope for each AST Node
-// 2. Build symbol table
-// 3. Construct types graph
+// What should this class do?
+// 1. Create for each function list of local variables
+// 2. Link each variable name to its definition
 class SemanticAnalyzer
-    : public ASTVisitor<SemanticAnalyzer, false, Order::POSTORDER> {
+    : public ASTVisitor<SemanticAnalyzer, false, Order::POSTORDER>,
+      OneShotObject {
   const GlobalContext& global_context_;
   ModuleContext& context_;
   std::vector<std::pair<SourceRange, std::string>> errors_;
@@ -37,15 +37,25 @@ class SemanticAnalyzer
   std::pair<Scope*, SymbolInfo*> recursive_global_name_lookup(
       const ModuleContext& module, StringId id) const;
 
-  Scope* start_nested_scope() {
-    auto& scope = current_scope_->children.emplace_back(
-        std::make_unique<Scope>(current_scope_));
+  class NestedScopeRAII {
+    Scope*& current_scope_;
 
-    current_scope_ = scope.get();
-    return current_scope_;
-  }
+   public:
+    explicit NestedScopeRAII(Scope*& current_scope)
+        : current_scope_(current_scope) {
+      auto& scope = current_scope_->children.emplace_back(
+          std::make_unique<Scope>(current_scope_));
+      current_scope_ = scope.get();
+    }
 
-  void end_nested_scope() { current_scope_ = current_scope_->parent; }
+    NestedScopeRAII(const NestedScopeRAII&) = delete;
+    NestedScopeRAII& operator=(const NestedScopeRAII&) = delete;
+
+    NestedScopeRAII(NestedScopeRAII&&) = delete;
+    NestedScopeRAII& operator=(NestedScopeRAII&&) = delete;
+
+    ~NestedScopeRAII() { current_scope_ = current_scope_->parent; }
+  };
 
   void check_call_arguments(FunctionType* type, const CallExpr& call);
 
@@ -58,15 +68,11 @@ class SemanticAnalyzer
   bool before_program_declaration(ProgramDecl& node);
   bool after_program_declaration(ProgramDecl& node);
 
-  bool before_compound_statement(CompoundStmt& node);
-  bool after_compound_statement(CompoundStmt& node);
-
-  bool visit_parameter_declaration(ParameterDecl& node);
+  bool traverse_compound_statement(CompoundStmt& node);
 
   bool traverse_function_declaration(FunctionDecl& node);
 
-  // bool before_return_statement(ReturnStmt& node);
-  // bool after_return_statement(ReturnStmt& node);
+  bool visit_return_statement(ReturnStmt& node);
 
   bool before_integer_literal(IntegerLiteral& node);
   bool before_string_literal(StringLiteral& node);
@@ -93,8 +99,7 @@ class SemanticAnalyzer
   // bool before_expression_statement(ExpressionStmt& node);
   // bool after_expression_statement(ExpressionStmt& node);
 
-  bool before_namespace_declaration(NamespaceDecl& node);
-  bool after_namespace_declaration(NamespaceDecl& node);
+  bool traverse_namespace_declaration(NamespaceDecl& node);
 
   // bool before_while_statement(WhileStmt& node);
   // bool after_while_statement(WhileStmt& node);
@@ -107,6 +112,9 @@ class SemanticAnalyzer
   // bool before_continue_statement(ContinueStmt& node);
   // bool after_continue_statement(ContinueStmt& node);
 
-  void analyze() { traverse(*context_.ast_root); }
+  void analyze() {
+    fire("analyze");
+    traverse(*context_.ast_root);
+  }
 };
 }  // namespace Front

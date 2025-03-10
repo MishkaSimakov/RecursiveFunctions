@@ -52,8 +52,8 @@ TEST_F(SyntaxTestCase, function_with_parameters) {
   auto& first_param = function.parameters[0];
   auto& second_param = function.parameters[1];
 
-  ASSERT_STRING_EQ(first_param->id, "first");
-  ASSERT_STRING_EQ(second_param->id, "second");
+  ASSERT_STRING_EQ(first_param->name, "first");
+  ASSERT_STRING_EQ(second_param->name, "second");
 
   ASSERT_TYPE_NODE_EQ(first_param->type, TypeKind::INT);
   ASSERT_TYPE_NODE_EQ(second_param->type, TypeKind::BOOL);

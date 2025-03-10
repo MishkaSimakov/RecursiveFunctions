@@ -51,12 +51,12 @@ function-definition:
               IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
 
 parameters:
-    OPEN_PAREN CLOSE_PAREN                              [construct<NodesList<ParameterDecl>>]
+    OPEN_PAREN CLOSE_PAREN                              [construct<NodesList<VariableDecl>>]
     OPEN_PAREN parameter-declaration-list CLOSE_PAREN   [pass<1>]
 
 parameter-declaration-list:
-    parameter-declaration                                   [sequence<NodesList<ParameterDecl>, ParameterDecl>]
-    parameter-declaration-list COMMA parameter-declaration  [sequence<NodesList<ParameterDecl>, ParameterDecl>]
+    parameter-declaration                                   [sequence<NodesList<VariableDecl>, VariableDecl>]
+    parameter-declaration-list COMMA parameter-declaration  [sequence<NodesList<VariableDecl>, VariableDecl>]
 
 parameter-declaration:
     IDENTIFIER COLON type-name [parameter_declaration]

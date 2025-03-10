@@ -7,7 +7,6 @@
 
 NODE(COMPOUND_STMT, CompoundStmt, compound_statement);
 NODE(PROGRAM_DECL, ProgramDecl, program_declaration);
-NODE(PARAMETER_DECL, ParameterDecl, parameter_declaration);
 NODE(FUNCTION_DECL, FunctionDecl, function_declaration);
 NODE(RETURN_STMT, ReturnStmt, return_statement);
 NODE(INTEGER_LITERAL_EXPR, IntegerLiteral, integer_literal);

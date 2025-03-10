@@ -110,10 +110,6 @@ class ASTVisitor {
 
     return true;
   }
-  bool traverse_parameter_declaration(wrap_const<ParameterDecl>& node) {
-    return traverse(*node.type);
-  }
-
   bool traverse_function_declaration(wrap_const<FunctionDecl>& node) {
     for (auto& parameter : node.parameters) {
       if (!traverse(*parameter)) {

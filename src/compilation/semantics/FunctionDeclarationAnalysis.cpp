@@ -2,29 +2,27 @@
 
 namespace Front {
 bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
+  NestedScopeRAII scope_guard(current_scope_);
+
   // build function type
   auto arguments_view =
-    node.parameters |
-    std::views::transform([](const std::unique_ptr<ParameterDecl>& node) {
-      return node->type->value;
-    });
+      node.parameters |
+      std::views::transform([](const std::unique_ptr<VariableDecl>& node) {
+        return node->type->value;
+      });
   std::vector arguments(arguments_view.begin(), arguments_view.end());
 
   Type* return_type = node.return_type->value;
+  FunctionType* type =
+      types().make_type<FunctionType>(std::move(arguments), return_type);
 
-  Type* type = context_.types_storage.make_type<FunctionType>(
-      std::move(arguments), return_type);
-
-  auto [itr, was_emplaced] =
-      current_scope_->symbols.emplace(node.name, SymbolInfo::make_terminal(node, type));
-
-  if (!was_emplaced) {
+  if (current_scope_->has_symbol(node.name)) {
     auto name = context_.get_string(node.name);
-    scold_user(node, fmt::format("Redefinition of function {}", name));
+    scold_user(node, fmt::format("Redefinition of function {:?}.", name));
   }
 
-  // traverse function arguments and body
-  node.subscope = start_nested_scope();
+  SymbolInfo& info = current_scope_->add_function(node.name, node, type);
+  current_scope_->parent_symbol = &info;
 
   for (auto& parameter : node.parameters) {
     traverse(*parameter);
@@ -35,7 +33,6 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
     traverse(*stmt);
   }
 
-  end_nested_scope();
   return true;
 }
 }  // namespace Front

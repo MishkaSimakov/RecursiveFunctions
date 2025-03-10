@@ -7,12 +7,14 @@
 #include "lexis/Token.h"
 
 namespace Lexis {
-class LexicalAutomatonGenerator {
-  constexpr static auto kTokenHasherFn = [](TokenType token) {
+struct TokenTypeHasher {
+  size_t operator()(TokenType token) const {
     return std::hash<size_t>()(static_cast<size_t>(token));
-  };
+  }
+};
 
-  std::unordered_map<TokenType, std::string, decltype(kTokenHasherFn)> tokens_;
+class LexicalAutomatonGenerator {
+  std::unordered_map<TokenType, std::string, TokenTypeHasher> tokens_;
   std::unordered_map<std::string, std::string> helpers_;
 
  public:
