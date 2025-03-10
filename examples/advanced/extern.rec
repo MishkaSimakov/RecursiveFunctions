@@ -1,9 +1,0 @@
-(extern) print(number);
-
-add(x, 0) = x;
-add(x, y + 1) = successor(add);
-
-print_n_times(x, 0) = 0;
-print_n_times(x, n + 1) = add(print(x), print_n_times);
-
-main() = print(add(100, 100));

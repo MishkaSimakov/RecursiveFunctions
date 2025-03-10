@@ -1,10 +1,13 @@
 #include "TeaFrontend.h"
 
+#include <llvm/Linker/Linker.h>
+
 #include <deque>
 #include <iostream>
 
 #include "ast/ASTPrinter.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
+#include "ir/IRASTVisitor.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
 #include "utils/Constants.h"
@@ -118,7 +121,7 @@ void TeaFrontend::build_ast() {
   }
 }
 
-void TeaFrontend::build_symbols_table() {
+void TeaFrontend::build_symbols_table_and_compile() {
   std::deque<std::string_view> queue;
 
   for (const auto& [name, module] : context_.get_modules()) {
@@ -158,6 +161,9 @@ void TeaFrontend::build_symbols_table() {
       context_.source_manager.print_annotations(std::cout);
       throw;
     }
+
+    auto ir_compiler = IRASTVisitor(*llvm_context_, current_module);
+    llvm_modules_.emplace_back(std::move(ir_compiler.compile()));
   }
 }
 
@@ -171,8 +177,20 @@ int TeaFrontend::compile() {
   // For each module build ASTTree and store links to imported modules
   build_ast();
 
-  // For each module build symbol table
-  build_symbols_table();
+  // For each module build symbol table and compile it into llvm IR
+  build_symbols_table_and_compile();
+
+  // Link all llvm modules together
+  auto main_module = std::make_unique<llvm::Module>("main", *llvm_context_);
+  llvm::Linker linker(*main_module);
+
+  for (auto& module : llvm_modules_) {
+    linker.linkInModule(std::move(module));
+  }
+  llvm_modules_.clear();
+
+  // Write linked module into output stream
+  main_module->print(llvm::outs(), nullptr);
 
   return 0;
 }

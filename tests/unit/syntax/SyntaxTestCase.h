@@ -27,10 +27,10 @@ using TypeKind = Front::Type::Kind;
 
 class SyntaxTestCase : public ::testing::Test {
  private:
-  GlobalContext context_;
+  GlobalContext* context_{nullptr};
 
  protected:
-  const ModuleContext& module() { return context_.get_module("main"); }
+  const ModuleContext& module() { return context_->get_module("main"); }
 
   template <typename... Args>
   bool is_identifier_equal(const std::unique_ptr<IdExpr>& identifier,
@@ -57,13 +57,14 @@ class SyntaxTestCase : public ::testing::Test {
 
   const ModuleContext& parse(std::string_view program) {
     // reset global context for each parse
-    context_ = GlobalContext();
+    delete context_;
+    context_ = new GlobalContext();
 
     Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
-    auto source_view = context_.source_manager.load_text(program);
+    auto source_view = context_->source_manager.load_text(program);
     lexical_analyzer.set_source_view(source_view);
 
-    auto& module_context = context_.add_module("main");
+    auto& module_context = context_->add_module("main");
 
     Syntax::LRParser parser(Constants::grammar_filepath);
     parser.parse(lexical_analyzer, module_context, source_view);
@@ -83,6 +84,11 @@ class SyntaxTestCase : public ::testing::Test {
         dynamic_cast<FunctionDecl&>(*context.ast_root->declarations.front());
     return function.body->statements;
   }
+
+  void TearDown() override {
+    delete context_;
+  }
+
   //
   // template <typename... Args>
   //   requires(std::same_as<Args, BinaryOperator::OpType> && ...)

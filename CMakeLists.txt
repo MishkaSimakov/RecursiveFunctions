@@ -24,8 +24,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 
 # -- llvm --
-list(APPEND CMAKE_DIR
-        /opt/homebrew/Cellar/llvm
+list(APPEND CMAKE_PREFIX_PATH
+        /opt/homebrew/Cellar/llvm/19.1.7_1/
 )
 
 find_package(LLVM REQUIRED CONFIG)
@@ -33,7 +33,7 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(llvm_libs support core irreader linker)
 # -- end of llvm --
 
 add_subdirectory(src)

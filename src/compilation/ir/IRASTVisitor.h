@@ -1,14 +1,28 @@
 #pragma once
 #include "ast/ASTVisitor.h"
+#include "compilation/GlobalContext.h"
 #include "compilation/ModuleContext.h"
-#include "intermediate_representation/Program.h"
-
-using namespace llvm;
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 
 namespace Front {
 class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
-  std::unique_ptr<LLVMContext>
-  IR::Type* map_type(Type* type);
+  llvm::LLVMContext& llvm_context_;
+  std::unique_ptr<llvm::Module> llvm_module_;
+  std::unique_ptr<llvm::IRBuilder<>> llvm_ir_builder_;
+
+  ModuleContext& module_;
+
+  llvm::Value* current_expr_value_{nullptr};
 
   // compiler must not pass through some kind of nodes. If it does, then I've
   // made some mistake developing it
@@ -16,28 +30,22 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
     unreachable("Compiler doesn't pass through this kind of nodes.");
   }
 
- public:
-  IRASTVisitor(const ASTNode& root, GlobalContext& context,
-               ModuleContext& module)
-      : ASTVisitor(root), context_(context), module_(module) {}
+  llvm::Type* map_type(Type* type) const;
 
-  bool traverse_compound_statement(const CompoundStmt& value);
-  bool traverse_program_declaration(const ProgramDecl& value);
-  bool traverse_parameter_declaration(const ParameterDecl& value) {
-    unreachable_node();
-  }
+  llvm::Value* compile_expression(Expression* expr);
+
+ public:
+  IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
+      : llvm_context_(llvm_context),
+        llvm_module_(
+            std::make_unique<llvm::Module>(module.name, llvm_context_)),
+        llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
+        module_(module) {}
+
   bool traverse_function_declaration(const FunctionDecl& value);
   bool traverse_return_statement(const ReturnStmt& value);
-  bool traverse_integer_literal(const IntegerLiteral& value);
-  bool traverse_string_literal(const StringLiteral& value);
-  bool traverse_id_expression(const IdExpr& value);
-  bool traverse_import_declaration(const ImportDecl& value) {
-    unreachable_node();
-  }
-  bool traverse_binary_operator(const BinaryOperator& value);
-  bool traverse_call_expression(const CallExpr& value);
-  bool traverse_type_node(const TypeNode& value) { unreachable_node(); }
-  bool traverse_variable_declaration(const VariableDecl& value);
-  bool traverse_declaration_statement(const DeclarationStmt& value);
+  bool visit_integer_literal(const IntegerLiteral& value);
+
+  std::unique_ptr<llvm::Module> compile();
 };
 }  // namespace Front
