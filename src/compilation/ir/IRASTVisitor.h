@@ -15,12 +15,18 @@
 #include "llvm/IR/Verifier.h"
 
 namespace Front {
-class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
+struct IRASTVisitorConfig : ASTVisitorConfig {
+  static constexpr auto order() { return Order::POSTORDER; }
+  static constexpr auto is_const() { return true; }
+  static constexpr auto override_all() { return true; }
+};
+
+class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
   llvm::LLVMContext& llvm_context_;
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<llvm::IRBuilder<>> llvm_ir_builder_;
 
-  std::unordered_map<const Declaration*, llvm::AllocaInst*> local_variables_;
+  std::unordered_map<const Declaration*, llvm::Value*> identifiers_addresses_;
 
   ModuleContext& module_;
 
@@ -35,6 +41,8 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
   llvm::Type* map_type(Type* type) const;
   llvm::Value* compile_expression(const Expression& expr);
 
+  std::string get_qualified_object_name(const FunctionDecl& value) const;
+
  public:
   IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
       : llvm_context_(llvm_context),
@@ -43,12 +51,18 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, true, Order::POSTORDER> {
         llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
         module_(module) {}
 
+  bool traverse_implicit_lvalue_to_rvalue_conversion_expression(
+      const ImplicitLvalueToRvalueConversionExpr& value);
+  bool traverse_assignment_statement(const AssignmentStmt& value);
+  bool traverse_if_statement(const IfStmt& value);
+  bool traverse_call_expression(const CallExpr& value);
   bool traverse_variable_declaration(const VariableDecl& value);
   bool traverse_id_expression(const IdExpr& value);
   bool traverse_binary_operator(const BinaryOperator& value);
   bool traverse_function_declaration(const FunctionDecl& value);
   bool traverse_return_statement(const ReturnStmt& value);
   bool visit_integer_literal(const IntegerLiteral& value);
+  bool visit_bool_literal(const BoolLiteral& value);
 
   std::unique_ptr<llvm::Module> compile();
 };

@@ -1,0 +1,19 @@
+// extern print: (value: i64) -> void
+
+math: namespace = {
+    sqr: (value: i64) -> i64 = {
+        return value * value;
+    }
+}
+
+}main: (x: i64) -> i64 = {
+    y: i64 = 123;
+
+    if (true) {
+        y = 37;
+    } else {
+        y = 42;
+    }
+
+    return y;
+}

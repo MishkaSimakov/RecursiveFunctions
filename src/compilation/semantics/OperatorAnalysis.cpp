@@ -2,7 +2,9 @@
 
 namespace Front {
 bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
-  // TODO: make this better
+  convert_to_rvalue(node.left);
+  convert_to_rvalue(node.right);
+
   auto left_op_type = node.left->type;
   auto right_op_type = node.right->type;
 
@@ -37,6 +39,8 @@ bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
   } else {
     scold_user(node, "Unimplemented binary operator.");
   }
+
+  node.value_category = ValueCategory::RVALUE;
 
   return true;
 }

@@ -48,7 +48,7 @@ struct SymbolInfo {
 };
 
 struct Scope {
-  SymbolInfo* parent_symbol{nullptr};
+  std::optional<StringId> name;
   std::vector<std::unique_ptr<Scope>> children;
   Scope* parent{nullptr};
 
@@ -73,6 +73,15 @@ struct Scope {
                            FunctionType* type) {
     return symbols.emplace(name, SymbolInfo{decl, FunctionSymbol{type}})
         .first->second;
+  }
+
+  // returns nullptr for anonymous scopes
+  SymbolInfo* get_scope_info() const {
+    if (!name.has_value()) {
+      return nullptr;
+    }
+
+    return &parent->symbols.at(name.value());
   }
 };
 }  // namespace Front

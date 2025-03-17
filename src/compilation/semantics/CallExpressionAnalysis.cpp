@@ -2,7 +2,7 @@
 
 namespace Front {
 bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
-  FunctionType* type = dynamic_cast<FunctionType*>(node.name->type);
+  FunctionType* type = dynamic_cast<FunctionType*>(node.callee->type);
 
   // check that type is callable
   if (type == nullptr) {

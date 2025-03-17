@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <string_view>
 
+#include "../../../../../../../../Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/source_location"
 #include "fmt/format.h"
 
 class OneShotObject {
@@ -18,13 +19,18 @@ class OneShotObject {
   OneShotObject(OneShotObject&&) = delete;
   OneShotObject& operator=(OneShotObject&&) = delete;
 
-  void fire(std::string_view method_name) {
+  void fire(std::source_location location) {
     if (was_shot_) {
       throw std::runtime_error(
           fmt::format("Method {:?} must be invoked only once for one object.",
-                      method_name));
+                      location.function_name()));
     }
 
     was_shot_ = true;
   }
 };
+
+// For some reason source_location::curent() doesn't capture the location when
+// used as member default argument. But do capture when it is funtion argument:
+// https://en.cppreference.com/w/cpp/utility/source_location/current
+#define OSO_FIRE() fire(std::source_location::current())

@@ -1,6 +1,7 @@
 #pragma once
 #include <compilation/StringId.h>
 
+#include <bitset>
 #include <memory>
 #include <ranges>
 #include <vector>
@@ -17,6 +18,10 @@
 // 5. Add visit_* method in ASTPrinter
 
 namespace Front {
+struct QualifiedId {
+  std::vector<StringId> parts;
+};
+
 struct ASTNode {
   // clang-format off
   ENUM(Kind,
@@ -34,6 +39,7 @@ struct ASTNode {
     CALL_EXPR,
     TYPE_NODE,
     VARIABLE_DECL,
+    ASSIGNMENT_STMT,
     DECLARATION_STMT,
     EXPRESSION_STMT,
     NAMESPACE_DECL,
@@ -41,6 +47,8 @@ struct ASTNode {
     IF_STMT,
     CONTINUE_STMT,
     BREAK_STMT,
+
+    IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR,
   );
   // clang-format on
 
@@ -54,19 +62,6 @@ struct ASTNode {
   virtual ~ASTNode() = default;
 
   virtual Kind get_kind() const = 0;
-};
-
-struct TokenNode : ASTNode {
-  Lexis::TokenType token_type;
-
-  TokenNode(const Lexis::Token& token)
-      : ASTNode(token.source_range), token_type(token.type) {}
-  TokenNode(SourceRange source_range, Lexis::TokenType token_type)
-      : ASTNode(source_range), token_type(token_type) {}
-
-  Kind get_kind() const override {
-    unreachable("Token node doesn't appear anywhere except ASTBuildContext.");
-  }
 };
 
 struct Statement : ASTNode {
@@ -83,8 +78,16 @@ struct TypeNode : ASTNode {
   Kind get_kind() const override { return Kind::TYPE_NODE; }
 };
 
+enum class ValueCategory {
+  LVALUE,
+  RVALUE,
+
+  UNKNOWN
+};
+
 struct Expression : ASTNode {
   Type* type{nullptr};
+  ValueCategory value_category{ValueCategory::UNKNOWN};
 
   using ASTNode::ASTNode;
 };
@@ -99,23 +102,6 @@ struct CompoundStmt : Statement {
   }
 
   Kind get_kind() const override { return Kind::COMPOUND_STMT; }
-};
-
-template <typename NodeT = ASTNode>
-  requires std::is_base_of_v<ASTNode, NodeT>
-struct NodesList : ASTNode {
-  std::vector<std::unique_ptr<NodeT>> nodes;
-
-  NodesList(SourceRange source_range) : ASTNode(source_range) {}
-
-  void add_item(std::unique_ptr<NodeT> node) {
-    nodes.push_back(std::move(node));
-  }
-
-  Kind get_kind() const override {
-    unreachable(
-        "NodesList<T> node doesn't appear anywhere except ASTBuildContext.");
-  }
 };
 
 struct ReturnStmt : Statement {
@@ -154,13 +140,10 @@ struct StringLiteral : Expression {
 };
 
 struct IdExpr : Expression {
-  std::vector<StringId> parts;
-  Declaration* declaration{nullptr};
+  QualifiedId id;
 
-  IdExpr(SourceRange source_range) : Expression(source_range) {}
-
-  void add_qualifier(StringId qualifier) { parts.push_back(qualifier); }
-
+  IdExpr(SourceRange source_range, QualifiedId id)
+      : Expression(source_range), id(std::move(id)) {}
   Kind get_kind() const override { return Kind::ID_EXPR; }
 };
 
@@ -279,13 +262,13 @@ struct UnaryOperator : Expression {
 };
 
 struct CallExpr : Expression {
-  std::unique_ptr<IdExpr> name;
+  std::unique_ptr<Expression> callee;
   std::vector<std::unique_ptr<Expression>> arguments;
 
-  CallExpr(SourceRange source_range, std::unique_ptr<IdExpr> name,
+  CallExpr(SourceRange source_range, std::unique_ptr<Expression> callee,
            std::vector<std::unique_ptr<Expression>> arguments)
       : Expression(source_range),
-        name(std::move(name)),
+        callee(std::move(callee)),
         arguments(std::move(arguments)) {}
 
   Kind get_kind() const override { return Kind::CALL_EXPR; }
@@ -307,23 +290,61 @@ struct VariableDecl : Declaration {
   Kind get_kind() const override { return Kind::VARIABLE_DECL; }
 };
 
+struct AssignmentStmt : Statement {
+  std::unique_ptr<Expression> left;
+  std::unique_ptr<Expression> right;
+
+  AssignmentStmt(SourceRange source_range, std::unique_ptr<Expression> left,
+                 std::unique_ptr<Expression> right)
+      : Statement(source_range),
+        left(std::move(left)),
+        right(std::move(right)) {}
+
+  Kind get_kind() const override { return Kind::ASSIGNMENT_STMT; }
+};
+
 struct FunctionDecl : Declaration {
+  struct Specifiers {
+   private:
+    constexpr static size_t kExportedId = 0;
+    constexpr static size_t kExternId = 1;
+
+    std::bitset<2> specifiers_{0};
+
+   public:
+    Specifiers() = default;
+
+    Specifiers& set_exported(bool is_exported) {
+      specifiers_[kExportedId] = is_exported;
+      return *this;
+    }
+
+    Specifiers& set_extern(bool is_extern) {
+      specifiers_[kExternId] = is_extern;
+      return *this;
+    }
+
+    bool is_exported() const { return specifiers_[kExportedId]; }
+
+    bool is_extern() const { return specifiers_[kExternId]; }
+  };
+
   StringId name;
   std::vector<std::unique_ptr<VariableDecl>> parameters;
   std::unique_ptr<TypeNode> return_type;
   std::unique_ptr<CompoundStmt> body;
-  bool is_exported;
+  Specifiers specifiers;
 
   FunctionDecl(SourceRange source_range, StringId name,
                std::vector<std::unique_ptr<VariableDecl>> parameters,
                std::unique_ptr<TypeNode> return_type,
-               std::unique_ptr<CompoundStmt> body, bool is_exported)
+               std::unique_ptr<CompoundStmt> body, Specifiers specifiers)
       : Declaration(source_range),
         name(name),
         parameters(std::move(parameters)),
         return_type(std::move(return_type)),
         body(std::move(body)),
-        is_exported(is_exported) {}
+        specifiers(specifiers) {}
 
   Kind get_kind() const override { return Kind::FUNCTION_DECL; }
 };
@@ -412,4 +433,54 @@ struct BreakStmt : Statement {
   explicit BreakStmt(SourceRange source_range) : Statement(source_range) {}
   Kind get_kind() const override { return Kind::BREAK_STMT; }
 };
+
+// implicit nodes (added by SemanticAnalyzer)
+struct ImplicitLvalueToRvalueConversionExpr : Expression {
+  std::unique_ptr<Expression> value;
+
+  ImplicitLvalueToRvalueConversionExpr(SourceRange source_range,
+                                       std::unique_ptr<Expression> value)
+      : Expression(source_range), value(std::move(value)) {}
+
+  Kind get_kind() const override {
+    return Kind::IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR;
+  }
+};
+
+// ASTNodes that follow this line are supplementary.
+// They are used only in Parser. They must not be presented in AST after parsing
+
+struct SupplementaryNode : ASTNode {
+  using ASTNode::ASTNode;
+
+  Kind get_kind() const override {
+    unreachable("Token node doesn't appear anywhere except ASTBuildContext.");
+  }
+};
+
+struct TokenNode final : SupplementaryNode {
+  Lexis::TokenType token_type;
+
+  TokenNode(const Lexis::Token& token)
+      : SupplementaryNode(token.source_range), token_type(token.type) {}
+  TokenNode(SourceRange source_range, Lexis::TokenType token_type)
+      : SupplementaryNode(source_range), token_type(token_type) {}
+};
+
+template <typename NodeT = ASTNode>
+  requires std::is_base_of_v<ASTNode, NodeT>
+struct NodesList final : SupplementaryNode {
+  std::vector<std::unique_ptr<NodeT>> nodes;
+
+  using SupplementaryNode::SupplementaryNode;
+
+  void add_item(std::unique_ptr<NodeT> node) {
+    nodes.push_back(std::move(node));
+  }
+};
+
+struct FunctionSpecifiersNode : SupplementaryNode, FunctionDecl::Specifiers {
+  using SupplementaryNode::SupplementaryNode;
+};
+
 }  // namespace Front

@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "grammar/GrammarGenerator.h"
 #include "lr/LRTableSerializer.h"
 #include "utils/Constants.h"

@@ -17,7 +17,9 @@ bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
         "Identifier must refer to variable, function or function parameter.");
   }
 
-  context_.symbols_info[&node] = info;
+  node.value_category = ValueCategory::LVALUE;
+
+  context_.symbols_info[&node] = std::pair{current_scope_, info};
 
   return true;
 }

@@ -99,8 +99,7 @@ std::filesystem::path Cli::ArgumentsReader::parse_output(
 
 Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
   argparse::ArgumentParser parser("compiler");
-  parser.add_description(
-      "Compiler for TeaLang ☕️");
+  parser.add_description("Compiler for TeaLang ☕️");
 
   parser.add_argument("sources")
       .nargs(argparse::nargs_pattern::at_least_one)
@@ -122,16 +121,16 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
   //         "info and "
   //         "warnings, -vvv - show all log messages.");
   //
-  // parser.add_argument("-o", "--output")
-  //     .default_value(std::filesystem::current_path().string())
-  //     .help("specify output file name");
+  parser.add_argument("-o", "--output")
+      .default_value(std::filesystem::current_path().string())
+      .help("output file name");
 
   // parser.add_argument("-d", "--debug")
   //     .default_value(false)
   //     .implicit_value(true)
   //     .help("turn on debug mode");
 
-  parser.add_argument("--dump-ast")
+  parser.add_argument("--ast-dump")
       .default_value(false)
       .implicit_value(true)
       .help("dumps AST tree for provided files");
@@ -145,8 +144,8 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
   CompilerArguments arguments;
   arguments.sources =
       parse_source_paths(parser.get<std::vector<std::string>>("sources"));
-  arguments.dump_ast = parser.get<bool>("dump-ast");
-  // arguments.output = parse_output(parser.get("output"));
+  arguments.dump_ast = parser.get<bool>("ast-dump");
+  arguments.output = parse_output(parser.get("output"));
   // arguments.verbosity_level = verbosity;
   // arguments.emit_type = CompilerEmitType::COMPILED;
 

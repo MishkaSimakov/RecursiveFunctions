@@ -1,11 +1,10 @@
 #pragma once
 #include <filesystem>
-#include <iostream>
 
-#include "syntax/grammar/Grammar.h"
 #include "Position.h"
 #include "TokensBitset.h"
 #include "lexis/LexicalAnalyzer.h"
+#include "syntax/grammar/Grammar.h"
 
 namespace Syntax {
 using State = std::unordered_map<Position, TokensBitset>;
@@ -51,19 +50,21 @@ struct ActionsConflictException : std::exception {
   }
 };
 
-constexpr auto states_hasher_fn = [](const State& state) {
-  return unordered_range_hasher_fn(
-      state | std::views::transform([](const State::value_type& element) {
-        return tuple_hasher_fn(element.first, element.second);
-      }));
-};
-
 class LRTableBuilder {
+  struct StatesHasher {
+    size_t operator()(const State& state) const {
+      return unordered_range_hasher_fn(
+          state | std::views::transform([](const State::value_type& element) {
+            return tuple_hasher_fn(element.first, element.second);
+          }));
+    }
+  };
+
   Grammar grammar_;
 
   std::unordered_map<NonTerminal, TokensBitset> first_;
   std::unordered_map<NonTerminal, TokensBitset> follow_;
-  std::unordered_map<State, StateInfo, decltype(states_hasher_fn)> states_;
+  std::unordered_map<State, StateInfo, StatesHasher> states_;
   std::vector<std::vector<size_t>> goto_;
   std::vector<std::vector<Action>> actions_;
 
@@ -97,8 +98,6 @@ class LRTableBuilder {
 };
 }  // namespace Syntax
 
-std::ostream& operator<<(std::ostream& os,
-                                const Syntax::Action& action);
+std::ostream& operator<<(std::ostream& os, const Syntax::Action& action);
 
 std::ostream& operator<<(std::ostream& os, const Syntax::State& state);
-

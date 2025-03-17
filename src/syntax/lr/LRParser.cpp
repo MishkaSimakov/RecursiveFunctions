@@ -160,7 +160,7 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       recovery_tree.prune_subtree(lexical_analyzer);
 
       // RecoveryTree can brake after skipping some tokens.
-      // Therefore we have to check again.
+      // Therefore, we have to check again.
       if (recovery_tree.is_broken()) {
         break;
       }

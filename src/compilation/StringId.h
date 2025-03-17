@@ -16,6 +16,8 @@ class StringId {
   friend struct Front::ModuleContext;
 
  public:
+  StringId() = delete;
+
   bool operator==(StringId other) const { return other.itr_ == itr_; }
 
   size_t hash() const noexcept {

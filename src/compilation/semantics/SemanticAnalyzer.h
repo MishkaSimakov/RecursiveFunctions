@@ -15,8 +15,14 @@ struct SemanticAnalyzerException : std::runtime_error {
 // What should this class do?
 // 1. Create for each function list of local variables
 // 2. Link each variable name to its definition
+struct SemanticAnalyzerConfig : ASTVisitorConfig {
+  static constexpr auto order() { return Order::POSTORDER; }
+  static constexpr auto is_const() { return false; }
+  static constexpr auto override_all() { return false; }
+};
+
 class SemanticAnalyzer
-    : public ASTVisitor<SemanticAnalyzer, false, Order::POSTORDER>,
+    : public ASTVisitor<SemanticAnalyzer, SemanticAnalyzerConfig>,
       OneShotObject {
   const GlobalContext& global_context_;
   ModuleContext& context_;
@@ -59,6 +65,8 @@ class SemanticAnalyzer
 
   void check_call_arguments(FunctionType* type, const CallExpr& call);
 
+  void convert_to_rvalue(std::unique_ptr<Expression>& expression);
+
  public:
   bool after_traverse(ASTNode& node);
 
@@ -85,8 +93,8 @@ class SemanticAnalyzer
 
   bool visit_binary_operator(BinaryOperator& node);
   bool visit_unary_operator(UnaryOperator& node);
-
   bool visit_call_expression(CallExpr& node);
+  bool visit_assignment_statement(AssignmentStmt& node);
 
   // bool before_type_node(TypeNode& node);
   // bool after_type_node(TypeNode& node);
@@ -113,7 +121,7 @@ class SemanticAnalyzer
   // bool after_continue_statement(ContinueStmt& node);
 
   void analyze() {
-    fire("analyze");
+    OSO_FIRE();
     traverse(*context_.ast_root);
   }
 };

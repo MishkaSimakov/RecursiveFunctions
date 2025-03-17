@@ -25,7 +25,8 @@ class Main {
         throw std::runtime_error("Only one source file must be provided.");
       }
 
-      Front::TeaFrontend(arguments.sources).compile();
+      auto front = Front::TeaFrontend(arguments.sources, arguments.output);
+      front.compile();
 
       // Front::GlobalContext context;
       // auto& source_manager = context.source_manager;

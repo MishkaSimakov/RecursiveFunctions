@@ -10,6 +10,10 @@ bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
   auto type = node.type->value;
   current_scope_->add_variable(node.name, node, type);
 
+  if (node.initializer != nullptr && node.initializer->type != node.type->value) {
+    scold_user(node, "Type of variable initializer must be same as variable type.");
+  }
+
   return true;
 }
 }  // namespace Front

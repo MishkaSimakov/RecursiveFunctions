@@ -19,6 +19,7 @@ NODE(UNARY_OPERATOR_EXPR, UnaryOperator, unary_operator);
 NODE(CALL_EXPR, CallExpr, call_expression);
 NODE(TYPE_NODE, TypeNode, type_node);
 NODE(VARIABLE_DECL, VariableDecl, variable_declaration);
+NODE(ASSIGNMENT_STMT, AssignmentStmt, assignment_statement);
 NODE(DECLARATION_STMT, DeclarationStmt, declaration_statement);
 NODE(EXPRESSION_STMT, ExpressionStmt, expression_statement);
 NODE(NAMESPACE_DECL, NamespaceDecl, namespace_declaration);
@@ -26,3 +27,5 @@ NODE(WHILE_STMT, WhileStmt, while_statement);
 NODE(IF_STMT, IfStmt, if_statement);
 NODE(BREAK_STMT, BreakStmt, break_statement);
 NODE(CONTINUE_STMT, ContinueStmt, continue_statement);
+
+NODE(IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR, ImplicitLvalueToRvalueConversionExpr, implicit_lvalue_to_rvalue_conversion_expression)

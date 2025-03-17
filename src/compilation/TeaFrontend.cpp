@@ -1,6 +1,8 @@
 #include "TeaFrontend.h"
 
 #include <llvm/Linker/Linker.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <deque>
 #include <iostream>
@@ -9,6 +11,27 @@
 #include "compilation/semantics/SemanticAnalyzer.h"
 #include "ir/IRASTVisitor.h"
 #include "lexis/LexicalAnalyzer.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "syntax/lr/LRParser.h"
 #include "utils/Constants.h"
 
@@ -168,6 +191,8 @@ void TeaFrontend::build_symbols_table_and_compile() {
 }
 
 int TeaFrontend::compile() {
+  OSO_FIRE();
+
   // Creating context for each module before building ast
   // this way we can store links to imported modules
   for (const auto& name : files_ | std::views::keys) {
@@ -189,8 +214,17 @@ int TeaFrontend::compile() {
   }
   llvm_modules_.clear();
 
-  // Write linked module into output stream
-  main_module->print(llvm::outs(), nullptr);
+  // Write linked module into output file
+  std::error_code ec;
+  llvm::raw_fd_ostream output_stream(
+      output_file_.c_str(), ec,
+      llvm::sys::fs::CreationDisposition::CD_CreateAlways);
+
+  if (ec) {
+    throw std::runtime_error(
+        fmt::format("Failed to open output file: {}", ec.message()));
+  }
+  main_module->print(output_stream, nullptr);
 
   return 0;
 }

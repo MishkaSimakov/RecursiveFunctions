@@ -35,7 +35,7 @@ std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::name_lookup(
 
 std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::qualified_name_lookup(
     Scope* base_scope, const IdExpr& qualified_id) {
-  auto parts = qualified_id.parts;
+  auto& parts = qualified_id.id.parts;
   // process scope qualifiers
   for (size_t i = 0; i + 1 < parts.size(); ++i) {
     auto [next_scope, next_symbol] = name_lookup(base_scope, parts[i], i == 0);
@@ -90,15 +90,33 @@ void SemanticAnalyzer::check_call_arguments(FunctionType* type,
     }
   }
 }
+void SemanticAnalyzer::convert_to_rvalue(
+    std::unique_ptr<Expression>& expression) {
+  if (expression->value_category == ValueCategory::RVALUE) {
+    return;
+  }
+
+  auto cast = std::make_unique<ImplicitLvalueToRvalueConversionExpr>(
+      expression->source_range, std::move(expression));
+
+  cast->type = cast->value->type;
+  cast->value_category = ValueCategory::RVALUE;
+
+  expression = std::move(cast);
+}
 
 bool SemanticAnalyzer::after_traverse(ASTNode& node) {
   if constexpr (Constants::debug) {
     Expression* expression = dynamic_cast<Expression*>(&node);
-    if (expression != nullptr && expression->type == nullptr) {
-      scold_user(
-          node,
-          "Program logic error. Type of expression is not calculated after "
-          "traversal.");
+    if (expression != nullptr) {
+      if (expression->type == nullptr) {
+        scold_user(node, "Program logic error. Type is not calculated.");
+      }
+
+      if (expression->value_category == ValueCategory::UNKNOWN) {
+        scold_user(node,
+                   "Program logic error. Value category is not calculated.");
+      }
     }
   }
 
@@ -106,13 +124,12 @@ bool SemanticAnalyzer::after_traverse(ASTNode& node) {
 }
 
 bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
-  if (current_scope_->parent_symbol == nullptr ||
-      !current_scope_->parent_symbol->is_function()) {
+  SymbolInfo* scope_info = current_scope_->get_scope_info();
+  if (scope_info == nullptr || !scope_info->is_function()) {
     scold_user(node, "Return statements are allowed only in function scope.");
   }
 
-  const auto& function =
-      std::get<FunctionSymbol>(current_scope_->parent_symbol->data);
+  const auto& function = std::get<FunctionSymbol>(scope_info->data);
 
   if (node.value->type != function.type->return_type) {
     auto left_type = node.value->type->to_string();
@@ -126,81 +143,10 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
             left_type, right_type));
   }
 
+  // right part of assignment must be rvalue
+  // if it is not then lvalue-to-rvalue-conversion is applied
+  convert_to_rvalue(node.value);
+
   return true;
 }
-
-//
-// bool SemanticAnalyzer::visit_function_declaration(FunctionDecl& node) {
-// auto arguments_view =
-//     node.parameters |
-//     std::views::transform([](const std::unique_ptr<ParameterDecl>& node) {
-//       return node->type->value;
-//     });
-// std::vector arguments(arguments_view.begin(), arguments_view.end());
-//
-// Type* return_type = node.return_type->value;
-//
-// Type* type = context_.types_storage.make_type<FunctionType>(
-//     std::move(arguments), return_type);
-// node.scope->add_symbol(node.name, type, node.is_exported);
-
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
-//   Type* type = node.type->value;
-//
-//   if (node.initializer != nullptr && node.initializer->type != type) {
-//     scold_user(
-//         node.initializer->source_range,
-//         fmt::format("Incompatible initializer and variable types: {} != {}",
-//                     type->to_string(), node.initializer->type->to_string()));
-//   }
-//
-//   node.scope->add_symbol(node.name, type, false);
-//   return true;
-// }
-// bool SemanticAnalyzer::visit_parameter_declaration(ParameterDecl& node) {
-//   Type* type = node.type->value;
-//   node.scope->add_symbol(node.id, type, false);
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_integer_literal(IntegerLiteral& node) {
-//   node.type = types().add_primitive<IntType>();
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_string_literal(StringLiteral& node) {
-//   auto char_type = types().add_primitive<CharType>();
-//   node.type = types().add_pointer(char_type);
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
-//   // for now only "int op int" is allowed
-//   if (*node.left->type != IntType()) {
-//     scold_user(
-//         node.left->source_range,
-//         fmt::format(
-//             "Incompatible type for binary operator. Must be int, got: {}",
-//             node.left->type->to_string()));
-//   }
-//   if (*node.right->type != IntType()) {
-//     scold_user(
-//         node.right->source_range,
-//         fmt::format(
-//             "Incompatible type for binary operator. Must be int, got: {}",
-//             node.right->type->to_string()));
-//   }
-//
-//   node.type = types().add_primitive<IntType>();
-//
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
-//   // must check that function type and function return are same
-//   return true;
-// }
 }  // namespace Front

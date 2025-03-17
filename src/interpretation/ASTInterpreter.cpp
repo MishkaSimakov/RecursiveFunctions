@@ -67,7 +67,7 @@ bool Interpretation::ASTInterpreter::traverse_if_statement(
 
 bool Interpretation::ASTInterpreter::traverse_call_expression(
     const CallExpr& value) {
-  if (!is_print_function(*value.name)) {
+  if (!is_print_function(*value.callee)) {
     throw InterpreterException(value, "Unknown function.");
   }
 
@@ -86,11 +86,11 @@ bool Interpretation::ASTInterpreter::traverse_call_expression(
 
 bool Interpretation::ASTInterpreter::visit_id_expression(const IdExpr& value) {
   // we dont allow qualified names
-  if (value.parts.size() != 1) {
+  if (value.id.parts.size() != 1) {
     throw InterpreterException(value, "Qualified names are not allowed.");
   }
 
-  auto name = value.parts.front();
+  auto name = value.id.parts.front();
   if (!variables_.contains(name)) {
     throw InterpreterException(value, "Unknown variable name.");
   }

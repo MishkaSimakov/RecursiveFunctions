@@ -21,8 +21,10 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
     scold_user(node, fmt::format("Redefinition of function {:?}.", name));
   }
 
-  SymbolInfo& info = current_scope_->add_function(node.name, node, type);
-  current_scope_->parent_symbol = &info;
+  SymbolInfo& info =
+      current_scope_->parent->add_function(node.name, node, type);
+  current_scope_->name = node.name;
+  context_.functions_info.emplace(&node, std::pair{current_scope_, &info});
 
   for (auto& parameter : node.parameters) {
     traverse(*parameter);

@@ -32,12 +32,12 @@ declaration-seq:
     declaration-seq declaration [sequence<NodesList<Declaration>, Declaration>]
 
 declaration:
-    function-definition [pass<0>]
-    namespace-definition [pass<0>]
+    extern-function-declaration [pass<0>]
+    function-definition         [pass<0>]
+    namespace-definition        [pass<0>]
 
 namespace-definition:
-              IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body    [namespace_definition]
-    KW_EXPORT IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body    [namespace_definition]
+    specifiers IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body   [namespace_definition]
 
 namespace-body:
     OPEN_BRACE CLOSE_BRACE                  [construct<NodesList<Declaration>>]
@@ -47,8 +47,16 @@ import:
     KW_IMPORT string-literal SEMICOLON [module_import]
 
 function-definition:
-    KW_EXPORT IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
-              IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
+    specifiers IDENTIFIER COLON parameters return-type EQUAL compound-statement [function</*IsDefined=*/true>]
+
+extern-function-declaration:
+    specifiers IDENTIFIER COLON parameters return-type [function</*IsDefined=*/false>]
+
+specifiers:
+    empty               [function_specifiers]
+    KW_EXPORT           [function_specifiers]
+    KW_EXTERN           [function_specifiers]
+    KW_EXPORT KW_EXTERN [function_specifiers]
 
 parameters:
     OPEN_PAREN CLOSE_PAREN                              [construct<NodesList<VariableDecl>>]
@@ -82,12 +90,15 @@ statement-seq:
 statement:
     compound-statement      [pass<0>]
     iteration-statement     [pass<0>]
+    assignment-statement    [pass<0>]
     declaration-statement   [wrap_pass<Declaration, DeclarationStmt, 0>]
     expression-statement    [wrap_pass<Expression, ExpressionStmt, 0>]
     jump-statement          [pass<0>]
     selection-statement     [pass<0>]
 
-// for now only variable declaration
+assignment-statement:
+    expression EQUAL expression SEMICOLON [assignment_statement]
+
 declaration-statement:
     IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
     IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
@@ -116,21 +127,21 @@ call-arguments:
     OPEN_PAREN CLOSE_PAREN                  [construct<NodesList<Expression>>]
     OPEN_PAREN expression-list CLOSE_PAREN  [pass<1>]
 
-call-expression:
-    id call-arguments [call_expression]
-
-id:
-    IDENTIFIER                  [id_expression]
-    id COLONCOLON IDENTIFIER    [id_expression]
+qualified-id:
+    IDENTIFIER                            [sequence<NodesList<TokenNode>, TokenNode>]
+    qualified-id COLONCOLON IDENTIFIER    [sequence<NodesList<TokenNode>, TokenNode>]
 
 primary-expression:
     literal                             [pass<0>]
-    IDENTIFIER                          [id_expression]
+    qualified-id                        [id_expression]
     OPEN_PAREN expression CLOSE_PAREN   [pass<1>]
-    call-expression                     [pass<0>]
+
+call-expression:
+    primary-expression                [pass<0>]
+    primary-expression call-arguments [call_expression]
 
 unary-expression:
-    primary-expression          [pass<0>]
+    call-expression             [pass<0>]
     PLUS unary-expression       [unary_op<UnaryOperator::OpType::PLUS>]
     MINUS unary-expression      [unary_op<UnaryOperator::OpType::MINUS>]
     // TODO: maybe should remove prefix increment/decrement and unary plus

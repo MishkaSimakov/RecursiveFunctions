@@ -1,5 +1,7 @@
 #include "IRASTVisitor.h"
 
+#include <iostream>
+
 llvm::Type* Front::IRASTVisitor::map_type(Type* type) const {
   switch (type->get_kind()) {
     case Type::Kind::INT:
@@ -14,9 +16,91 @@ llvm::Type* Front::IRASTVisitor::map_type(Type* type) const {
 }
 
 llvm::Value* Front::IRASTVisitor::compile_expression(const Expression& expr) {
+  current_expr_value_ = nullptr;
   traverse(expr);
-  assert("Expression value must be calculated.");
-  return current_expr_value_;
+  assert(current_expr_value_ != nullptr &&
+         "Expression value must be calculated.");
+  return std::exchange(current_expr_value_, nullptr);
+}
+
+std::string Front::IRASTVisitor::get_qualified_object_name(
+    const FunctionDecl& value) const {
+  auto [scope, info] = module_.functions_info[&value];
+
+  std::vector<StringId> parts;
+  parts.push_back(value.name);
+
+  scope = scope->parent;
+  while (scope->parent != nullptr) {
+    parts.push_back(scope->name.value());
+    scope = scope->parent;
+  }
+
+  auto parts_strings =
+      parts | std::views::reverse | std::views::transform([this](StringId id) {
+        return module_.get_string(id);
+      });
+
+  auto result = fmt::format("{}", fmt::join(parts_strings, "::"));
+  std::cout << result << std::endl;
+  return result;
+}
+
+bool Front::IRASTVisitor::
+    traverse_implicit_lvalue_to_rvalue_conversion_expression(
+        const ImplicitLvalueToRvalueConversionExpr& value) {
+  llvm::Value* ptr = compile_expression(*value.value);
+  current_expr_value_ = llvm_ir_builder_->CreateLoad(map_type(value.type), ptr);
+  return true;
+}
+
+bool Front::IRASTVisitor::traverse_assignment_statement(
+    const AssignmentStmt& value) {
+  auto left = compile_expression(*value.left);
+  auto right = compile_expression(*value.right);
+
+  llvm_ir_builder_->CreateStore(right, left);
+  return true;
+}
+
+bool Front::IRASTVisitor::traverse_if_statement(const IfStmt& value) {
+  llvm::Value* condition = compile_expression(*value.condition);
+  llvm::Function* current_function =
+      llvm_ir_builder_->GetInsertBlock()->getParent();
+
+  auto* true_branch =
+      llvm::BasicBlock::Create(llvm_context_, "true_br", current_function);
+  auto* false_branch = llvm::BasicBlock::Create(llvm_context_, "false_br");
+  auto* merge = llvm::BasicBlock::Create(llvm_context_, "ifcont");
+
+  llvm_ir_builder_->CreateCondBr(condition, true_branch, false_branch);
+
+  llvm_ir_builder_->SetInsertPoint(true_branch);
+  traverse(*value.true_branch);
+  llvm_ir_builder_->CreateBr(merge);
+
+  current_function->insert(current_function->end(), false_branch);
+  llvm_ir_builder_->SetInsertPoint(false_branch);
+  traverse(*value.false_branch);
+  llvm_ir_builder_->CreateBr(merge);
+
+  current_function->insert(current_function->end(), merge);
+  llvm_ir_builder_->SetInsertPoint(merge);
+  return true;
+}
+
+bool Front::IRASTVisitor::traverse_call_expression(const CallExpr& value) {
+  llvm::Function* callee =
+      llvm::dyn_cast<llvm::Function>(compile_expression(*value.callee));
+
+  std::vector<llvm::Value*> arguments;
+  arguments.reserve(value.arguments.size());
+  for (auto& argument : value.arguments) {
+    arguments.emplace_back(compile_expression(*argument));
+  }
+
+  current_expr_value_ = llvm_ir_builder_->CreateCall(callee, arguments);
+  return true;
 }
 
 bool Front::IRASTVisitor::traverse_variable_declaration(
@@ -28,7 +112,7 @@ bool Front::IRASTVisitor::traverse_variable_declaration(
   temp_builder.SetInsertPoint(&entry_block);
 
   auto var_alloca = temp_builder.CreateAlloca(map_type(value.type->value));
-  local_variables_.emplace(&value, var_alloca);
+  identifiers_addresses_.emplace(&value, var_alloca);
 
   if (value.initializer != nullptr) {
     auto initial_value = compile_expression(*value.initializer);
@@ -39,10 +123,15 @@ bool Front::IRASTVisitor::traverse_variable_declaration(
 }
 
 bool Front::IRASTVisitor::traverse_id_expression(const IdExpr& value) {
-  Declaration& id_declaration = module_.symbols_info.at(&value)->declaration;
-  auto* id_alloca = local_variables_.at(&id_declaration);
-  current_expr_value_ =
-      llvm_ir_builder_->CreateLoad(id_alloca->getAllocatedType(), id_alloca);
+  auto [scope, info] = module_.symbols_info.at(&value);
+
+  if (value.type->get_kind() != Type::Kind::FUNCTION) {
+    current_expr_value_ = identifiers_addresses_.at(&info->declaration);
+  } else {
+    auto name = get_qualified_object_name(
+        dynamic_cast<const FunctionDecl&>(info->declaration));
+    current_expr_value_ = llvm_module_->getFunction(name);
+  }
 
   return true;
 }
@@ -55,6 +144,9 @@ bool Front::IRASTVisitor::traverse_binary_operator(
   switch (value.op_type) {
     case BinaryOperator::OpType::PLUS:
       current_expr_value_ = llvm_ir_builder_->CreateAdd(left_op, right_op);
+      break;
+    case BinaryOperator::OpType::MULTIPLY:
+      current_expr_value_ = llvm_ir_builder_->CreateMul(left_op, right_op);
       break;
     default:
       throw std::runtime_error("Not implemented.");
@@ -73,7 +165,7 @@ bool Front::IRASTVisitor::traverse_function_declaration(
   auto llvm_func_type = llvm::FunctionType::get(
       map_type(value.return_type->value), arguments, false);
 
-  auto name = module_.get_string(value.name);
+  auto name = get_qualified_object_name(value);
   auto func =
       llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
                              name, llvm_module_.get());
@@ -86,14 +178,14 @@ bool Front::IRASTVisitor::traverse_function_declaration(
 
     // load parameter into allocated local variable
     llvm::Value* param_value = func->getArg(i);
-    llvm_ir_builder_->CreateStore(param_value,
-                                  local_variables_[value.parameters[i].get()]);
+    llvm_ir_builder_->CreateStore(
+        param_value, identifiers_addresses_[value.parameters[i].get()]);
   }
 
   traverse(*value.body);
 
   llvm::verifyFunction(*func, &llvm::outs());
-  local_variables_.clear();
+  identifiers_addresses_.clear();
 
   return true;
 }
@@ -106,6 +198,11 @@ bool Front::IRASTVisitor::traverse_return_statement(const ReturnStmt& value) {
 
 bool Front::IRASTVisitor::visit_integer_literal(const IntegerLiteral& value) {
   current_expr_value_ = llvm_ir_builder_->getInt64(value.value);
+  return true;
+}
+
+bool Front::IRASTVisitor::visit_bool_literal(const BoolLiteral& value) {
+  current_expr_value_ = llvm_ir_builder_->getInt1(value.value);
   return true;
 }
 

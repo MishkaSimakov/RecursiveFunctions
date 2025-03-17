@@ -11,7 +11,14 @@
 #include "utils/Printing.h"
 
 namespace Front {
-class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
+struct ASTPrinterConfig : ASTVisitorConfig {
+  static constexpr auto order() { return Order::PREORDER; }
+  static constexpr auto is_const() { return true; }
+  static constexpr auto override_all() { return false; }
+};
+
+class ASTPrinter : public ASTVisitor<ASTPrinter, ASTPrinterConfig>,
+                   public TreePrinter {
   const ModuleContext& context_;
 
   std::string range_string(const ASTNode& node) {
@@ -46,7 +53,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   }
   bool visit_function_declaration(const FunctionDecl& value) {
     std::vector<std::string> specifiers;
-    if (value.is_exported) {
+    if (value.specifiers.is_exported()) {
       specifiers.push_back("export");
     }
 
@@ -76,7 +83,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   }
   bool visit_id_expression(const IdExpr& value) {
     auto qualified_name =
-        value.parts | std::views::transform([this](StringId id) {
+        value.id.parts | std::views::transform([this](StringId id) {
           return context_.get_string(id);
         });
 
@@ -109,6 +116,10 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
                          value.type->value->to_string()));
     return true;
   }
+  bool visit_assignment_statement(const AssignmentStmt& value) {
+    add_node(fmt::format("AssignmentStmt {}", range_string(value)));
+    return true;
+  }
   bool visit_declaration_statement(const DeclarationStmt& value) {
     add_node(fmt::format("DeclarationStmt {}", range_string(value)));
     return true;
@@ -128,6 +139,12 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, true>, public TreePrinter {
   }
   bool visit_if_statement(const IfStmt& value) {
     add_node(fmt::format("IfStmt {}", range_string(value)));
+    return true;
+  }
+  bool visit_implicit_lvalue_to_rvalue_conversion_expression(
+      const ImplicitLvalueToRvalueConversionExpr& value) {
+    add_node(fmt::format("ImplicitLvalueToRvalueConversionExpr {}",
+                         range_string(value)));
     return true;
   }
 

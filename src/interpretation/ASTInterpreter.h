@@ -43,8 +43,13 @@ inline void print_function_implementation(ExpressionValue value) {
       value);
 }
 
-class ASTInterpreter
-    : public ASTVisitor<ASTInterpreter, true, Order::POSTORDER> {
+struct ASTInterpreterConfig : ASTVisitorConfig {
+  static constexpr auto order() { return Order::POSTORDER; }
+  static constexpr auto is_const() { return true; }
+  static constexpr auto override_all() { return false; }
+};
+
+class ASTInterpreter : public ASTVisitor<ASTInterpreter, ASTInterpreterConfig> {
   const ModuleContext& context_;
   size_t current_nesting_level_{0};
   std::unordered_map<StringId, ExpressionValue> variables_;
@@ -59,14 +64,19 @@ class ASTInterpreter
     variables_[variable.name] = value;
   }
 
-  bool is_print_function(const IdExpr& name) const {
-    // names can be qualified
-    // we only allow unqualified print function call
-    if (name.parts.size() != 1) {
+  bool is_print_function(const Expression& callee) const {
+    const auto* id_expr = dynamic_cast<const IdExpr*>(&callee);
+    if (id_expr == nullptr) {
       return false;
     }
 
-    if (context_.get_string(name.parts.front()) != "print") {
+    // names can be qualified
+    // we only allow unqualified print function call
+    if (id_expr->id.parts.size() != 1) {
+      return false;
+    }
+
+    if (context_.get_string(id_expr->id.parts.front()) != "print") {
       return false;
     }
 
