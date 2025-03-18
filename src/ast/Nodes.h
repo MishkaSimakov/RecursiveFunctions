@@ -78,6 +78,13 @@ struct TypeNode : ASTNode {
   Kind get_kind() const override { return Kind::TYPE_NODE; }
 };
 
+struct NamedDecl : Declaration {
+  StringId name;
+
+  NamedDecl(SourceRange source_range, StringId name)
+      : Declaration(source_range), name(name) {}
+};
+
 enum class ValueCategory {
   LVALUE,
   RVALUE,
@@ -274,16 +281,14 @@ struct CallExpr : Expression {
   Kind get_kind() const override { return Kind::CALL_EXPR; }
 };
 
-struct VariableDecl : Declaration {
-  StringId name;
+struct VariableDecl : NamedDecl {
   std::unique_ptr<TypeNode> type;
   std::unique_ptr<Expression> initializer;
 
   VariableDecl(SourceRange source_range, StringId name,
                std::unique_ptr<TypeNode> type,
                std::unique_ptr<Expression> initializer)
-      : Declaration(source_range),
-        name(name),
+      : NamedDecl(source_range, name),
         type(std::move(type)),
         initializer(std::move(initializer)) {}
 
@@ -303,7 +308,7 @@ struct AssignmentStmt : Statement {
   Kind get_kind() const override { return Kind::ASSIGNMENT_STMT; }
 };
 
-struct FunctionDecl : Declaration {
+struct FunctionDecl : NamedDecl {
   struct Specifiers {
    private:
     constexpr static size_t kExportedId = 0;
@@ -329,7 +334,6 @@ struct FunctionDecl : Declaration {
     bool is_extern() const { return specifiers_[kExternId]; }
   };
 
-  StringId name;
   std::vector<std::unique_ptr<VariableDecl>> parameters;
   std::unique_ptr<TypeNode> return_type;
   std::unique_ptr<CompoundStmt> body;
@@ -339,8 +343,7 @@ struct FunctionDecl : Declaration {
                std::vector<std::unique_ptr<VariableDecl>> parameters,
                std::unique_ptr<TypeNode> return_type,
                std::unique_ptr<CompoundStmt> body, Specifiers specifiers)
-      : Declaration(source_range),
-        name(name),
+      : NamedDecl(source_range, name),
         parameters(std::move(parameters)),
         return_type(std::move(return_type)),
         body(std::move(body)),
@@ -378,8 +381,7 @@ struct ExpressionStmt : Statement {
   Kind get_kind() const override { return Kind::EXPRESSION_STMT; }
 };
 
-struct NamespaceDecl : Declaration {
-  StringId name;
+struct NamespaceDecl : NamedDecl {
   std::vector<std::unique_ptr<Declaration>> body;
 
   bool is_exported;
@@ -387,8 +389,7 @@ struct NamespaceDecl : Declaration {
   NamespaceDecl(SourceRange source_range, StringId name,
                 std::vector<std::unique_ptr<Declaration>> body,
                 bool is_exported)
-      : Declaration(source_range),
-        name(name),
+      : NamedDecl(source_range, name),
         body(std::move(body)),
         is_exported(is_exported) {}
 

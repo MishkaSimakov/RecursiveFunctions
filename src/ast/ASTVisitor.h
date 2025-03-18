@@ -149,7 +149,11 @@ class ASTVisitor {
       return false;
     }
 
-    return traverse(*node.body);
+    if (node.body != nullptr && !traverse(*node.body)) {
+      return false;
+    }
+
+    return true;
   }
   bool traverse_return_statement(wrap_const<ReturnStmt>& node) {
     return traverse(*node.value);

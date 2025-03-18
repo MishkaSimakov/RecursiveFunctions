@@ -4,6 +4,8 @@
 #include <fmt/ranges.h>
 
 #include <ranges>
+#include <typeinfo>
+#include <vector>
 
 #include "utils/Hashers.h"
 

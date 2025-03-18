@@ -54,12 +54,23 @@ void LRTableBuilder::build_first_table() {
           continue;
         }
 
-        auto begin = production.cbegin();
+        auto itr = production.cbegin();
 
-        if (begin.is_terminal()) {
-          nonterm_update.add(begin.access_terminal());
-        } else {
-          nonterm_update.add(first_[begin.access_nonterminal()]);
+        // here we must consider empty productions
+        // for example A -> B C a, where B -> epsilon, C -> epsilon
+        // in this case a \in First(A)
+        for (; itr != production.cend(); ++itr) {
+          if (itr.is_terminal()) {
+            nonterm_update.add(itr.access_terminal());
+            break;
+          } else {
+            auto first = first_[itr.access_nonterminal()];
+            nonterm_update.add(first);
+
+            if (!first.contains(Lexis::TokenType::END)) {
+              break;
+            }
+          }
         }
       }
 
@@ -287,7 +298,7 @@ State LRTableBuilder::closure(State state) const {
     }
     updated.clear();
 
-    for (const auto& updated_position : prev_updated | std::views::keys) {
+    for (const auto& [updated_position, following] : prev_updated) {
       if (updated_position.iterator == updated_position.end_iterator() ||
           updated_position.iterator.is_terminal()) {
         continue;
@@ -298,7 +309,11 @@ State LRTableBuilder::closure(State state) const {
 
       TokensBitset new_following;
       if (following_itr == updated_position.end_iterator()) {
-        new_following = follow_.at(updated_position.from);
+        // TODO: previous version is commented here
+        // theoretically it is wrong, but in practice it worked and lr-table was
+        // smaller. Should someday think why it worked this way...
+        // new_following = follow_.at(updated_position.from);
+        new_following = following;
       } else if (following_itr.is_terminal()) {
         new_following.add(following_itr.access_terminal());
       } else {

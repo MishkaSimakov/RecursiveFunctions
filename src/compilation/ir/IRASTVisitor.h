@@ -2,6 +2,7 @@
 #include "ast/ASTVisitor.h"
 #include "compilation/GlobalContext.h"
 #include "compilation/ModuleContext.h"
+#include "compilation/mangling/Mangler.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
@@ -26,6 +27,8 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<llvm::IRBuilder<>> llvm_ir_builder_;
 
+  Mangler mangler_;
+
   std::unordered_map<const Declaration*, llvm::Value*> identifiers_addresses_;
 
   ModuleContext& module_;
@@ -41,14 +44,13 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
   llvm::Type* map_type(Type* type) const;
   llvm::Value* compile_expression(const Expression& expr);
 
-  std::string get_qualified_object_name(const FunctionDecl& value) const;
-
  public:
   IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
       : llvm_context_(llvm_context),
         llvm_module_(
             std::make_unique<llvm::Module>(module.name, llvm_context_)),
         llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
+        mangler_(module),
         module_(module) {}
 
   bool traverse_implicit_lvalue_to_rvalue_conversion_expression(

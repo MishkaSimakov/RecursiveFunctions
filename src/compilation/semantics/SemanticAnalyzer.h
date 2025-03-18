@@ -34,14 +34,14 @@ class SemanticAnalyzer
 
   [[noreturn]] void scold_user(const ASTNode& node, std::string message);
 
-  std::pair<Scope*, SymbolInfo*> name_lookup(Scope* base_scope, StringId id,
-                                             bool should_ascend = true) const;
+  SymbolInfo* name_lookup(Scope* base_scope, StringId id,
+                          bool should_ascend = true) const;
 
-  std::pair<Scope*, SymbolInfo*> qualified_name_lookup(
-      Scope* base_scope, const IdExpr& qualified_id);
+  SymbolInfo* qualified_name_lookup(Scope* base_scope,
+                                    const IdExpr& qualified_id);
 
-  std::pair<Scope*, SymbolInfo*> recursive_global_name_lookup(
-      const ModuleContext& module, StringId id) const;
+  SymbolInfo* recursive_global_name_lookup(const ModuleContext& module,
+                                           StringId id) const;
 
   class NestedScopeRAII {
     Scope*& current_scope_;
@@ -63,7 +63,7 @@ class SemanticAnalyzer
     ~NestedScopeRAII() { current_scope_ = current_scope_->parent; }
   };
 
-  void check_call_arguments(FunctionType* type, const CallExpr& call);
+  QualifiedId get_full_name(Scope* scope, StringId name) const;
 
   void convert_to_rvalue(std::unique_ptr<Expression>& expression);
 

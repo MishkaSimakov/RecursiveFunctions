@@ -23,29 +23,6 @@ llvm::Value* Front::IRASTVisitor::compile_expression(const Expression& expr) {
   return std::exchange(current_expr_value_, nullptr);
 }
 
-std::string Front::IRASTVisitor::get_qualified_object_name(
-    const FunctionDecl& value) const {
-  auto [scope, info] = module_.functions_info[&value];
-
-  std::vector<StringId> parts;
-  parts.push_back(value.name);
-
-  scope = scope->parent;
-  while (scope->parent != nullptr) {
-    parts.push_back(scope->name.value());
-    scope = scope->parent;
-  }
-
-  auto parts_strings =
-      parts | std::views::reverse | std::views::transform([this](StringId id) {
-        return module_.get_string(id);
-      });
-
-  auto result = fmt::format("{}", fmt::join(parts_strings, "::"));
-  std::cout << result << std::endl;
-  return result;
-}
-
 bool Front::IRASTVisitor::
     traverse_implicit_lvalue_to_rvalue_conversion_expression(
         const ImplicitLvalueToRvalueConversionExpr& value) {
@@ -123,13 +100,12 @@ bool Front::IRASTVisitor::traverse_variable_declaration(
 }
 
 bool Front::IRASTVisitor::traverse_id_expression(const IdExpr& value) {
-  auto [scope, info] = module_.symbols_info.at(&value);
+  const SymbolInfo& info = module_.symbols_info.at(&value);
 
   if (value.type->get_kind() != Type::Kind::FUNCTION) {
-    current_expr_value_ = identifiers_addresses_.at(&info->declaration);
+    current_expr_value_ = identifiers_addresses_.at(&info.declaration);
   } else {
-    auto name = get_qualified_object_name(
-        dynamic_cast<const FunctionDecl&>(info->declaration));
+    auto name = mangler_.mangle(info);
     current_expr_value_ = llvm_module_->getFunction(name);
   }
 
@@ -165,10 +141,16 @@ bool Front::IRASTVisitor::traverse_function_declaration(
   auto llvm_func_type = llvm::FunctionType::get(
       map_type(value.return_type->value), arguments, false);
 
-  auto name = get_qualified_object_name(value);
+  const SymbolInfo& function_info = module_.functions_info.at(&value);
+  std::string name = mangler_.mangle(function_info);
   auto func =
       llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
                              name, llvm_module_.get());
+
+  // external function doesn't have a body
+  if (value.specifiers.is_extern()) {
+    return true;
+  }
 
   auto basic_block = llvm::BasicBlock::Create(llvm_context_, "entry", func);
   llvm_ir_builder_->SetInsertPoint(basic_block);

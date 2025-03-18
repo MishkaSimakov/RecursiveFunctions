@@ -24,15 +24,17 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
   SymbolInfo& info =
       current_scope_->parent->add_function(node.name, node, type);
   current_scope_->name = node.name;
-  context_.functions_info.emplace(&node, std::pair{current_scope_, &info});
+  context_.functions_info.emplace(&node, info);
 
   for (auto& parameter : node.parameters) {
     traverse(*parameter);
   }
 
-  // we skip CompoundStmt node and return type
-  for (auto& stmt : node.body->statements) {
-    traverse(*stmt);
+  if (!node.specifiers.is_extern()) {
+    // we skip CompoundStmt node and return type
+    for (auto& stmt : node.body->statements) {
+      traverse(*stmt);
+    }
   }
 
   return true;

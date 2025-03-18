@@ -56,6 +56,9 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, ASTPrinterConfig>,
     if (value.specifiers.is_exported()) {
       specifiers.push_back("export");
     }
+    if (value.specifiers.is_extern()) {
+      specifiers.push_back("extern");
+    }
 
     std::string_view name = context_.get_string(value.name);
     add_node(fmt::format("FuncDecl {} {} {}", range_string(value), name,

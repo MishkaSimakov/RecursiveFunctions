@@ -2,6 +2,7 @@
 
 #include <utils/Constants.h>
 
+#include <algorithm>
 #include <iostream>
 
 namespace Front {
@@ -12,18 +13,18 @@ void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
   throw SemanticAnalyzerException(std::move(errors_));
 }
 
-std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::name_lookup(
-    Scope* base_scope, StringId id, bool should_ascend) const {
+SymbolInfo* SemanticAnalyzer::name_lookup(Scope* base_scope, StringId id,
+                                          bool should_ascend) const {
   Scope* current_scope = base_scope;
   // first we do local lookup
   while (current_scope != nullptr) {
     auto itr = current_scope->symbols.find(id);
     if (itr != current_scope->symbols.end()) {
-      return {current_scope, &itr->second};
+      return &itr->second;
     }
 
     if (!should_ascend) {
-      return {nullptr, nullptr};
+      return nullptr;
     }
 
     current_scope = current_scope->parent;
@@ -33,12 +34,12 @@ std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::name_lookup(
   return recursive_global_name_lookup(context_, id);
 }
 
-std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::qualified_name_lookup(
+SymbolInfo* SemanticAnalyzer::qualified_name_lookup(
     Scope* base_scope, const IdExpr& qualified_id) {
   auto& parts = qualified_id.id.parts;
   // process scope qualifiers
   for (size_t i = 0; i + 1 < parts.size(); ++i) {
-    auto [next_scope, next_symbol] = name_lookup(base_scope, parts[i], i == 0);
+    SymbolInfo* next_symbol = name_lookup(base_scope, parts[i], i == 0);
 
     // only namespaces can appear as scope qualifiers
     if (!std::holds_alternative<NamespaceSymbol>(next_symbol->data)) {
@@ -53,7 +54,7 @@ std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::qualified_name_lookup(
   return name_lookup(base_scope, parts.back(), !has_qualifiers);
 }
 
-std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::recursive_global_name_lookup(
+SymbolInfo* SemanticAnalyzer::recursive_global_name_lookup(
     const ModuleContext& module, StringId name) const {
   // // TODO: notify when there are conflicting names
   // for (const auto& dependency : module.dependencies) {
@@ -70,26 +71,24 @@ std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::recursive_global_name_lookup(
   //   }
   // }
   //
-  return {nullptr, nullptr};
+  return nullptr;
 }
 
-void SemanticAnalyzer::check_call_arguments(FunctionType* type,
-                                            const CallExpr& call) {
-  if (type->arguments.size() != call.arguments.size()) {
-    scold_user(call,
-               fmt::format("Arguments count mismatch: {} != {}",
-                           type->arguments.size(), call.arguments.size()));
+QualifiedId SemanticAnalyzer::get_full_name(Scope* scope, StringId name) const {
+  std::vector<StringId> parts;
+  parts.push_back(name);
+
+  scope = scope->parent;
+  while (scope->parent != nullptr) {
+    parts.push_back(scope->name.value());
+    scope = scope->parent;
   }
 
-  for (size_t i = 0; i < type->arguments.size(); ++i) {
-    if (type->arguments[i] != call.arguments[i]->type) {
-      scold_user(*call.arguments[i],
-                 fmt::format("Argument type mismatch: {} != {}",
-                             type->arguments[i]->to_string(),
-                             call.arguments[i]->type->to_string()));
-    }
-  }
+  std::ranges::reverse(parts);
+
+  return QualifiedId{std::move(parts)};
 }
+
 void SemanticAnalyzer::convert_to_rvalue(
     std::unique_ptr<Expression>& expression) {
   if (expression->value_category == ValueCategory::RVALUE) {
