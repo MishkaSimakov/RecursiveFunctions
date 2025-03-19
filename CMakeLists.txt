@@ -14,14 +14,9 @@ target_link_libraries(TeaLang fmt::fmt argparse::argparse ${llvm_libs})
 target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
 
 include(cmake/tablegen.cmake)
-add_tablegen_cmake_directory()
 
 add_subdirectory(src/lexis)
 add_subdirectory(src/syntax)
-
-if (BUILD_ONLY_TABLEGEN)
-    return()
-endif()
 
 add_dependencies(TeaLang run_grammar_tablegen run_lexis_tablegen)
 

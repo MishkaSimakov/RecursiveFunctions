@@ -1,5 +1,4 @@
 #include <fmt/core.h>
-#include <iostream>
 
 #include "grammar/GrammarGenerator.h"
 #include "lr/LRTableSerializer.h"

@@ -1,5 +1,4 @@
 set(SOURCES
-        compile_lexis_table.cpp
         table/LexicalAutomatonGenerator.cpp
         table/LexicalTableSerializer.cpp
         regex/CustomRegex.cpp
@@ -11,9 +10,12 @@ set(SOURCES
         automata/parts/NonDeterministicToDeterministic.cpp
 )
 
+add_library(lexis_table_tools INTERFACE)
+target_sources(lexis_table_tools INTERFACE ${SOURCES})
+
 tablegen(
         NAME lexis
-        SOURCES ${SOURCES}
+        SOURCES ${SOURCES} compile_lexis_table.cpp
         OUTPUT ${CMAKE_SOURCE_DIR}/files/lexis/lexis.lx
 )
 

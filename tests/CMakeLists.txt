@@ -7,7 +7,7 @@ add_executable(Tests ${TestsSources})
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)
 target_link_options(Tests PUBLIC -fsanitize=address)
-target_link_libraries(Tests TeaLang LexisTools GTest::gtest_main)
+target_link_libraries(Tests TeaLang lexis_table_tools GTest::gtest_main)
 
 gtest_discover_tests(Tests)
 
