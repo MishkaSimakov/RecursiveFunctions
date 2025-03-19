@@ -1,163 +1,65 @@
 #pragma once
 
+#include <lexis/LexicalAnalyzer.h>
+#include <syntax/lr/LRParser.h>
+#include <utils/Constants.h>
+
 #include <argparse/argparse.hpp>
 
-#include "ExceptionsHandler.h"
-#include "RecursiveFunctions.h"
-#include "execution/debug/DebugBytecodeExecutor.h"
-
-using Compilation::CompileTreeBuilder, Compilation::BytecodeCompiler;
-using Preprocessing::Preprocessor, Preprocessing::FileSource;
+#include "ArgumentsReader.h"
+#include "ast/ASTPrinter.h"
+#include "compilation/TeaFrontend.h"
+#include "errors/ExceptionsHandler.h"
+#include "interpretation/ASTInterpreter.h"
 
 namespace Cli {
 namespace fs = std::filesystem;
 
 class Main {
-  constexpr static auto kIncludeNamePathDelimiter = ":";
-
-  static Preprocessor prepare_preprocessor(
-      const argparse::ArgumentParser& parser) {
-    Preprocessor preprocessor;
-
-    auto includes = parser.get<vector<string>>("include");
-    auto main_filepath = parser.get<string>("filepath");
-
-    if (!fs::is_regular_file(main_filepath)) {
-      throw std::runtime_error(fmt::format("No such file {}", main_filepath));
-    }
-
-    preprocessor.add_source<FileSource>("main", main_filepath);
-    preprocessor.set_main_source("main");
-
-    string separator{fs::path::preferred_separator};
-
-    for (auto& include : includes) {
-      if (include.contains(kIncludeNamePathDelimiter)) {
-        // named include
-        size_t index = include.find(kIncludeNamePathDelimiter);
-        string name = include.substr(0, index);
-
-        if (name.empty()) {
-          throw std::runtime_error("Include name must be non-empty.");
-        }
-
-        fs::path path = include.substr(index + 1, include.size() - index);
-
-        if (is_directory(path)) {
-          throw std::runtime_error("Directory import can not be named.");
-        }
-
-        preprocessor.add_source<FileSource>(name, std::move(path));
-      } else {
-        // unnamed include
-        // for this type of include name is stem part of path
-        // directory can be passed as parameter to this type of include
-        // if so all files will be included recursively
-        // for example file with relative path from given directory root
-        // foo/baz/prog.rec will be available with #include "foo.baz.prog"
-
-        fs::path path = include;
-
-        if (is_regular_file(path)) {
-          fs::path path_copy = path;
-          path_copy.replace_extension();
-
-          auto include_name =
-              std::regex_replace(string{path_copy}, std::regex(separator), ".");
-
-          preprocessor.add_source<FileSource>(include_name, path);
-          continue;
-        }
-
-        for (auto subfile : fs::recursive_directory_iterator(path)) {
-          if (subfile.is_regular_file()) {
-            string relative_path = relative(subfile, path).replace_extension();
-            auto include_name =
-                std::regex_replace(relative_path, std::regex(separator), ".");
-
-            preprocessor.add_source<FileSource>(include_name, subfile.path());
-          }
-        }
-      }
-    }
-
-    return preprocessor;
-  }
-
  public:
   static int main(int argc, char* argv[]) {
-    return ExceptionsHandler::execute([argc, &argv] {
-      argparse::ArgumentParser parser("interpeter");
-      parser.add_description(
-          "Interpreter for general recursive functions "
-          "(https://en.wikipedia.org/wiki/General_recursive_function).");
+    return ExceptionsHandler::execute([argc, argv] {
+      auto arguments = ArgumentsReader::read(argc, argv);
 
-      parser.add_argument("filepath").help("Path to main file.");
-      parser.add_argument("-i", "--include")
-          .nargs(argparse::nargs_pattern::any)
-          .help(
-              "adds include paths. You can write <name>:<filepath> to create "
-              "implicitly named include, <filepath> to deduce include name "
-              "automatically or <directory path> to include all files in "
-              "directory recursively.");
+      if (arguments.sources.size() != 1) {
+        throw std::runtime_error("Only one source file must be provided.");
+      }
 
-      size_t verbosity = 0;
-      parser.add_argument("-v")
-          .action([&](const auto&) { ++verbosity; })
-          .append()
-          .default_value(false)
-          .implicit_value(true)
-          .nargs(0)
-          .help(
-              "increase program verbosity. -v - show only warnings, -vv - show "
-              "info and "
-              "warnings, -vvv - show all log messages.");
+      Front::GlobalContext context;
+      auto& source_manager = context.source_manager;
 
-      parser.add_argument("-d", "--debug")
-          .default_value(false)
-          .implicit_value(true)
-          .help("turn on debug mode");
+      Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
+      auto parser = Syntax::LRParser(Constants::grammar_filepath);
+
+      auto& [name, path] = *arguments.sources.begin();
+      SourceView source_view = source_manager.load(path);
+      lexical_analyzer.set_source_view(source_view);
+
+      auto& module_context = context.add_module(name);
 
       try {
-        parser.parse_args(argc, argv);
-      } catch (const std::exception& err) {
-        throw ArgumentsParseException(err.what());
+        parser.parse(lexical_analyzer, module_context, source_view);
+      } catch (Syntax::ParserException exception) {
+        for (const auto& [position, error] : exception.get_errors()) {
+          source_manager.add_annotation(position, error);
+        }
+
+        source_manager.print_annotations(std::cout);
+        throw;
       }
 
-      Logger::set_level(verbosity);
-
-      auto preprocessor = prepare_preprocessor(parser);
-      string program_text = preprocessor.process();
-
-      auto tokens = LexicalAnalyzer::get_tokens(program_text);
-
-      auto syntax_tree = SyntaxTreeBuilder::build(
-          tokens, RecursiveFunctionsSyntax::GetSyntax(),
-          RecursiveFunctionsSyntax::RuleIdentifiers::PROGRAM);
-
-      CompileTreeBuilder compile_tree_builder;
-      for (auto& [name, args_count] : BytecodeCompiler::internal_functions) {
-        compile_tree_builder.add_internal_function(name, args_count);
-      }
-
-      BytecodeCompiler compiler;
-      auto compile_tree = compile_tree_builder.build(*syntax_tree);
-      compiler.compile(*compile_tree);
-
-      auto bytecode = compiler.get_result();
-
-      bool is_debug_enabled = parser.get<bool>("debug");
-
-      ValueT result;
-      if (is_debug_enabled) {
-        DebugBytecodeExecutor executor(std::move(bytecode));
-        result = executor.execute();
+      if (arguments.dump_ast) {
+        Front::ASTPrinter(module_context, std::cout).print();
       } else {
-        BytecodeExecutor executor;
-        result = executor.execute(bytecode);
+        try {
+          Interpretation::ASTInterpreter(module_context, std::cout).interpret();
+        } catch (Interpretation::InterpreterException exception) {
+          source_manager.add_annotation(exception.get_range(),
+                                        exception.what());
+          source_manager.print_annotations(std::cout);
+          throw;
+        }
       }
-
-      cout << result.as_value() << endl;
     });
   }
 };

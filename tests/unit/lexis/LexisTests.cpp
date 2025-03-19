@@ -2,69 +2,57 @@
 
 #include <vector>
 
-#include "RecursiveFunctions.h"
+#include "LexisTestCase.h"
 
-using std::unordered_map, std::vector;
-using namespace Lexing;
+using enum Lexis::TokenType::InternalEnum;
 
-TEST(LexisTests, test_basic) {
-  unordered_map<string, vector<Token>> tests = {
-      {"abc=cba;", vector{Token{TokenType::IDENTIFIER, "abc"},
-                          Token{TokenType::OPERATOR, "="},
-                          Token{TokenType::IDENTIFIER, "cba"},
-                          Token{TokenType::SEMICOLON, ";"}}},
-      {"f(x,y)=f(y,x);",
-       vector{Token{TokenType::IDENTIFIER, "f"}, Token{TokenType::LPAREN, "("},
-              Token{TokenType::IDENTIFIER, "x"}, Token{TokenType::COMMA, ","},
-              Token{TokenType::IDENTIFIER, "y"}, Token{TokenType::RPAREN, ")"},
-              Token{TokenType::OPERATOR, "="},
-              Token{TokenType::IDENTIFIER, "f"}, Token{TokenType::LPAREN, "("},
-              Token{TokenType::IDENTIFIER, "y"}, Token{TokenType::COMMA, ","},
-              Token{TokenType::IDENTIFIER, "x"}, Token{TokenType::RPAREN, ")"},
-              Token{TokenType::SEMICOLON, ";"}}},
-      {"f()=argmin(*);",
-       vector{Token{TokenType::IDENTIFIER, "f"}, Token{TokenType::LPAREN, "("},
-              Token{TokenType::RPAREN, ")"}, Token{TokenType::OPERATOR, "="},
-              Token{TokenType::IDENTIFIER, "argmin"},
-              Token{TokenType::LPAREN, "("}, Token{TokenType::ASTERISK, "*"},
-              Token{TokenType::RPAREN, ")"},
-              Token{TokenType::SEMICOLON, ";"}}}};
+TEST_F(LexisTestCase, empty_string_test) { test_sequence({{"", WHITESPACE}}); }
 
-  for (const auto& [string, result] : tests) {
-    ASSERT_EQ(LexicalAnalyzer::get_tokens(string), result);
-  }
+TEST_F(LexisTestCase, simple_tests) {
+  test_sequence({{"hello", IDENTIFIER},
+                 {"     ", WHITESPACE},
+                 {"// hello world!!!\n", WHITESPACE},
+                 {"=", EQUAL},
+                 {"5", NUMBER}});
+
+  test_sequence({{"a", IDENTIFIER}, {" ", WHITESPACE}, {"b", IDENTIFIER}});
+
+  test_sequence({{"// comment !!!", WHITESPACE}});
+  test_sequence({{"// "
+                  "comment !!!\n",
+                  WHITESPACE},
+                 {"identifier", IDENTIFIER},
+                 {";", SEMICOLON},
+                 {"// comment", WHITESPACE}});
 }
 
-TEST(LexisTests, test_it_parse_identifier_as_one_token) {
-  vector scary_identifiers = {"helloworld",   "hello_world", "hell_o_world",
-                              "test____test", "____",        "a_b_c_"};
-
-  for (auto& identifier : scary_identifiers) {
-    auto tokens = LexicalAnalyzer::get_tokens(identifier);
-
-    ASSERT_EQ(tokens.size(), 1);
-    ASSERT_EQ(tokens.front().type, TokenType::IDENTIFIER);
-    ASSERT_EQ(tokens.front().value, identifier);
+TEST_F(LexisTestCase, test_number_token) {
+  for (size_t i = 0; i < 100; ++i) {
+    test_sequence({{std::to_string(i), NUMBER}});
   }
+
+  std::string_view very_long =
+      "12370837148274897328946815618973472308168356189658932714374";
+  test_sequence({{very_long, NUMBER}});
 }
 
-TEST(LexisTests, test_it_throws_when_incorrect_symbol_occured) {
-  vector strings_with_incorrect_symbols = {"f(x, y)@", "&abc",
-                                           "successor(абырвалг)", "😇🙂🙂🙂"};
+TEST_F(LexisTestCase, test_identifier_token) {
+  std::vector identifiers = {"a",   "b",  "c",    "a_a",      "a___", "_123",
+                             "a1a", "a1", "a123", "_1_2_3_4", "ABC_", "_A"};
 
-  for (auto& incorrect : strings_with_incorrect_symbols) {
-    ASSERT_THROW({ LexicalAnalyzer::get_tokens(incorrect); }, UnexpectedSymbolException);
+  for (std::string_view id : identifiers) {
+    test_sequence({{id, IDENTIFIER}});
   }
+
+  std::string_view very_long =
+      "asldkfjwriqu923874213ADFVBADBDA____asdfhkasdhjfh123123_asadfASDF";
+  test_sequence({{very_long, IDENTIFIER}});
 }
 
-TEST(LexisTests, test_it_throws_when_symbol_must_not_repeat) {
-  vector strings_with_repeated_symbol = {
-      "f(x, y) == x;",         "f(x,, y) = z;", "f(x, y) = z;;", ";;",
-      "f(x, y) = argmin(**);", "f((x, y)=x;"};
-
-  for (auto& incorrect : strings_with_repeated_symbol) {
-    ASSERT_THROW({ LexicalAnalyzer::get_tokens(incorrect); }, UnexpectedSymbolException);
-  }
+TEST_F(LexisTestCase, test_lexer_is_greedy) {
+  test_sequence({{"++", PLUSPLUS}, {"+", PLUS}, {"x", IDENTIFIER}});
+  test_sequence({{"++", PLUSPLUS},
+                 {"++", PLUSPLUS},
+                 {"++", PLUSPLUS},
+                 {"x", IDENTIFIER}});
 }
-
-

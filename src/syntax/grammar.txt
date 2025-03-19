@@ -1,0 +1,166 @@
+program:
+    preamble declaration-seq    [program_declaration]
+    declaration-seq             [program_declaration]
+    empty                       [program_declaration]
+
+preamble:
+    import-seq [pass<0>]
+
+import-seq:
+    import              [sequence<NodesList<ImportDecl>, ImportDecl>]
+    import-seq import   [sequence<NodesList<ImportDecl>, ImportDecl>]
+
+// basics
+literal:
+    string-literal  [pass<0>]
+    integer-literal [pass<0>]
+    bool-literal [pass<0>]
+
+string-literal:
+    STRING [string_literal]
+
+integer-literal:
+    NUMBER [integer_literal]
+
+bool-literal:
+    KW_TRUE     [bool_literal]
+    KW_FALSE    [bool_literal]
+
+// declarations
+declaration-seq:
+    declaration                 [sequence<NodesList<Declaration>, Declaration>]
+    declaration-seq declaration [sequence<NodesList<Declaration>, Declaration>]
+
+declaration:
+    function-definition [pass<0>]
+    namespace-definition [pass<0>]
+
+namespace-definition:
+              IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body    [namespace_definition]
+    KW_EXPORT IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body    [namespace_definition]
+
+namespace-body:
+    OPEN_BRACE CLOSE_BRACE                  [construct<NodesList<Declaration>>]
+    OPEN_BRACE declaration-seq CLOSE_BRACE  [pass<1>]
+
+import:
+    KW_IMPORT string-literal SEMICOLON [module_import]
+
+function-definition:
+    KW_EXPORT IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
+              IDENTIFIER COLON parameters return-type EQUAL compound-statement [function_definition]
+
+parameters:
+    OPEN_PAREN CLOSE_PAREN                              [construct<NodesList<ParameterDecl>>]
+    OPEN_PAREN parameter-declaration-list CLOSE_PAREN   [pass<1>]
+
+parameter-declaration-list:
+    parameter-declaration                                   [sequence<NodesList<ParameterDecl>, ParameterDecl>]
+    parameter-declaration-list COMMA parameter-declaration  [sequence<NodesList<ParameterDecl>, ParameterDecl>]
+
+parameter-declaration:
+    IDENTIFIER COLON type-name [parameter_declaration]
+
+return-type:
+    ARROW type-name [pass<1>]
+
+type-name:
+    type-name STAR [pointer_type]
+    KW_I64 [construct_type<IntType>]
+    KW_BOOL [construct_type<BoolType>]
+    KW_VOID [construct_type<VoidType>]
+
+// statements
+compound-statement:
+    OPEN_BRACE CLOSE_BRACE                  [compound_statement]
+    OPEN_BRACE statement-seq CLOSE_BRACE    [compound_statement]
+
+statement-seq:
+    statement               [sequence<CompoundStmt, Statement>]
+    statement-seq statement [sequence<CompoundStmt, Statement>]
+
+statement:
+    compound-statement      [pass<0>]
+    iteration-statement     [pass<0>]
+    assignment-statement    [pass<0>]
+    declaration-statement   [wrap_pass<Declaration, DeclarationStmt, 0>]
+    expression-statement    [wrap_pass<Expression, ExpressionStmt, 0>]
+    jump-statement          [pass<0>]
+    selection-statement     [pass<0>]
+
+declaration-statement:
+    IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
+    IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
+
+assignment-statement:
+    IDENTIFIER EQUAL expression SEMICOLON [variable_assignment]
+
+selection-statement:
+    KW_IF OPEN_PAREN expression CLOSE_PAREN compound-statement                            [if_statement]
+    KW_IF OPEN_PAREN expression CLOSE_PAREN compound-statement KW_ELSE compound-statement [if_statement]
+
+jump-statement:
+    KW_RETURN expression SEMICOLON [return_statement]
+    KW_RETURN SEMICOLON            [return_statement]
+    KW_BREAK SEMICOLON             [construct<BreakStmt>]
+    KW_CONTINUE SEMICOLON          [construct<ContinueStmt>]
+
+iteration-statement:
+    KW_WHILE OPEN_PAREN expression CLOSE_PAREN compound-statement [while_statement]
+
+expression-statement:
+    expression SEMICOLON [pass<0>]
+
+expression-list:
+    expression                          [sequence<NodesList<Expression>, Expression>]
+    expression-list COMMA expression    [sequence<NodesList<Expression>, Expression>]
+
+call-arguments:
+    OPEN_PAREN CLOSE_PAREN                  [construct<NodesList<Expression>>]
+    OPEN_PAREN expression-list CLOSE_PAREN  [pass<1>]
+
+call-expression:
+    id call-arguments [call_expression]
+
+id:
+    IDENTIFIER                  [id_expression]
+    id COLONCOLON IDENTIFIER    [id_expression]
+
+primary-expression:
+    literal                             [pass<0>]
+    IDENTIFIER                          [id_expression]
+    OPEN_PAREN expression CLOSE_PAREN   [pass<1>]
+    call-expression                     [pass<0>]
+
+unary-expression:
+    primary-expression          [pass<0>]
+    PLUS unary-expression       [unary_op<UnaryOperator::OpType::PLUS>]
+    MINUS unary-expression      [unary_op<UnaryOperator::OpType::MINUS>]
+    // TODO: maybe should remove prefix increment/decrement and unary plus
+    PLUSPLUS unary-expression   [unary_op<UnaryOperator::OpType::PREINCREMENT>]
+    MINUSMINUS unary-expression [unary_op<UnaryOperator::OpType::PREDECREMENT>]
+
+multiply-expression:
+    unary-expression                                [pass<0>]
+    multiply-expression STAR primary-expression     [binary_op<MULTIPLY>]
+    multiply-expression PERCENT primary-expression  [binary_op<REMAINDER>]
+
+add-expression:
+    multiply-expression                         [pass<0>]
+    add-expression PLUS multiply-expression     [binary_op<PLUS>]
+    add-expression MINUS multiply-expression    [binary_op<MINUS>]
+
+relational-expression:
+    add-expression                                      [pass<0>]
+    relational-expression LESS add-expression           [binary_op<LESS>]
+    relational-expression GREATER add-expression        [binary_op<GREATER>]
+    relational-expression LESS_EQ add-expression        [binary_op<LESS_EQ>]
+    relational-expression GREATER_EQ add-expression     [binary_op<GREATER_EQ>]
+
+equality-expression:
+    relational-expression                                   [pass<0>]
+    equality-expression EQUALEQUAL relational-expression    [binary_op<EQUALEQUAL>]
+    equality-expression NOTEQUAL relational-expression      [binary_op<NOTEQUAL>]
+
+expression:
+    equality-expression [pass<0>]

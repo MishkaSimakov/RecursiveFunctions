@@ -1,101 +1,30 @@
 #pragma once
 
-#include <array>
-#include <functional>
-#include <string>
+#include <filesystem>
+#include <unordered_map>
 #include <vector>
 
-#include "Exceptions.h"
+#include "lexis/Token.h"
+#include "lexis/table/LexicalAutomatonState.h"
+#include "sources/SourceManager.h"
 
-namespace Lexing {
-enum class TokenType : size_t {
-  IDENTIFIER,  // variable or function name
-  CONSTANT,    // number
-  LPAREN,      // left parenthesis
-  RPAREN,      // right parenthesis
-  OPERATOR,    // operator + or =
-  SEMICOLON,   // semicolon for statements separation
-  ASTERISK,    // asterisk for argmin function
-  COMMA,       // comma for arguments separation
-  ERROR,       // returned if some unexpected symbol appeared
-};
-
-enum class TokenSolitaryMode { CONCATENATE, SEPARATE, EXPLODE };
-
-struct Token {
-  TokenType type = TokenType::ERROR;
-  std::string value;
-
-  bool operator==(const Token&) const = default;
-};
-
-inline std::string GetTokenDescription(const Token& token) {
-  switch (token.type) {
-    case TokenType::IDENTIFIER:
-      return "identifier(" + token.value + ")";
-    case TokenType::CONSTANT:
-      return "constant(" + token.value + ")";
-    case TokenType::LPAREN:
-      return "left parenthesis";
-    case TokenType::RPAREN:
-      return "right parenthesis";
-    case TokenType::OPERATOR:
-      return "operator(" + token.value + ")";
-    case TokenType::SEMICOLON:
-      return "semicolon";
-    case TokenType::ASTERISK:
-      return "asterisk";
-    case TokenType::COMMA:
-      return "comma";
-    case TokenType::ERROR:
-      return "error";
-    default:
-      return "something strange";
-  }
-}
-
+namespace Lexis {
 class LexicalAnalyzer {
-  static TokenType get_symbol_affiliation(char symbol) {
-    if (std::isdigit(symbol) != 0) {
-      return TokenType::CONSTANT;
-    }
+  const std::vector<JumpTableT> jumps_;
+  static std::unordered_map<std::string_view, TokenType> keywords;
 
-    if (std::isalpha(symbol) != 0 || symbol == '_') {
-      return TokenType::IDENTIFIER;
-    }
+  SourceLocation location_{};
+  SourceView source_view_;
+  std::optional<Token> current_token_;
 
-    switch (symbol) {
-      case '(':
-        return TokenType::LPAREN;
-      case ')':
-        return TokenType::RPAREN;
-      case '=':
-      case '+':
-        return TokenType::OPERATOR;
-      case '*':
-        return TokenType::ASTERISK;
-      case ',':
-        return TokenType::COMMA;
-      case ';':
-        return TokenType::SEMICOLON;
-      default:
-        return TokenType::ERROR;
-    }
-  }
-
-  static TokenSolitaryMode get_solitary_mode(TokenType type) {
-    switch (type) {
-      case TokenType::CONSTANT:
-      case TokenType::IDENTIFIER:
-        return TokenSolitaryMode::CONCATENATE;
-      case TokenType::RPAREN:
-        return TokenSolitaryMode::SEPARATE;
-      default:
-        return TokenSolitaryMode::EXPLODE;
-    }
-  }
+  Token get_token_internal(SourceLocation location) const;
 
  public:
-  static std::vector<Token> get_tokens(const std::string& program);
+  LexicalAnalyzer(const std::filesystem::path& table_path);
+
+  void set_source_view(SourceView view);
+
+  Token next_token();
+  Token current_token() const;
 };
-}  // namespace Lexing
+}  // namespace Lexis
