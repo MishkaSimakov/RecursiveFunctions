@@ -38,7 +38,8 @@ SymbolInfo* SemanticAnalyzer::qualified_name_lookup(
   auto& parts = qualified_id.id.parts;
   // process scope qualifiers
   for (size_t i = 0; i + 1 < parts.size(); ++i) {
-    SymbolInfo* next_symbol = name_lookup(base_scope, parts[i], i == 0);
+    // SymbolInfo* next_symbol = name_lookup(base_scope, parts[i], i == 0);
+    SymbolInfo* next_symbol = nullptr;
 
     // only namespaces can appear as scope qualifiers
     if (!std::holds_alternative<NamespaceSymbol>(next_symbol->data)) {
@@ -50,25 +51,26 @@ SymbolInfo* SemanticAnalyzer::qualified_name_lookup(
   }
 
   bool has_qualifiers = parts.size() > 1;
-  return name_lookup(base_scope, parts.back(), !has_qualifiers);
+  // return name_lookup(base_scope, parts.back(), !has_qualifiers);
+  return nullptr;
 }
 
 SymbolInfo* SemanticAnalyzer::recursive_global_name_lookup(
     const ModuleContext& module, StringId name) const {
   // TODO: notify when there are conflicting names
-  for (const auto& dependency : module.dependencies) {
-    const auto& symbols = import_module.root_scope->symbols;
-    auto itr = symbols.find(name);
-    if (itr != symbols.end() && itr->second.is_exported) {
-      return {itr->second.type, import_module.root_scope};
-    }
-
-    auto recursive_search_result =
-        recursive_global_name_lookup(import_module, name);
-    if (recursive_search_result.first != nullptr) {
-      return recursive_search_result;
-    }
-  }
+  // for (const auto& dependency : module.dependencies) {
+  //   const auto& symbols = import_module.root_scope->symbols;
+  //   auto itr = symbols.find(name);
+  //   if (itr != symbols.end() && itr->second.is_exported) {
+  //     return {itr->second.type, import_module.root_scope};
+  //   }
+  //
+  //   auto recursive_search_result =
+  //       recursive_global_name_lookup(import_module, name);
+  //   if (recursive_search_result.first != nullptr) {
+  //     return recursive_search_result;
+  //   }
+  // }
 
   return nullptr;
 }

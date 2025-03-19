@@ -28,7 +28,7 @@ bool SemanticAnalyzer::traverse_namespace_declaration(NamespaceDecl& node) {
       }
 
       is_in_exported_scope_ = true;
-      context_.exported_symbols.push_back(info);
+      // context_.exported_symbols.push_back(info);
     }
   }
 

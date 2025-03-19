@@ -1,4 +1,4 @@
-#include <iostream>
+#include <fmt/base.h>
 
 #include "lexis/Token.h"
 #include "table/LexicalAutomatonGenerator.h"
@@ -14,6 +14,12 @@ int main() {
   generator["space"] = "[ \t\r\n\v\f]";
   generator["comment_symbol"] = "[^\n]";
   generator["s_char"] = "[^\"\n]";
+
+  // IDENTIFIER token can be overriden. Therefore, we mark this token as "weak".
+  // All warnings from collisions with this token will be ignored
+  // (same as weak linkage)
+  generator[TokenType::IDENTIFIER] = "[a-zA-Z_]([a-zA-Z0-9_])*";
+  generator.mark_token_as_weak(TokenType::IDENTIFIER);
 
   // keywords
   // keywords
@@ -43,7 +49,6 @@ int main() {
   generator[TokenType::KW_VOID] = "void";
   // keywords end
 
-  generator[TokenType::IDENTIFIER] = "[a-zA-Z_]([a-zA-Z0-9_])*";
   generator[TokenType::NUMBER] = "{digit}+";
 
   // TODO: string can contain any character + escape sequence
@@ -86,6 +91,5 @@ int main() {
       std::filesystem::path(BASE_PATH) / Constants::lexis_filepath;
   generator.build_and_save(absolute_lexis_filepath);
 
-  std::cout << "Stored lexis table in: " << absolute_lexis_filepath
-            << std::endl;
+  fmt::print("Stored lexis table in: {:?}.\n", absolute_lexis_filepath.c_str());
 }

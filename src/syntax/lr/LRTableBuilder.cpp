@@ -165,11 +165,6 @@ void LRTableBuilder::build_actions_table() {
 
   const auto& tokens = Lexis::TokenType::values;
 
-  for (size_t i = 0; i < states_.size(); ++i) {
-    const auto& [state, info] = *state_by_index(i);
-    std::cout << "State #" << i << ":\n" << state << std::endl;
-  }
-
   for (const auto& [state, info] : states_) {
     auto& actions = temp_actions[info.index];
     actions.resize(tokens.size());

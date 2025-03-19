@@ -119,7 +119,6 @@ class SemanticAnalyzer
   void analyze() {
     OSO_FIRE();
 
-    merge_dependencies_symbols();
     traverse(*context_.ast_root);
   }
 };

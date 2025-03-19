@@ -36,7 +36,7 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
                  "exported context. Remove unnecessary \"exported\".");
     }
 
-    context_.exported_symbols.push_back(info);
+    // context_.exported_symbols.push_back(info);
     is_in_exported_scope_ = true;
   }
 

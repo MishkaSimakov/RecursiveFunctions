@@ -173,15 +173,18 @@ void generate_function_file(const std::filesystem::path& path,
 }
 }  // namespace
 
-void GrammarGenerator::generate_grammar(
+size_t GrammarGenerator::generate_grammar(
     const std::filesystem::path& input_path,
     const std::filesystem::path& table_path,
     const std::filesystem::path& builders_path) {
+  size_t states_count;
+
   auto text_grammar = read_grammar(input_path);
   auto grammar = parse_grammar(text_grammar);
 
   try {
     auto builder = LRTableBuilder(std::move(grammar));
+    states_count = builder.get_actions_table().size();
     builder.save_to(table_path);
   } catch (ActionsConflictException exception) {
     std::cout << exception.what() << std::endl;
@@ -200,5 +203,7 @@ void GrammarGenerator::generate_grammar(
 
   // now we generate file with builders list
   generate_function_file(builders_path, text_grammar);
+
+  return states_count;
 }
 }  // namespace Syntax

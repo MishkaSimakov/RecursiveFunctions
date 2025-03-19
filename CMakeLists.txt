@@ -2,47 +2,28 @@ cmake_minimum_required(VERSION 3.22)
 project(TeaLang)
 
 set(CMAKE_CXX_STANDARD 23)
-
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_CXX_FLAGS "-O3")
-else ()
-    set(CMAKE_CXX_FLAGS "-fsanitize=address")
-endif ()
-
-#find_program(CCACHE_FOUND "ccache")
-#if (CCACHE_FOUND)
-#    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-#endif ()
+set(TABLEGEN_CMAKE_DIR ${CMAKE_SOURCE_DIR}/cmake-build-tablegen)
 
 add_compile_definitions(BASE_PATH=\"${CMAKE_SOURCE_DIR}\")
 
-# libraries
-add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)
-
-# compile fmt as static library
-set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
-
-# -- llvm --
-list(APPEND CMAKE_PREFIX_PATH
-        /opt/homebrew/Cellar/llvm/19.1.7_1/
-)
-
-find_package(LLVM REQUIRED CONFIG)
-
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-llvm_map_components_to_libnames(llvm_libs support core irreader linker)
-# -- end of llvm --
+# load libraries
+include(cmake/libraries.cmake)
 
 add_subdirectory(src)
 target_link_libraries(TeaLang fmt::fmt argparse::argparse ${llvm_libs})
 target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
 
-# add executable for compiling grammar and lexis
-add_subdirectory(src/syntax)
+include(cmake/tablegen.cmake)
+add_tablegen_cmake_directory()
+
 add_subdirectory(src/lexis)
+add_subdirectory(src/syntax)
+
+if (BUILD_ONLY_TABLEGEN)
+    return()
+endif()
+
+add_dependencies(TeaLang run_grammar_tablegen run_lexis_tablegen)
 
 # add executables from cli directory
 file(GLOB_RECURSE CliFiles

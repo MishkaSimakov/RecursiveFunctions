@@ -5,6 +5,8 @@
 
 namespace Lexis {
 ENUM(TokenType,
+     IDENTIFIER,  // variable or function name
+
      // keywords
      KW_BREAK, KW_CONTINUE, KW_ELSE, KW_IMPORT, KW_EXPORT, KW_EXTERN, KW_IF,
      KW_NAMESPACE, KW_RETURN, KW_USING, KW_WHILE,
@@ -16,9 +18,8 @@ ENUM(TokenType,
      KW_U64, KW_I64, KW_F64, KW_BOOL, KW_CHAR, KW_VOID,
      // keywords end
 
-     IDENTIFIER,  // variable or function name
-     NUMBER,      // number literal
-     STRING,      // "hello world"
+     NUMBER,  // number literal
+     STRING,  // "hello world"
 
      // operators
      EQUAL,       // =

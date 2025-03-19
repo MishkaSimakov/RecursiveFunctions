@@ -1,3 +1,4 @@
+#include <fmt/core.h>
 #include <iostream>
 
 #include "grammar/GrammarGenerator.h"
@@ -13,9 +14,10 @@ int main() {
   auto builders_filepath = std::filesystem::path(BASE_PATH) / "src" / "syntax" /
                            "BuildersRegistry.h";
 
-  Syntax::GrammarGenerator::generate_grammar(
+  size_t states_count = Syntax::GrammarGenerator::generate_grammar(
       input_filepath, absolute_grammar_filepath, builders_filepath);
 
-  std::cout << "Stored grammar table in: " << absolute_grammar_filepath
-            << std::endl;
+  fmt::print(
+      "Successfully generated grammar table with {} states. Stored in {:?}.\n",
+      states_count, absolute_grammar_filepath.c_str());
 }

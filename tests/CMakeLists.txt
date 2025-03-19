@@ -1,45 +1,14 @@
-# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
-    cmake_policy(SET CMP0135 NEW)
-endif ()
-
-include(FetchContent)
-
-FetchContent_Declare(
-        googletest
-        URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-
-FetchContent_MakeAvailable(googletest)
-
+include(GoogleTest)
 enable_testing()
 
-add_executable(
-        Tests
-
-        feature/RunProgramsTests.cpp
-
-        unit/regex/RegexParserTestCase.h
-        unit/regex/RegexParserTests.cpp
-
-        unit/lexis/LexisTests.cpp
-        unit/lexis/LexisTestCase.h
-
-        unit/syntax/types/TypesTests.cpp
-
-        unit/syntax/RecoveryTests.cpp
-        unit/syntax/SyntaxTestCase.h
-        unit/syntax/SyntaxTests.cpp
-
-        unit/utils/SmartEnumTests.cpp
-)
+# Add all files from tests directory
+file(GLOB_RECURSE TestsSources "*.cpp" "*.h")
+add_executable(Tests ${TestsSources})
 
 target_compile_options(Tests PUBLIC -fsanitize=address -O0)
+target_link_options(Tests PUBLIC -fsanitize=address)
+target_link_libraries(Tests TeaLang LexisTools GTest::gtest_main)
 
-target_link_libraries(Tests TeaLang LexisTools)
-target_link_libraries(Tests GTest::gtest_main)
-
-include(GoogleTest)
 gtest_discover_tests(Tests)
 
 add_custom_command(
