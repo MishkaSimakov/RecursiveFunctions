@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types/Type.h"
 #include "ast/Nodes.h"
+#include "types/Type.h"
 
 namespace Front {
 struct Scope;
@@ -45,6 +45,10 @@ struct SymbolInfo {
 
   bool is_function() const {
     return std::holds_alternative<FunctionSymbol>(data);
+  }
+
+  bool is_namespace() const {
+    return std::holds_alternative<NamespaceSymbol>(data);
   }
 
   StringId get_unqualified_name() const {

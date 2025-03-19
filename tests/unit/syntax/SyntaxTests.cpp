@@ -24,7 +24,7 @@ TEST_F(SyntaxTestCase, simple_function_test) {
   auto& function = dynamic_cast<FunctionDecl&>(*root.declarations.front());
 
   ASSERT_STRING_EQ(function.name, "function");
-  ASSERT_FALSE(function.is_exported);
+  ASSERT_FALSE(function.specifiers.is_exported());
   ASSERT_TRUE(function.parameters.empty());
   ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::VOID);
 
@@ -45,7 +45,7 @@ TEST_F(SyntaxTestCase, function_with_parameters) {
   auto& function = dynamic_cast<FunctionDecl&>(*root.declarations.front());
 
   ASSERT_STRING_EQ(function.name, "function");
-  ASSERT_FALSE(function.is_exported);
+  ASSERT_FALSE(function.specifiers.is_exported());
   ASSERT_EQ(function.parameters.size(), 2);
   ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::INT);
 
@@ -71,8 +71,10 @@ TEST_F(SyntaxTestCase, function_call_test) {
 
     auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
     auto& call_expr = dynamic_cast<CallExpr&>(*expr_stmt.value);
+    auto& call_id = dynamic_cast<IdExpr&>(*call_expr.callee);
 
-    ASSERT_ID_EQ(call_expr.name, "function");
+    ASSERT_ID_EQ(call_id, "function");
+
     ASSERT_TRUE(call_expr.arguments.empty());
   }
 
@@ -83,8 +85,9 @@ TEST_F(SyntaxTestCase, function_call_test) {
 
     auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
     auto& call_expr = dynamic_cast<CallExpr&>(*expr_stmt.value);
+    auto& call_id = dynamic_cast<IdExpr&>(*call_expr.callee);
 
-    ASSERT_ID_EQ(call_expr.name, "math", "sqrt");
+    ASSERT_ID_EQ(call_id, "math", "sqrt");
     ASSERT_EQ(call_expr.arguments.size(), 1);
 
     auto& argument =

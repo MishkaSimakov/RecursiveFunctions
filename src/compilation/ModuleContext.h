@@ -9,6 +9,12 @@
 
 namespace Front {
 struct ModuleContext {
+  enum class ModuleState {
+    UNPROCESSED,
+    AFTER_PARSER,
+    AFTER_SEMANTIC_ANALYZER,
+    AFTER_IR_COMPILER
+  };
   std::string name;
 
   TypesStorage types_storage;
@@ -20,6 +26,11 @@ struct ModuleContext {
   std::unordered_map<const FunctionDecl*, std::reference_wrapper<SymbolInfo>>
       functions_info;
 
+  // warning: StringIds inside QualifierId are from another module.
+  // To get string_view from it, get_string must be called on correct module.
+  std::unordered_map<QualifiedId, std::reference_wrapper<SymbolInfo>>
+      exported_symbols;
+
   // I use std::less<void> to compare std::string with std::string_view without
   // creating new string from string_view
   std::set<std::string, std::less<>> strings_table;
@@ -27,7 +38,7 @@ struct ModuleContext {
   std::vector<std::reference_wrapper<ModuleContext>> dependencies;
   std::vector<std::reference_wrapper<ModuleContext>> dependents;
 
-  bool has_symbols_table{false};
+  ModuleState state{ModuleState::UNPROCESSED};
 
   ModuleContext() = default;
 

@@ -1,14 +1,14 @@
 #pragma once
-#include <compilation/StringId.h>
-
 #include <bitset>
 #include <memory>
 #include <ranges>
 #include <vector>
 
+#include "compilation/StringId.h"
 #include "compilation/types/Type.h"
 #include "errors/Helpers.h"
 #include "lexis/Token.h"
+#include "utils/Hashers.h"
 
 // Here all AST Nodes are defined. To add new node:
 // 1. Create class and inherit it from ASTNode
@@ -20,8 +20,25 @@
 namespace Front {
 struct QualifiedId {
   std::vector<StringId> parts;
+
+  size_t hash() const noexcept {
+    StreamHasher hasher;
+    for (StringId part : parts) {
+      hasher << part;
+    }
+    return hasher.get_hash();
+  }
+};
+}  // namespace Front
+
+template <>
+struct std::hash<Front::QualifiedId> {
+  size_t operator()(const Front::QualifiedId& id) const noexcept {
+    return id.hash();
+  }
 };
 
+namespace Front {
 struct ASTNode {
   // clang-format off
   ENUM(Kind,
@@ -308,32 +325,32 @@ struct AssignmentStmt : Statement {
   Kind get_kind() const override { return Kind::ASSIGNMENT_STMT; }
 };
 
+struct Specifiers {
+ private:
+  constexpr static size_t kExportedId = 0;
+  constexpr static size_t kExternId = 1;
+
+  std::bitset<2> specifiers_{0};
+
+ public:
+  Specifiers() = default;
+
+  Specifiers& set_exported(bool is_exported) {
+    specifiers_[kExportedId] = is_exported;
+    return *this;
+  }
+
+  Specifiers& set_extern(bool is_extern) {
+    specifiers_[kExternId] = is_extern;
+    return *this;
+  }
+
+  bool is_exported() const { return specifiers_[kExportedId]; }
+
+  bool is_extern() const { return specifiers_[kExternId]; }
+};
+
 struct FunctionDecl : NamedDecl {
-  struct Specifiers {
-   private:
-    constexpr static size_t kExportedId = 0;
-    constexpr static size_t kExternId = 1;
-
-    std::bitset<2> specifiers_{0};
-
-   public:
-    Specifiers() = default;
-
-    Specifiers& set_exported(bool is_exported) {
-      specifiers_[kExportedId] = is_exported;
-      return *this;
-    }
-
-    Specifiers& set_extern(bool is_extern) {
-      specifiers_[kExternId] = is_extern;
-      return *this;
-    }
-
-    bool is_exported() const { return specifiers_[kExportedId]; }
-
-    bool is_extern() const { return specifiers_[kExternId]; }
-  };
-
   std::vector<std::unique_ptr<VariableDecl>> parameters;
   std::unique_ptr<TypeNode> return_type;
   std::unique_ptr<CompoundStmt> body;
@@ -480,7 +497,7 @@ struct NodesList final : SupplementaryNode {
   }
 };
 
-struct FunctionSpecifiersNode : SupplementaryNode, FunctionDecl::Specifiers {
+struct SpecifiersNode : SupplementaryNode, Specifiers {
   using SupplementaryNode::SupplementaryNode;
 };
 

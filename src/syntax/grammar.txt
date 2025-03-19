@@ -44,7 +44,7 @@ namespace-body:
     OPEN_BRACE declaration-seq CLOSE_BRACE  [pass<1>]
 
 import:
-    KW_IMPORT string-literal SEMICOLON [module_import]
+    KW_IMPORT string-literal [module_import]
 
 function-definition:
     specifiers IDENTIFIER COLON parameters return-type EQUAL compound-statement [function</*IsDefined=*/true>]

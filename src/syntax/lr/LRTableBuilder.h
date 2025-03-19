@@ -63,7 +63,6 @@ class LRTableBuilder {
   Grammar grammar_;
 
   std::unordered_map<NonTerminal, TokensBitset> first_;
-  std::unordered_map<NonTerminal, TokensBitset> follow_;
   std::unordered_map<State, StateInfo, StatesHasher> states_;
   std::vector<std::vector<size_t>> goto_;
   std::vector<std::vector<Action>> actions_;
@@ -71,7 +70,6 @@ class LRTableBuilder {
   static std::unordered_map<ssize_t, State> group_by_next(const State& state);
 
   void build_first_table();
-  void build_follow_table();
   void build_states_table();
   void build_actions_table();
 
@@ -91,7 +89,6 @@ class LRTableBuilder {
 
   auto& get_actions_table() { return actions_; }
   auto& get_first_table() { return first_; }
-  auto& get_follow_table() { return follow_; }
   auto& get_goto_table() { return goto_; }
 
   void save_to(const std::filesystem::path& path) const;

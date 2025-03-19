@@ -162,7 +162,7 @@ class ASTBuildContext {
 
   NodePtr function_specifiers(SourceRange source_range,
                               std::span<NodePtr> nodes) {
-    auto specifiers = std::make_unique<FunctionSpecifiersNode>(source_range);
+    auto specifiers = std::make_unique<SpecifiersNode>(source_range);
 
     for (auto& node : nodes) {
       auto token = cast_move<TokenNode>(std::move(node));
@@ -173,6 +173,7 @@ class ASTBuildContext {
           break;
         case Lexis::TokenType::KW_EXPORT:
           specifiers->set_exported(true);
+          break;
         default:
           unreachable("Grammar must fail with other token types.");
       }
@@ -182,9 +183,8 @@ class ASTBuildContext {
   }
 
   template <bool IsDefined>
-  NodePtr function(SourceRange source_range,
-                              std::span<NodePtr> nodes) {
-    auto specifiers = cast_move<FunctionSpecifiersNode>(std::move(nodes[0]));
+  NodePtr function(SourceRange source_range, std::span<NodePtr> nodes) {
+    auto specifiers = cast_move<SpecifiersNode>(std::move(nodes[0]));
 
     const auto& id_token = cast_view<TokenNode>(nodes[1]);
     auto name_id = context_.add_string(get_token_string(id_token));
@@ -196,8 +196,6 @@ class ASTBuildContext {
     if constexpr (IsDefined) {
       body = cast_move<CompoundStmt>(std::move(nodes[6]));
     } else {
-      // if function is not defined, it must be marked as extern
-      // TODO: make pretty exception
       if (!specifiers->is_extern()) {
         throw std::runtime_error("Function without definition must be extern.");
       }
@@ -301,17 +299,21 @@ class ASTBuildContext {
 
   NodePtr namespace_definition(SourceRange source_range,
                                std::span<NodePtr> nodes) {
-    bool is_exported = nodes.size() == 6;
-    size_t shift = is_exported ? 1 : 0;
+    auto specifiers = cast_move<SpecifiersNode>(std::move(nodes[0]));
 
-    // identifier
-    const auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
+    if (specifiers->is_extern()) {
+      throw std::runtime_error(
+          "Extern specifier is not applicable to namespace.");
+    }
+
+    const auto& id_token = cast_view<TokenNode>(nodes[1]);
     auto name_id = context_.add_string(get_token_string(id_token));
 
-    auto body = cast_move<NodesList<Declaration>>(std::move(nodes[shift + 4]));
+    auto body = cast_move<NodesList<Declaration>>(std::move(nodes[5]));
 
     return make_node<NamespaceDecl>(source_range, name_id,
-                                    std::move(body->nodes), is_exported);
+                                    std::move(body->nodes),
+                                    specifiers->is_exported());
   }
 
   NodePtr while_statement(SourceRange source_range, std::span<NodePtr> nodes) {

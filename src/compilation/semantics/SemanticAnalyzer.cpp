@@ -13,10 +13,10 @@ void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
   throw SemanticAnalyzerException(std::move(errors_));
 }
 
-SymbolInfo* SemanticAnalyzer::name_lookup(Scope* base_scope, StringId id,
-                                          bool should_ascend) const {
+SymbolInfo* SemanticAnalyzer::unqualified_name_lookup(
+    Scope* base_scope, StringId id, bool should_ascend) const {
   Scope* current_scope = base_scope;
-  // first we do local lookup
+
   while (current_scope != nullptr) {
     auto itr = current_scope->symbols.find(id);
     if (itr != current_scope->symbols.end()) {
@@ -30,8 +30,7 @@ SymbolInfo* SemanticAnalyzer::name_lookup(Scope* base_scope, StringId id,
     current_scope = current_scope->parent;
   }
 
-  // if it hasn't found then start global lookup in imported modules
-  return recursive_global_name_lookup(context_, id);
+  return nullptr;
 }
 
 SymbolInfo* SemanticAnalyzer::qualified_name_lookup(
@@ -56,21 +55,21 @@ SymbolInfo* SemanticAnalyzer::qualified_name_lookup(
 
 SymbolInfo* SemanticAnalyzer::recursive_global_name_lookup(
     const ModuleContext& module, StringId name) const {
-  // // TODO: notify when there are conflicting names
-  // for (const auto& dependency : module.dependencies) {
-  //   const auto& symbols = import_module.root_scope->symbols;
-  //   auto itr = symbols.find(name);
-  //   if (itr != symbols.end() && itr->second.is_exported) {
-  //     return {itr->second.type, import_module.root_scope};
-  //   }
-  //
-  //   auto recursive_search_result =
-  //       recursive_global_name_lookup(import_module, name);
-  //   if (recursive_search_result.first != nullptr) {
-  //     return recursive_search_result;
-  //   }
-  // }
-  //
+  // TODO: notify when there are conflicting names
+  for (const auto& dependency : module.dependencies) {
+    const auto& symbols = import_module.root_scope->symbols;
+    auto itr = symbols.find(name);
+    if (itr != symbols.end() && itr->second.is_exported) {
+      return {itr->second.type, import_module.root_scope};
+    }
+
+    auto recursive_search_result =
+        recursive_global_name_lookup(import_module, name);
+    if (recursive_search_result.first != nullptr) {
+      return recursive_search_result;
+    }
+  }
+
   return nullptr;
 }
 

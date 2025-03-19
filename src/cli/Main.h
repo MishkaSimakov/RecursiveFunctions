@@ -21,10 +21,6 @@ class Main {
     return ExceptionsHandler::execute([argc, argv] {
       auto arguments = ArgumentsReader::read(argc, argv);
 
-      if (arguments.sources.size() != 1) {
-        throw std::runtime_error("Only one source file must be provided.");
-      }
-
       auto front = Front::TeaFrontend(arguments.sources, arguments.output);
       front.compile();
 

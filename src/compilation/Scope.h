@@ -13,8 +13,6 @@ struct Scope {
 
   std::unordered_map<StringId, SymbolInfo> symbols;
 
-  explicit Scope(Scope* parent) : parent(parent) {}
-
   bool has_symbol(StringId name) const { return symbols.contains(name); }
 
   SymbolInfo& add_namespace(StringId name, NamespaceDecl& decl,
@@ -42,6 +40,12 @@ struct Scope {
     }
 
     return &parent->symbols.at(name.value());
+  }
+
+  Scope& add_child() {
+    auto& child = children.emplace_back(std::make_unique<Scope>());
+    child->parent = this;
+    return *child;
   }
 };
 }  // namespace Front

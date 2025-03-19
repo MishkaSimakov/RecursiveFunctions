@@ -109,6 +109,8 @@ void TeaFrontend::build_ast() {
       source_manager.print_annotations(std::cout);
     }
 
+    module_context.state = ModuleContext::ModuleState::AFTER_PARSER;
+
     if (has_syntax_errors) {
       continue;
     }
@@ -160,8 +162,8 @@ void TeaFrontend::build_symbols_table_and_compile() {
     // check that all dependencies are already processed
     ModuleContext& current_module = context_.get_module(current_name);
     bool has_unprocessed_dependencies = false;
-    for (const auto& dependency : current_module.dependencies) {
-      if (!dependency.get().has_symbols_table) {
+    for (const ModuleContext& dependency : current_module.dependencies) {
+      if (dependency.state != ModuleContext::ModuleState::AFTER_IR_COMPILER) {
         has_unprocessed_dependencies = true;
         break;
       }
@@ -187,6 +189,14 @@ void TeaFrontend::build_symbols_table_and_compile() {
 
     auto ir_compiler = IRASTVisitor(*llvm_context_, current_module);
     llvm_modules_.emplace_back(std::move(ir_compiler.compile()));
+
+    current_module.state = ModuleContext::ModuleState::AFTER_IR_COMPILER;
+
+    for (const ModuleContext& dependent : current_module.dependents) {
+      if (dependent.state != ModuleContext::ModuleState::AFTER_IR_COMPILER) {
+        queue.push_back(dependent.name);
+      }
+    }
   }
 }
 

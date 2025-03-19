@@ -1,9 +1,9 @@
 #pragma once
 
+#include <source_location>
 #include <stdexcept>
 #include <string_view>
 
-#include "../../../../../../../../Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/v1/source_location"
 #include "fmt/format.h"
 
 class OneShotObject {

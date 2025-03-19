@@ -95,57 +95,6 @@ void LRTableBuilder::build_first_table() {
   }
 }
 
-void LRTableBuilder::build_follow_table() {
-  auto update_data = [this] {
-    std::unordered_map<NonTerminal, TokensBitset> updated;
-
-    for (const auto& [non_terminal, productions] : grammar_.get_productions()) {
-      for (const auto& production : productions | std::views::keys) {
-        const auto& parts = production.get_parts();
-        for (auto itr = parts.begin(); itr != parts.end(); ++itr) {
-          if (std::holds_alternative<Terminal>(*itr)) {
-            continue;
-          }
-
-          auto curr_non_terminal = std::get<NonTerminal>(*itr);
-          auto next = std::next(itr);
-          auto& nonterm_update = updated[curr_non_terminal];
-
-          if (next == parts.end()) {
-            nonterm_update.add(follow_[non_terminal]);
-          } else if (std::holds_alternative<Terminal>(*next)) {
-            nonterm_update.add(std::get<Terminal>(*next).get_token());
-          } else {
-            // next is non-terminal
-            nonterm_update.add(first_[std::get<NonTerminal>(*next)]);
-          }
-        }
-      }
-    }
-
-    for (auto& [nonterm, nonterm_update] : updated) {
-      nonterm_update.remove(follow_[nonterm]);
-    }
-
-    EraseEmpty(updated);
-
-    return updated;
-  };
-
-  std::unordered_map<NonTerminal, TokensBitset> curr_added;
-  curr_added[grammar_.get_start()].add(Lexis::TokenType::END);
-
-  while (!curr_added.empty()) {
-    // merge into result
-    for (const auto& [nonterm, follows] : curr_added) {
-      follow_[nonterm].add(follows);
-    }
-
-    // find new data
-    curr_added = update_data();
-  }
-}
-
 void LRTableBuilder::build_states_table() {
   // building goto table
   State start_state;
@@ -346,7 +295,6 @@ LRTableBuilder::LRTableBuilder(Grammar grammar) : grammar_(std::move(grammar)) {
   grammar_.set_start(new_start);
 
   build_first_table();
-  build_follow_table();
   build_states_table();
   build_actions_table();
 }

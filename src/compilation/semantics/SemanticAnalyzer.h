@@ -12,9 +12,6 @@ struct SemanticAnalyzerException : std::runtime_error {
       : std::runtime_error("Semantic error."), errors(std::move(errors)) {}
 };
 
-// What should this class do?
-// 1. Create for each function list of local variables
-// 2. Link each variable name to its definition
 struct SemanticAnalyzerConfig : ASTVisitorConfig {
   static constexpr auto order() { return Order::POSTORDER; }
   static constexpr auto is_const() { return false; }
@@ -28,14 +25,15 @@ class SemanticAnalyzer
   ModuleContext& context_;
   std::vector<std::pair<SourceRange, std::string>> errors_;
 
+  bool is_in_exported_scope_{false};
   Scope* current_scope_{nullptr};
 
   TypesStorage& types();
 
   [[noreturn]] void scold_user(const ASTNode& node, std::string message);
 
-  SymbolInfo* name_lookup(Scope* base_scope, StringId id,
-                          bool should_ascend = true) const;
+  SymbolInfo* unqualified_name_lookup(Scope* base_scope, StringId id,
+                                      bool should_ascend) const;
 
   SymbolInfo* qualified_name_lookup(Scope* base_scope,
                                     const IdExpr& qualified_id);
@@ -49,9 +47,7 @@ class SemanticAnalyzer
    public:
     explicit NestedScopeRAII(Scope*& current_scope)
         : current_scope_(current_scope) {
-      auto& scope = current_scope_->children.emplace_back(
-          std::make_unique<Scope>(current_scope_));
-      current_scope_ = scope.get();
+      current_scope_ = &current_scope->add_child();
     }
 
     NestedScopeRAII(const NestedScopeRAII&) = delete;
@@ -82,9 +78,9 @@ class SemanticAnalyzer
 
   bool visit_return_statement(ReturnStmt& node);
 
-  bool before_integer_literal(IntegerLiteral& node);
-  bool before_string_literal(StringLiteral& node);
-  bool before_bool_literal(BoolLiteral& node);
+  bool visit_integer_literal(IntegerLiteral& node);
+  bool visit_string_literal(StringLiteral& node);
+  bool visit_bool_literal(BoolLiteral& node);
 
   bool visit_id_expression(IdExpr& node);
 
@@ -122,6 +118,8 @@ class SemanticAnalyzer
 
   void analyze() {
     OSO_FIRE();
+
+    merge_dependencies_symbols();
     traverse(*context_.ast_root);
   }
 };
