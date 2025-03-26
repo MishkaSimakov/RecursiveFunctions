@@ -46,6 +46,8 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
 
   llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
 
+  void allocate_local_variables(const FunctionSymbolInfo& info);
+
  public:
   IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
       : llvm_context_(llvm_context),
@@ -59,6 +61,7 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
       const ImplicitLvalueToRvalueConversionExpr& value);
   bool traverse_assignment_statement(const AssignmentStmt& value);
   bool traverse_if_statement(const IfStmt& value);
+  bool traverse_while_statement(const WhileStmt& value);
   bool traverse_call_expression(const CallExpr& value);
   bool traverse_variable_declaration(const VariableDecl& value);
   bool traverse_id_expression(const IdExpr& value);

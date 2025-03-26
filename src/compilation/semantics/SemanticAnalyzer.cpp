@@ -69,16 +69,14 @@ bool SemanticAnalyzer::after_traverse(ASTNode& node) {
 }
 
 bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
-  SymbolInfo* scope_info = current_scope_->get_scope_info();
-  if (scope_info == nullptr || !scope_info->is_function()) {
-    scold_user(node, "Return statements are allowed only in function scope.");
+  FunctionSymbolInfo* fun = current_scope_->get_parent_function();
+  if (fun == nullptr) {
+    scold_user(node, "Return statements are allowed only inside function.");
   }
 
-  const auto& function = std::get<FunctionSymbolInfo>(*scope_info);
-
-  if (node.value->type != function.type->return_type) {
+  if (node.value->type != fun->type->return_type) {
     auto left_type = node.value->type->to_string();
-    auto right_type = function.type->return_type->to_string();
+    auto right_type = fun->type->return_type->to_string();
 
     scold_user(
         node,
@@ -98,7 +96,8 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
 void SemanticAnalyzer::analyze() {
   OSO_FIRE();
 
-  context_.root_scope = std::make_unique<Scope>();
+  auto name = context_.add_string(fmt::format("module({})", context_.name));
+  context_.root_scope = std::make_unique<Scope>(name);
   current_scope_ = context_.root_scope.get();
 
   for (ModuleContext& exported : context_.dependencies) {

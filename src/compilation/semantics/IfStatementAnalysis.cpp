@@ -10,12 +10,12 @@ bool SemanticAnalyzer::traverse_if_statement(IfStmt& node) {
   }
 
   {
-    NestedScopeRAII scope_guard(current_scope_);
+    NestedScopeRAII scope_guard(*this);
     traverse(*node.true_branch);
   }
 
   {
-    NestedScopeRAII scope_guard(current_scope_);
+    NestedScopeRAII scope_guard(*this);
     traverse(*node.false_branch);
   }
 

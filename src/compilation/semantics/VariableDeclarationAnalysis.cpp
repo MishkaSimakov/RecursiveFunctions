@@ -8,10 +8,14 @@ bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
   }
 
   auto type = node.type->value;
-  current_scope_->add_variable(node.name, node, type);
+  VariableSymbolInfo& info = std::get<VariableSymbolInfo>(
+      current_scope_->add_variable(node.name, node, type));
+  current_scope_->get_parent_function()->local_variables.push_back(info);
 
-  if (node.initializer != nullptr && node.initializer->type != node.type->value) {
-    scold_user(node, "Type of variable initializer must be same as variable type.");
+  if (node.initializer != nullptr &&
+      node.initializer->type != node.type->value) {
+    scold_user(node,
+               "Type of variable initializer must be same as variable type.");
   }
 
   return true;

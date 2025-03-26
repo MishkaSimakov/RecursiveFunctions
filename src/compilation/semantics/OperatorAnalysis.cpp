@@ -46,7 +46,7 @@ bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
 }
 
 bool SemanticAnalyzer::visit_unary_operator(UnaryOperator& node) {
-  scold_user(node, "Not implemented.");
+  not_implemented();
   return true;
 }
 }  // namespace Front

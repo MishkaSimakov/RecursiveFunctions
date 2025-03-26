@@ -23,16 +23,6 @@ struct InternalSymbolInfo {
   QualifiedId get_fully_qualified_name() const;
 };
 
-struct ExternalSymbolInfo {
-  SymbolInfo* original_info;
-  QualifiedId fully_qualified_id;
-
-  StringId get_unqualified_name() const {
-    return fully_qualified_id.unqualified_id();
-  }
-  QualifiedId get_fully_qualified_name() const { return fully_qualified_id; }
-};
-
 struct VariableSymbolInfo : InternalSymbolInfo {
   Type* type;
 
@@ -42,6 +32,7 @@ struct VariableSymbolInfo : InternalSymbolInfo {
 
 struct FunctionSymbolInfo : InternalSymbolInfo {
   FunctionType* type;
+  std::vector<std::reference_wrapper<VariableSymbolInfo>> local_variables;
 
   FunctionSymbolInfo(Scope* scope, NamedDecl& declaration, FunctionType* type)
       : InternalSymbolInfo(scope, declaration), type(type) {}
@@ -54,8 +45,8 @@ struct NamespaceSymbolInfo : InternalSymbolInfo {
       : InternalSymbolInfo(scope, declaration), subscope(subscope) {}
 };
 
-using SymbolInfoVariant = std::variant<VariableSymbolInfo, NamespaceSymbolInfo,
-                                       FunctionSymbolInfo, ExternalSymbolInfo>;
+using SymbolInfoVariant =
+    std::variant<VariableSymbolInfo, NamespaceSymbolInfo, FunctionSymbolInfo>;
 
 struct SymbolInfo : SymbolInfoVariant {
   using SymbolInfoVariant::SymbolInfoVariant;
@@ -70,12 +61,6 @@ struct SymbolInfo : SymbolInfoVariant {
     return std::visit(
         [](const auto& value) { return value.get_fully_qualified_name(); },
         *this);
-  }
-
-  bool is_local_for_module() const { return !is_external_for_module(); }
-
-  bool is_external_for_module() const {
-    return std::holds_alternative<ExternalSymbolInfo>(*this);
   }
 
   bool is_variable() const {

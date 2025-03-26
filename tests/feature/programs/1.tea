@@ -1,4 +1,6 @@
-// extern print: (value: i64) -> void
+144
+//
+import "testing"
 
 math: namespace = {
     sqr: (value: i64) -> i64 = {
@@ -6,14 +8,11 @@ math: namespace = {
     }
 }
 
-}main: (x: i64) -> i64 = {
-    y: i64 = 123;
+main: () -> i64 = {
+    value: i64 = 12;
+    squared: i64 = math::sqr(squared);
 
-    if (true) {
-        y = 37;
-    } else {
-        y = 42;
-    }
+    testing::output(squared);
 
-    return y;
+    return 0;
 }

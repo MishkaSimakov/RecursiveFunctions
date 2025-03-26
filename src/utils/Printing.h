@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 class TreePrinter {
   struct TextNode {
     std::string value;

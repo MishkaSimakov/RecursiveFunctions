@@ -2,7 +2,7 @@
 
 namespace Front {
 bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
-  NestedScopeRAII scope_guard(current_scope_);
+  NestedScopeRAII scope_guard(*this, node.name);
 
   // build function type
   auto arguments_view =
@@ -25,7 +25,7 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
 
   SymbolInfo& info =
       current_scope_->parent->add_function(node.name, node, type);
-  current_scope_->name = node.name;
+  current_scope_->parent_symbol = &info;
   context_.functions_info.emplace(&node, std::get<FunctionSymbolInfo>(info));
 
   bool prev_is_in_exported_scope = is_in_exported_scope_;

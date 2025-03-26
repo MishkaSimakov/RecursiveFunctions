@@ -27,6 +27,7 @@ class SemanticAnalyzer
 
   bool is_in_exported_scope_{false};
   Scope* current_scope_{nullptr};
+  size_t anonymous_namespace_counter_{0};
 
   TypesStorage& types();
   SymbolInfo* name_lookup(Scope* scope, const QualifiedId& id);
@@ -45,9 +46,16 @@ class SemanticAnalyzer
     Scope*& current_scope_;
 
    public:
-    explicit NestedScopeRAII(Scope*& current_scope)
-        : current_scope_(current_scope) {
-      current_scope_ = &current_scope->add_child();
+    // starts new anonymous namespace
+    explicit NestedScopeRAII(SemanticAnalyzer& analyzer)
+        : NestedScopeRAII(
+              analyzer,
+              analyzer.context_.add_string(fmt::format(
+                  "anonymous({})", analyzer.anonymous_namespace_counter_++))) {}
+
+    NestedScopeRAII(SemanticAnalyzer& analyzer, StringId name)
+        : current_scope_(analyzer.current_scope_) {
+      current_scope_ = &current_scope_->add_child(name);
     }
 
     NestedScopeRAII(const NestedScopeRAII&) = delete;

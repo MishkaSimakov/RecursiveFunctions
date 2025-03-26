@@ -14,11 +14,11 @@ bool SemanticAnalyzer::traverse_namespace_declaration(NamespaceDecl& node) {
 
     current_scope_ = std::get<NamespaceSymbolInfo>(info).subscope;
   } else {
-    current_scope_ = &current_scope_->add_child();
+    current_scope_ = &current_scope_->add_child(node.name);
 
     SymbolInfo& info =
         current_scope_->parent->add_namespace(node.name, node, current_scope_);
-    current_scope_->name = node.name;
+    current_scope_->parent_symbol = &info;
 
     if (node.is_exported) {
       scold_user(node, "Exported namespaces are not supported yet.");

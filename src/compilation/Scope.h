@@ -7,7 +7,8 @@
 
 namespace Front {
 struct Scope {
-  std::optional<StringId> name;
+  StringId name;
+  SymbolInfo* parent_symbol{nullptr};
   std::vector<std::unique_ptr<Scope>> children;
   Scope* parent{nullptr};
 
@@ -30,19 +31,25 @@ struct Scope {
     return symbols.emplace(name, info).first->second;
   }
 
-  // returns nullptr for anonymous scopes
-  SymbolInfo* get_scope_info() const {
-    if (!name.has_value()) {
-      return nullptr;
-    }
-
-    return &parent->symbols.at(name.value());
-  }
-
-  Scope& add_child() {
-    auto& child = children.emplace_back(std::make_unique<Scope>());
+  Scope& add_child(StringId name) {
+    auto& child = children.emplace_back(std::make_unique<Scope>(name));
     child->parent = this;
     return *child;
+  }
+
+  FunctionSymbolInfo* get_parent_function() {
+    Scope* current_scope = this;
+    while (current_scope != nullptr) {
+      if (current_scope->parent_symbol != nullptr &&
+          current_scope->parent_symbol->is_function()) {
+        return &std::get<FunctionSymbolInfo>(*current_scope->parent_symbol);
+      }
+
+      current_scope = current_scope->parent;
+    }
+
+    // if we are here, then we were not in a function
+    return nullptr;
   }
 };
 }  // namespace Front

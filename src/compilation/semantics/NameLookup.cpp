@@ -24,8 +24,7 @@ void SemanticAnalyzer::inject_symbol(ModuleContext& module,
 
     auto itr = local_scope->symbols.find(local_part);
     if (itr == local_scope->symbols.end()) {
-      Scope* subscope = &local_scope->add_child();
-      subscope->name = local_part;
+      Scope* subscope = &local_scope->add_child(local_part);
       local_scope->add_namespace(local_part, external_namespace.declaration,
                                  subscope);
 

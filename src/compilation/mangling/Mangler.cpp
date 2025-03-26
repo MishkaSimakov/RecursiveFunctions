@@ -13,7 +13,7 @@ std::string Mangler::mangle_type(Type* type) const {
     case Type::Kind::INT:
       return "x";
     default:
-      throw std::runtime_error("Not implemented.");
+      not_implemented();
   }
 }
 
@@ -72,7 +72,7 @@ std::string Mangler::mangle(const SymbolInfo& symbol) const {
            mangle_bare_function_type(function_type);
   }
 
-  throw std::runtime_error("Not implemented.");
+  not_implemented();
 }
 
 }  // namespace Front
