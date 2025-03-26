@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <utility>
 
 namespace Constants {
@@ -9,9 +10,28 @@ namespace Constants {
 // constexpr inline size_t max_arguments = 7;
 
 constexpr inline auto entrypoint = "main";
-constexpr inline auto grammar_filepath = "files/grammar/grammar.lr";
-constexpr inline auto lexis_filepath = "files/lexis/lexis.lx";
-constexpr inline auto std_filepath = "files/std/reclib.asm";
+extern const bool is_installed_build;
+
+constexpr inline auto lexis_relative_filepath = "lexis/lexis.lx";
+constexpr inline auto grammar_relative_filepath = "grammar/grammar.lr";
+
+inline std::filesystem::path GetRuntimeFilePath(
+    std::filesystem::path relative_path) {
+  {
+    if (is_installed_build) {
+      // TODO: get this path from OS
+      return std::filesystem::path("/usr/local/share/tlang/files") /
+             relative_path;
+    } else {
+      return std::filesystem::path(FILES_DIRECTORY) / relative_path;
+    }
+  }
+}
+
+inline std::filesystem::path GetBuildFilePath(
+    std::filesystem::path relative_path) {
+  return std::filesystem::path(FILES_DIRECTORY) / relative_path;
+}
 
 #ifdef NDEBUG
 constexpr inline bool debug = false;

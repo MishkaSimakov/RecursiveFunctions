@@ -48,10 +48,10 @@ class TreePrinter {
   void move_cursor_down() { nodes_stack_.push_back(nullptr); }
   void move_cursor_up() { nodes_stack_.pop_back(); }
 
-  void add_node(std::string value) {
+  void add_node(std::string_view value) {
     nodes_stack_.pop_back();
 
-    auto node = std::make_unique<TextNode>(std::move(value));
+    auto node = std::make_unique<TextNode>(std::string(value));
     auto node_ptr = node.get();
     nodes_stack_.back()->children.push_back(std::move(node));
 

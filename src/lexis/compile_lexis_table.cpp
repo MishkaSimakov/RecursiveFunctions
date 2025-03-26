@@ -87,8 +87,7 @@ int main() {
   generator[TokenType::WHITESPACE] = "{space}+";
   generator[TokenType::COMMENT] = "//{comment_symbol}*";
 
-  auto absolute_lexis_filepath =
-      std::filesystem::path(BASE_PATH) / Constants::lexis_filepath;
+  auto absolute_lexis_filepath = Constants::GetBuildFilePath("lexis/lexis.lx");
   generator.build_and_save(absolute_lexis_filepath);
 
   fmt::print("Stored lexis table in: {:?}.\n", absolute_lexis_filepath.c_str());

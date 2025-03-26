@@ -2,15 +2,15 @@
 
 namespace Front {
 bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
-  SymbolInfo* info = qualified_name_lookup(current_scope_, node);
+  SymbolInfo* info = name_lookup(current_scope_, node.id);
   if (info == nullptr) {
     scold_user(node, "Unknown identifier.");
   }
 
   if (info->is_variable()) {
-    node.type = std::get<VariableSymbol>(info->data).type;
+    node.type = std::get<VariableSymbolInfo>(*info).type;
   } else if (info->is_function()) {
-    node.type = std::get<FunctionSymbol>(info->data).type;
+    node.type = std::get<FunctionSymbolInfo>(*info).type;
   } else {
     scold_user(
         node,

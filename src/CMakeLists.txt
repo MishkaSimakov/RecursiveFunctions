@@ -25,4 +25,13 @@ list(APPEND CoreFiles
 )
 
 add_library(TeaLang ${CoreFiles})
-target_include_directories(TeaLang PUBLIC ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(TeaLang PUBLIC .)
+target_link_libraries(TeaLang
+        PUBLIC fmt::fmt
+        PUBLIC argparse::argparse
+        PRIVATE ${llvm_libs}
+)
+target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
+
+# TeaLang requires grammar and lexis tables to work
+add_dependencies(TeaLang run_grammar_tablegen run_lexis_tablegen)

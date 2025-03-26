@@ -60,13 +60,15 @@ class SyntaxTestCase : public ::testing::Test {
     delete context_;
     context_ = new GlobalContext();
 
-    Lexis::LexicalAnalyzer lexical_analyzer(Constants::lexis_filepath);
+    Lexis::LexicalAnalyzer lexical_analyzer(
+        Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
     auto source_view = context_->source_manager.load_text(program);
     lexical_analyzer.set_source_view(source_view);
 
     auto& module_context = context_->add_module("main");
 
-    Syntax::LRParser parser(Constants::grammar_filepath);
+    Syntax::LRParser parser(
+        Constants::GetRuntimeFilePath(Constants::grammar_relative_filepath));
     parser.parse(lexical_analyzer, module_context, source_view);
 
     return module_context;
@@ -85,9 +87,7 @@ class SyntaxTestCase : public ::testing::Test {
     return function.body->statements;
   }
 
-  void TearDown() override {
-    delete context_;
-  }
+  void TearDown() override { delete context_; }
 
   //
   // template <typename... Args>

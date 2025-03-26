@@ -23,13 +23,13 @@ struct ModuleContext {
 
   std::unordered_map<const IdExpr*, std::reference_wrapper<SymbolInfo>>
       symbols_info;
-  std::unordered_map<const FunctionDecl*, std::reference_wrapper<SymbolInfo>>
+  std::unordered_map<const FunctionDecl*,
+                     std::reference_wrapper<FunctionSymbolInfo>>
       functions_info;
 
   // warning: StringIds inside QualifierId are from another module.
   // To get string_view from it, get_string must be called on correct module.
-  std::unordered_map<QualifiedId, std::reference_wrapper<SymbolInfo>>
-      exported_symbols;
+  std::vector<std::reference_wrapper<SymbolInfo>> exported_symbols;
 
   // I use std::less<void> to compare std::string with std::string_view without
   // creating new string from string_view

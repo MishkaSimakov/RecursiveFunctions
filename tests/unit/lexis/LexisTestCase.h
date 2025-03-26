@@ -12,7 +12,8 @@ class LexisTestCase : public ::testing::Test {
  protected:
   static Lexis::LexicalAnalyzer setup_analyzer(std::string_view program) {
     SourceView source_view(program, SourceLocation{0, 0});
-    Lexis::LexicalAnalyzer analyzer(Constants::lexis_filepath);
+    Lexis::LexicalAnalyzer analyzer(
+        Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
     analyzer.set_source_view(source_view);
 
     return analyzer;

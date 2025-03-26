@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "ast/ASTVisitor.h"
+#include "compilation/ModuleContext.h"
 #include "utils/Printing.h"
 
 namespace Front {

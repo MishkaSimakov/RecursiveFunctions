@@ -67,7 +67,7 @@ std::string Mangler::mangle(const SymbolInfo& symbol) const {
       return "main";
     }
 
-    FunctionType* function_type = std::get<FunctionSymbol>(symbol.data).type;
+    FunctionType* function_type = std::get<FunctionSymbolInfo>(symbol).type;
     return "_Z" + mangle_name(qualified_name) +
            mangle_bare_function_type(function_type);
   }

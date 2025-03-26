@@ -13,48 +13,82 @@ struct Scope;
 // 3. function name
 // 4. namespace
 
-// Variable or Parameter, these symbols are in the end of qualified id
-struct VariableSymbol {
-  Type* type;
-};
+struct SymbolInfo;
 
-struct FunctionSymbol {
-  FunctionType* type;
-};
-
-struct NamespaceSymbol {
-  Scope* subscope;
-};
-
-struct SymbolInfo {
- private:
-  using NodeKind = ASTNode::Kind;
-
- public:
+struct InternalSymbolInfo {
   Scope* scope;
-  Declaration& declaration;
-  std::variant<VariableSymbol, FunctionSymbol, NamespaceSymbol> data;
+  NamedDecl& declaration;
 
-  SymbolInfo(Scope* scope, Declaration& declaration,
-             std::variant<VariableSymbol, FunctionSymbol, NamespaceSymbol> data)
-      : scope(scope), declaration(declaration), data(data) {}
+  StringId get_unqualified_name() const { return declaration.name; }
+  QualifiedId get_fully_qualified_name() const;
+};
+
+struct ExternalSymbolInfo {
+  SymbolInfo* original_info;
+  QualifiedId fully_qualified_id;
+
+  StringId get_unqualified_name() const {
+    return fully_qualified_id.unqualified_id();
+  }
+  QualifiedId get_fully_qualified_name() const { return fully_qualified_id; }
+};
+
+struct VariableSymbolInfo : InternalSymbolInfo {
+  Type* type;
+
+  VariableSymbolInfo(Scope* scope, NamedDecl& declaration, Type* type)
+      : InternalSymbolInfo(scope, declaration), type(type) {}
+};
+
+struct FunctionSymbolInfo : InternalSymbolInfo {
+  FunctionType* type;
+
+  FunctionSymbolInfo(Scope* scope, NamedDecl& declaration, FunctionType* type)
+      : InternalSymbolInfo(scope, declaration), type(type) {}
+};
+
+struct NamespaceSymbolInfo : InternalSymbolInfo {
+  Scope* subscope;
+
+  NamespaceSymbolInfo(Scope* scope, NamedDecl& declaration, Scope* subscope)
+      : InternalSymbolInfo(scope, declaration), subscope(subscope) {}
+};
+
+using SymbolInfoVariant = std::variant<VariableSymbolInfo, NamespaceSymbolInfo,
+                                       FunctionSymbolInfo, ExternalSymbolInfo>;
+
+struct SymbolInfo : SymbolInfoVariant {
+  using SymbolInfoVariant::SymbolInfoVariant;
+  using SymbolInfoVariant::operator=;
+
+  StringId get_unqualified_name() const {
+    return std::visit(
+        [](const auto& value) { return value.get_unqualified_name(); }, *this);
+  }
+
+  QualifiedId get_fully_qualified_name() const {
+    return std::visit(
+        [](const auto& value) { return value.get_fully_qualified_name(); },
+        *this);
+  }
+
+  bool is_local_for_module() const { return !is_external_for_module(); }
+
+  bool is_external_for_module() const {
+    return std::holds_alternative<ExternalSymbolInfo>(*this);
+  }
 
   bool is_variable() const {
-    return std::holds_alternative<VariableSymbol>(data);
+    return std::holds_alternative<VariableSymbolInfo>(*this);
   }
 
   bool is_function() const {
-    return std::holds_alternative<FunctionSymbol>(data);
+    return std::holds_alternative<FunctionSymbolInfo>(*this);
   }
 
   bool is_namespace() const {
-    return std::holds_alternative<NamespaceSymbol>(data);
+    return std::holds_alternative<NamespaceSymbolInfo>(*this);
   }
-
-  StringId get_unqualified_name() const {
-    return static_cast<const NamedDecl&>(declaration).name;
-  }
-
-  QualifiedId get_fully_qualified_name() const;
 };
+
 }  // namespace Front

@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <iostream>
 
+#include "ast/ASTPrinter.h"
+#include "compilation/ScopePrinter.h"
+
 namespace Front {
 TypesStorage& SemanticAnalyzer::types() { return context_.types_storage; }
 
@@ -13,81 +16,23 @@ void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
   throw SemanticAnalyzerException(std::move(errors_));
 }
 
-SymbolInfo* SemanticAnalyzer::unqualified_name_lookup(
-    Scope* base_scope, StringId id, bool should_ascend) const {
-  Scope* current_scope = base_scope;
-
-  while (current_scope != nullptr) {
-    auto itr = current_scope->symbols.find(id);
-    if (itr != current_scope->symbols.end()) {
-      return &itr->second;
-    }
-
-    if (!should_ascend) {
-      return nullptr;
-    }
-
-    current_scope = current_scope->parent;
+StringId SemanticAnalyzer::import_external_string(
+    StringId external_string, ModuleContext& external_module) {
+  if (&external_module == &context_) {
+    return external_string;
   }
 
-  return nullptr;
+  std::string_view string_view = external_module.get_string(external_string);
+  return context_.add_string(string_view);
 }
 
-SymbolInfo* SemanticAnalyzer::qualified_name_lookup(
-    Scope* base_scope, const IdExpr& qualified_id) {
-  auto& parts = qualified_id.id.parts;
-  // process scope qualifiers
-  for (size_t i = 0; i + 1 < parts.size(); ++i) {
-    // SymbolInfo* next_symbol = name_lookup(base_scope, parts[i], i == 0);
-    SymbolInfo* next_symbol = nullptr;
-
-    // only namespaces can appear as scope qualifiers
-    if (!std::holds_alternative<NamespaceSymbol>(next_symbol->data)) {
-      scold_user(qualified_id,
-                 "Only namespace name can appear as qualifier before id.");
-    }
-
-    base_scope = std::get<NamespaceSymbol>(next_symbol->data).subscope;
+QualifiedId SemanticAnalyzer::import_external_string(
+    QualifiedId external_string, ModuleContext& external_module) {
+  QualifiedId result;
+  for (StringId part : external_string.parts) {
+    result.parts.push_back(import_external_string(part, external_module));
   }
-
-  bool has_qualifiers = parts.size() > 1;
-  // return name_lookup(base_scope, parts.back(), !has_qualifiers);
-  return nullptr;
-}
-
-SymbolInfo* SemanticAnalyzer::recursive_global_name_lookup(
-    const ModuleContext& module, StringId name) const {
-  // TODO: notify when there are conflicting names
-  // for (const auto& dependency : module.dependencies) {
-  //   const auto& symbols = import_module.root_scope->symbols;
-  //   auto itr = symbols.find(name);
-  //   if (itr != symbols.end() && itr->second.is_exported) {
-  //     return {itr->second.type, import_module.root_scope};
-  //   }
-  //
-  //   auto recursive_search_result =
-  //       recursive_global_name_lookup(import_module, name);
-  //   if (recursive_search_result.first != nullptr) {
-  //     return recursive_search_result;
-  //   }
-  // }
-
-  return nullptr;
-}
-
-QualifiedId SemanticAnalyzer::get_full_name(Scope* scope, StringId name) const {
-  std::vector<StringId> parts;
-  parts.push_back(name);
-
-  scope = scope->parent;
-  while (scope->parent != nullptr) {
-    parts.push_back(scope->name.value());
-    scope = scope->parent;
-  }
-
-  std::ranges::reverse(parts);
-
-  return QualifiedId{std::move(parts)};
+  return result;
 }
 
 void SemanticAnalyzer::convert_to_rvalue(
@@ -129,7 +74,7 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
     scold_user(node, "Return statements are allowed only in function scope.");
   }
 
-  const auto& function = std::get<FunctionSymbol>(scope_info->data);
+  const auto& function = std::get<FunctionSymbolInfo>(*scope_info);
 
   if (node.value->type != function.type->return_type) {
     auto left_type = node.value->type->to_string();
@@ -148,5 +93,26 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
   convert_to_rvalue(node.value);
 
   return true;
+}
+
+void SemanticAnalyzer::analyze() {
+  OSO_FIRE();
+
+  context_.root_scope = std::make_unique<Scope>();
+  current_scope_ = context_.root_scope.get();
+
+  for (ModuleContext& exported : context_.dependencies) {
+    for (SymbolInfo& exported_symbol : exported.exported_symbols) {
+      inject_symbol(exported, exported_symbol);
+    }
+  }
+
+  traverse(*context_.ast_root);
+
+  ScopePrinter printer(context_, std::cout);
+  printer.print();
+
+  ASTPrinter ast_printer(context_, std::cout);
+  ast_printer.print();
 }
 }  // namespace Front

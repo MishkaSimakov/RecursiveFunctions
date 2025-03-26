@@ -2,52 +2,36 @@ cmake_minimum_required(VERSION 3.22)
 project(TeaLang)
 
 set(CMAKE_CXX_STANDARD 23)
-set(TABLEGEN_CMAKE_DIR ${CMAKE_SOURCE_DIR}/cmake-build-tablegen)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-add_compile_definitions(BASE_PATH=\"${CMAKE_SOURCE_DIR}\")
+set(TEALANG_FILES_DIRECTORY "${CMAKE_SOURCE_DIR}/files")
+# This definition is required when we build target for playground and tests
+# When target is built for installation, it calculates this path in a different way
+add_compile_definitions(FILES_DIRECTORY="${TEALANG_FILES_DIRECTORY}")
 
 # load libraries
-include(cmake/libraries.cmake)
-
-add_subdirectory(src)
-target_link_libraries(TeaLang fmt::fmt argparse::argparse ${llvm_libs})
-target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
-
-include(cmake/tablegen.cmake)
+include(load_libraries)
+include(tablegen)
 
 add_subdirectory(src/lexis)
 add_subdirectory(src/syntax)
 
-add_dependencies(TeaLang run_grammar_tablegen run_lexis_tablegen)
+add_subdirectory(src)
 
 # add executables from cli directory
-file(GLOB_RECURSE CliFiles
+file(GLOB_RECURSE CLI_SOURCES
         "src/cli/*.cpp"
         "src/cli/*.h"
 )
-add_executable(Cli main.cpp)
-target_sources(Cli PUBLIC ${CliFiles})
 
-target_include_directories(Cli PUBLIC src)
-target_link_libraries(Cli TeaLang)
+add_executable(cli ${CLI_SOURCES})
+target_link_libraries(cli PUBLIC TeaLang)
+target_compile_definitions(cli PUBLIC BUILD_FOR_INSTALLATION=false)
 
-# copy compiler files into build destination
-add_custom_command(
-        TARGET Cli POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/files
-        ${CMAKE_CURRENT_BINARY_DIR}/files)
+add_executable(cli_installation ${CLI_SOURCES})
+target_link_libraries(cli_installation PUBLIC TeaLang)
+target_compile_definitions(cli_installation PUBLIC BUILD_FOR_INSTALLATION=true)
 
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 
-set_target_properties(Cli PROPERTIES OUTPUT_NAME "tlang")
-
-if (COMMAND install)
-    install(TARGETS Cli)
-else ()
-    set_target_properties(Cli
-            PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-    )
-
-endif ()
+include(install_cli)

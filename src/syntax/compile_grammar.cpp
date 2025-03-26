@@ -1,22 +1,19 @@
 #include <fmt/core.h>
 
 #include "grammar/GrammarGenerator.h"
-#include "lr/LRTableSerializer.h"
 #include "utils/Constants.h"
 
 int main() {
-  auto absolute_grammar_filepath =
-      std::filesystem::path(BASE_PATH) / Constants::grammar_filepath;
+  auto grammar_filepath = Constants::GetBuildFilePath("grammar/grammar.lr");
 
-  auto input_filepath =
-      std::filesystem::path(BASE_PATH) / "src" / "syntax" / "grammar.txt";
-  auto builders_filepath = std::filesystem::path(BASE_PATH) / "src" / "syntax" /
-                           "BuildersRegistry.h";
+  auto input_filepath = std::filesystem::path(GRAMMAR_TABLEGEN_TEXT_INPUT);
+  auto builders_filepath =
+      std::filesystem::path(GRAMMAR_TABLEGEN_BUILDERS_OUTPUT);
 
   size_t states_count = Syntax::GrammarGenerator::generate_grammar(
-      input_filepath, absolute_grammar_filepath, builders_filepath);
+      input_filepath, grammar_filepath, builders_filepath);
 
   fmt::print(
       "Successfully generated grammar table with {} states. Stored in {:?}.\n",
-      states_count, absolute_grammar_filepath.c_str());
+      states_count, grammar_filepath.c_str());
 }

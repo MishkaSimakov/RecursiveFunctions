@@ -12,7 +12,7 @@ bool SemanticAnalyzer::traverse_namespace_declaration(NamespaceDecl& node) {
       scold_user(node, fmt::format("Redefinition of namespace {}", name));
     }
 
-    current_scope_ = std::get<NamespaceSymbol>(info.data).subscope;
+    current_scope_ = std::get<NamespaceSymbolInfo>(info).subscope;
   } else {
     current_scope_ = &current_scope_->add_child();
 
@@ -21,14 +21,14 @@ bool SemanticAnalyzer::traverse_namespace_declaration(NamespaceDecl& node) {
     current_scope_->name = node.name;
 
     if (node.is_exported) {
-      if (is_in_exported_scope_) {
-        scold_user(node,
-                   "Symbol is marked \"exported\" but it is already in "
-                   "exported context. Remove unnecessary \"exported\".");
-      }
-
-      is_in_exported_scope_ = true;
-      // context_.exported_symbols.push_back(info);
+      scold_user(node, "Exported namespaces are not supported yet.");
+      // if (is_in_exported_scope_) {
+      //   scold_user(node,
+      //              "Symbol is marked \"exported\" but it is already in "
+      //              "exported context. Remove unnecessary \"exported\".");
+      // }
+      //
+      // is_in_exported_scope_ = true;
     }
   }
 

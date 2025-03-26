@@ -26,7 +26,7 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
   SymbolInfo& info =
       current_scope_->parent->add_function(node.name, node, type);
   current_scope_->name = node.name;
-  context_.functions_info.emplace(&node, info);
+  context_.functions_info.emplace(&node, std::get<FunctionSymbolInfo>(info));
 
   bool prev_is_in_exported_scope = is_in_exported_scope_;
   if (node.specifiers.is_exported()) {
@@ -36,7 +36,7 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
                  "exported context. Remove unnecessary \"exported\".");
     }
 
-    // context_.exported_symbols.push_back(info);
+    context_.exported_symbols.push_back(info);
     is_in_exported_scope_ = true;
   }
 

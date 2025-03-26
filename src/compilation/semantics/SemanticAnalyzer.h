@@ -29,17 +29,17 @@ class SemanticAnalyzer
   Scope* current_scope_{nullptr};
 
   TypesStorage& types();
+  SymbolInfo* name_lookup(Scope* scope, const QualifiedId& id);
+
+  void inject_symbol(ModuleContext& module, SymbolInfo& symbol);
+  Type* inject_type(Type* external_type);
 
   [[noreturn]] void scold_user(const ASTNode& node, std::string message);
 
-  SymbolInfo* unqualified_name_lookup(Scope* base_scope, StringId id,
-                                      bool should_ascend) const;
-
-  SymbolInfo* qualified_name_lookup(Scope* base_scope,
-                                    const IdExpr& qualified_id);
-
-  SymbolInfo* recursive_global_name_lookup(const ModuleContext& module,
-                                           StringId id) const;
+  StringId import_external_string(StringId external_string,
+                                  ModuleContext& external_module);
+  QualifiedId import_external_string(QualifiedId external_string,
+                                     ModuleContext& external_module);
 
   class NestedScopeRAII {
     Scope*& current_scope_;
@@ -59,8 +59,6 @@ class SemanticAnalyzer
     ~NestedScopeRAII() { current_scope_ = current_scope_->parent; }
   };
 
-  QualifiedId get_full_name(Scope* scope, StringId name) const;
-
   void convert_to_rvalue(std::unique_ptr<Expression>& expression);
 
  public:
@@ -68,9 +66,6 @@ class SemanticAnalyzer
 
   SemanticAnalyzer(const GlobalContext& global_context, ModuleContext& context)
       : global_context_(global_context), context_(context) {}
-
-  bool before_program_declaration(ProgramDecl& node);
-  bool after_program_declaration(ProgramDecl& node);
 
   bool traverse_compound_statement(CompoundStmt& node);
 
@@ -116,10 +111,6 @@ class SemanticAnalyzer
   // bool before_continue_statement(ContinueStmt& node);
   // bool after_continue_statement(ContinueStmt& node);
 
-  void analyze() {
-    OSO_FIRE();
-
-    traverse(*context_.ast_root);
-  }
+  void analyze();
 };
 }  // namespace Front

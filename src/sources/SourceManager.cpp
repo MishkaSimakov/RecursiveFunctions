@@ -136,7 +136,8 @@ void SourceManager::print_annotations(std::ostream& os) {
         fmt::format(fg(fmt::color::orange), "{}", error_view);
     auto after_error_view = line_view.substr(end_offset);
 
-    os << fmt::format("In file {:?} on line {}:\n", path.c_str(), start_index);
+    os << fmt::format("In file {:?} on line {}:\n", path.c_str(),
+                      start_index + 1);
     os << before_error_view << emphasized_error << after_error_view << "\n";
     os << std::string(start_offset, ' ') << "`-" << annotation.value
        << std::endl;

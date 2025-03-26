@@ -16,7 +16,7 @@ target_sources(lexis_table_tools INTERFACE ${SOURCES})
 tablegen(
         NAME lexis
         SOURCES ${SOURCES} compile_lexis_table.cpp
-        OUTPUT ${CMAKE_SOURCE_DIR}/files/lexis/lexis.lx
+        OUTPUT ${TEALANG_FILES_DIRECTORY}/lexis/lexis.lx
 )
 
 target_include_directories(lexis_tablegen PUBLIC ${CMAKE_SOURCE_DIR}/src)

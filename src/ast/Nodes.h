@@ -21,12 +21,22 @@ namespace Front {
 struct QualifiedId {
   std::vector<StringId> parts;
 
+  StringId unqualified_id() const {
+    return parts.back();
+  }
+
   size_t hash() const noexcept {
     StreamHasher hasher;
     for (StringId part : parts) {
       hasher << part;
     }
     return hasher.get_hash();
+  }
+
+  StringId pop_name() {
+    StringId name = parts.back();
+    parts.pop_back();
+    return name;
   }
 };
 }  // namespace Front

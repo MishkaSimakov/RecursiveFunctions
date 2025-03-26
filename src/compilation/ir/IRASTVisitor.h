@@ -44,6 +44,8 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
   llvm::Type* map_type(Type* type) const;
   llvm::Value* compile_expression(const Expression& expr);
 
+  llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
+
  public:
   IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
       : llvm_context_(llvm_context),

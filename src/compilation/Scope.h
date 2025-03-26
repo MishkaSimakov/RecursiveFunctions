@@ -15,22 +15,19 @@ struct Scope {
 
   bool has_symbol(StringId name) const { return symbols.contains(name); }
 
-  SymbolInfo& add_namespace(StringId name, NamespaceDecl& decl,
-                            Scope* subscope) {
-    return symbols
-        .emplace(name, SymbolInfo{this, decl, NamespaceSymbol{subscope}})
-        .first->second;
+  SymbolInfo& add_namespace(StringId name, NamedDecl& decl, Scope* subscope) {
+    auto info = NamespaceSymbolInfo(this, decl, subscope);
+    return symbols.emplace(name, info).first->second;
   }
 
-  SymbolInfo& add_variable(StringId name, Declaration& decl, Type* type) {
-    return symbols.emplace(name, SymbolInfo{this, decl, VariableSymbol{type}})
-        .first->second;
+  SymbolInfo& add_variable(StringId name, NamedDecl& decl, Type* type) {
+    auto info = VariableSymbolInfo(this, decl, type);
+    return symbols.emplace(name, info).first->second;
   }
 
-  SymbolInfo& add_function(StringId name, Declaration& decl,
-                           FunctionType* type) {
-    return symbols.emplace(name, SymbolInfo{this, decl, FunctionSymbol{type}})
-        .first->second;
+  SymbolInfo& add_function(StringId name, NamedDecl& decl, FunctionType* type) {
+    auto info = FunctionSymbolInfo(this, decl, type);
+    return symbols.emplace(name, info).first->second;
   }
 
   // returns nullptr for anonymous scopes

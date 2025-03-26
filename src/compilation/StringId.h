@@ -18,7 +18,7 @@ class StringId {
  public:
   StringId() = delete;
 
-  bool operator==(StringId other) const { return other.itr_ == itr_; }
+  bool operator==(const StringId& other) const { return itr_ == other.itr_; }
 
   size_t hash() const noexcept {
     // TODO: this is really bad, remove iterators hashing somehow
