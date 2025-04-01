@@ -3,17 +3,13 @@
 #include <set>
 #include <string>
 
-namespace Front {
-struct ModuleContext;
-}
-
 class StringId {
   using IteratorT = std::set<std::string>::const_iterator;
   IteratorT itr_;
 
   explicit StringId(IteratorT itr) : itr_(itr) {}
 
-  friend struct Front::ModuleContext;
+  friend class StringPool;
 
  public:
   StringId() = delete;

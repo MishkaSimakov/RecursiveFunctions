@@ -10,7 +10,6 @@ import-seq:
     import              [sequence<NodesList<ImportDecl>, ImportDecl>]
     import-seq import   [sequence<NodesList<ImportDecl>, ImportDecl>]
 
-// basics
 literal:
     string-literal  [pass<0>]
     integer-literal [pass<0>]
@@ -28,16 +27,26 @@ bool-literal:
 
 // declarations
 declaration-seq:
-    declaration                 [sequence<NodesList<Declaration>, Declaration>]
-    declaration-seq declaration [sequence<NodesList<Declaration>, Declaration>]
+    specified-declaration                 [sequence<NodesList<Declaration>, Declaration>]
+    declaration-seq specified-declaration [sequence<NodesList<Declaration>, Declaration>]
 
-declaration:
+specified-declaration:
+    unspecified-declaration             [pass<0>]
+    KW_EXPORT unspecified-declaration   [pass<0>]
+
+unspecified-declaration:
     extern-function-declaration [pass<0>]
-    function-definition         [pass<0>]
-    namespace-definition        [pass<0>]
+    function-declaration        [pass<0>]
+    namespace-declaration       [pass<0>]
+    type-declaration            [pass<0>]
+    variable-declaration        [pass<0>]
 
-namespace-definition:
-    specifiers IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body   [namespace_definition]
+variable-declaration:
+    IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
+    IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
+
+namespace-declaration:
+    IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body   [namespace_definition]
 
 namespace-body:
     OPEN_BRACE CLOSE_BRACE                  [construct<NodesList<Declaration>>]
@@ -46,17 +55,23 @@ namespace-body:
 import:
     KW_IMPORT string-literal [module_import]
 
-function-definition:
-    specifiers IDENTIFIER COLON parameters return-type EQUAL compound-statement [function</*IsDefined=*/true>]
+function-declaration:
+    IDENTIFIER COLON parameters return-type EQUAL compound-statement [function</*IsDefined=*/true>]
 
 extern-function-declaration:
-    specifiers IDENTIFIER COLON parameters return-type [function</*IsDefined=*/false>]
+    KW_EXTERN IDENTIFIER COLON parameters return-type [function</*IsDefined=*/false>]
 
-specifiers:
-    empty               [function_specifiers]
-    KW_EXPORT           [function_specifiers]
-    KW_EXTERN           [function_specifiers]
-    KW_EXPORT KW_EXTERN [function_specifiers]
+type-declaration:
+    IDENTIFIER COLON KW_TYPE EQUALEQUAL type-name SEMICOLON [type_alias]
+    IDENTIFIER COLON KW_TYPE EQUAL class-body               [class_type]
+
+class-body:
+    OPEN_BRACE CLOSE_BRACE                          []
+    OPEN_BRACE class-declaration-seq CLOSE_BRACE    []
+
+class-declaration-seq:
+    variable-declaration                        [sequence<NodesList<Declaration>, Declaration>]
+    class-declaration-seq variable-declaration  [sequence<NodesList<Declaration>, Declaration>]
 
 parameters:
     OPEN_PAREN CLOSE_PAREN                              [construct<NodesList<VariableDecl>>]
@@ -73,10 +88,33 @@ return-type:
     ARROW type-name [pass<1>]
 
 type-name:
-    type-name STAR [pointer_type]
-    KW_I64 [construct_type<IntType>]
-    KW_BOOL [construct_type<BoolType>]
-    KW_VOID [construct_type<VoidType>]
+    type-name STAR      [pointer_type]
+    primitive-type      [pass<0>]
+    tuple-type          [pass<0>]
+    user-defined-type   [pass<0>]
+
+primitive-type:
+    KW_I8   [primitive_type<SignedIntType, 8>]
+    KW_I16  [primitive_type<SignedIntType, 16>]
+    KW_I32  [primitive_type<SignedIntType, 32>]
+    KW_I64  [primitive_type<SignedIntType, 64>]
+    KW_U8   [primitive_type<UnsignedIntType, 8>]
+    KW_U16  [primitive_type<UnsignedIntType, 16>]
+    KW_U32  [primitive_type<UnsignedIntType, 32>]
+    KW_U64  [primitive_type<UnsignedIntType, 64>]
+    KW_C8   [primitive_type<CharType, 8>]
+    KW_B8   [primitive_type<BoolType, 8>]
+
+tuple-type:
+    OPEN_PAREN type-seq CLOSE_PAREN [tuple_type]
+    OPEN_PAREN CLOSE_PAREN          [tuple_type]
+
+type-seq:
+    type-name                   [sequence<NodesList<TypeNode>, TypeNode>]
+    type-seq COMMA type-name    [sequence<NodesList<TypeNode>, TypeNode>]
+
+user-defined-type:
+    qualified-id [user_defined_type]
 
 // statements
 compound-statement:
@@ -100,8 +138,7 @@ assignment-statement:
     expression EQUAL expression SEMICOLON [assignment_statement]
 
 declaration-statement:
-    IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
-    IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
+    variable-declaration [pass<0>]
 
 selection-statement:
     KW_IF OPEN_PAREN expression CLOSE_PAREN compound-statement                            [if_statement]
