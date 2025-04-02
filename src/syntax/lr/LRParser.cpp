@@ -102,7 +102,7 @@ class RecoveryTree {
 
 void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
                      ModuleContext& context, SourceView source) const {
-  ASTBuildContext build_context(context, source);
+  ASTBuildContext build_context(context.get_strings_pool(), source);
   std::vector<size_t> states_stack;
 
   std::vector<std::pair<SourceRange, std::string>> errors;
@@ -122,8 +122,8 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
 
     if (std::holds_alternative<AcceptAction>(action)) {
       if (errors.empty()) {
-        context.ast_root = std::unique_ptr<ProgramDecl>(
-            dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
+        context.ast_root = std::unique_ptr<ProgramNode>(
+            dynamic_cast<ProgramNode*>(nodes_stack.front().release()));
       }
 
       break;

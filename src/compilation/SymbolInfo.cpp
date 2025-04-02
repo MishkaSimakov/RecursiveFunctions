@@ -7,7 +7,7 @@
 
 namespace Front {
 
-QualifiedId InternalSymbolInfo::get_fully_qualified_name() const {
+QualifiedId BaseSymbolInfo::get_fully_qualified_name() const {
   std::vector<StringId> result;
   result.push_back(declaration.name);
 
@@ -19,6 +19,15 @@ QualifiedId InternalSymbolInfo::get_fully_qualified_name() const {
 
   std::ranges::reverse(result);
   return QualifiedId{std::move(result)};
+}
+
+Type* SymbolInfo::get_type() const {
+  return std::visit(
+      Overloaded{
+          [](const ClassSymbolInfo& info) -> Type* { return info.type; },
+          [](const TypeAliasSymbolInfo& info) -> Type* { return info.type; },
+          [](const auto&) -> Type* { return nullptr; }},
+      *this);
 }
 
 }  // namespace Front

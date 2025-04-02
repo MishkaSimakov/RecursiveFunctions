@@ -9,7 +9,8 @@ void unreachable(const char* message) {
   abort();
 }
 
-void not_implemented(const char* message) {
+void not_implemented(const char* message, std::source_location location) {
+  std::cerr << location.file_name() << ":" << location.line() << std::endl;
   std::cerr << "Not implemented";
   if (message != nullptr) {
     std::cerr << ": " << message;

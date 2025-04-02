@@ -88,8 +88,8 @@ void TeaFrontend::build_ast() {
   // loading of tables occurs only once
   Lexis::LexicalAnalyzer lexical_analyzer(
       Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
-  auto parser =
-      Syntax::LRParser(Constants::GetRuntimeFilePath(Constants::grammar_relative_filepath));
+  auto parser = Syntax::LRParser(
+      Constants::GetRuntimeFilePath(Constants::grammar_relative_filepath));
 
   // build ASTTree for each file separately
   // TODO: this can be easily parallelized
@@ -119,7 +119,7 @@ void TeaFrontend::build_ast() {
 
     // processing imports
     for (const auto& import_decl : module_context.ast_root->imports) {
-      std::string_view import_name = module_context.get_string(import_decl->id);
+      std::string_view import_name = module_context.get_string(import_decl->name);
 
       if (!context_.has_module(import_name)) {
         throw std::runtime_error(fmt::format(
@@ -178,7 +178,7 @@ void TeaFrontend::build_symbols_table_and_compile() {
 
     // build symbols table for module
     try {
-      auto analyzer = SemanticAnalyzer(context_, current_module);
+      auto analyzer = SemanticAnalyzer(current_module);
       analyzer.analyze();
     } catch (SemanticAnalyzerException exception) {
       for (const auto& [position, error] : exception.errors) {

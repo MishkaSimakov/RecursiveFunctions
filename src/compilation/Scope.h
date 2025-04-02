@@ -2,8 +2,8 @@
 
 #include "SymbolInfo.h"
 #include "ast/Nodes.h"
-#include "compilation/StringId.h"
 #include "compilation/types/Type.h"
+#include "utils/StringId.h"
 
 namespace Front {
 struct Scope {
@@ -16,18 +16,19 @@ struct Scope {
 
   bool has_symbol(StringId name) const { return symbols.contains(name); }
 
-  SymbolInfo& add_namespace(StringId name, NamedDecl& decl, Scope* subscope) {
-    auto info = NamespaceSymbolInfo(this, decl, subscope);
+  SymbolInfo& add_namespace(StringId name, Declaration& decl, Scope* subscope) {
+    auto info = NamespaceSymbolInfo(this, subscope, decl);
     return symbols.emplace(name, info).first->second;
   }
 
-  SymbolInfo& add_variable(StringId name, NamedDecl& decl, Type* type) {
+  SymbolInfo& add_variable(StringId name, Declaration& decl, Type* type) {
     auto info = VariableSymbolInfo(this, decl, type);
     return symbols.emplace(name, info).first->second;
   }
 
-  SymbolInfo& add_function(StringId name, NamedDecl& decl, FunctionType* type) {
-    auto info = FunctionSymbolInfo(this, decl, type);
+  SymbolInfo& add_function(StringId name, Declaration& decl, FunctionType* type,
+                           Scope* subscope) {
+    auto info = FunctionSymbolInfo(this, subscope, decl, type);
     return symbols.emplace(name, info).first->second;
   }
 
@@ -37,18 +38,16 @@ struct Scope {
     return *child;
   }
 
-  FunctionSymbolInfo* get_parent_function() {
-    Scope* current_scope = this;
-    while (current_scope != nullptr) {
-      if (current_scope->parent_symbol != nullptr &&
-          current_scope->parent_symbol->is_function()) {
-        return &std::get<FunctionSymbolInfo>(*current_scope->parent_symbol);
+  SymbolInfo* get_parent_symbol() {
+    Scope* scope = this;
+    while (scope != nullptr) {
+      if (scope->parent_symbol != nullptr) {
+        return scope->parent_symbol;
       }
 
-      current_scope = current_scope->parent;
+      scope = scope->parent;
     }
 
-    // if we are here, then we were not in a function
     return nullptr;
   }
 };

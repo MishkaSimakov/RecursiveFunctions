@@ -17,20 +17,20 @@ void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
 }
 
 StringId SemanticAnalyzer::import_external_string(
-    StringId external_string, ModuleContext& external_module) {
-  if (&external_module == &context_) {
+    StringId external_string, const StringPool& external_strings) {
+  if (&external_strings == &context_.get_strings_pool()) {
     return external_string;
   }
 
-  std::string_view string_view = external_module.get_string(external_string);
+  std::string_view string_view = external_strings.get_string(external_string);
   return context_.add_string(string_view);
 }
 
 QualifiedId SemanticAnalyzer::import_external_string(
-    QualifiedId external_string, ModuleContext& external_module) {
+    const QualifiedId& external_string, const StringPool& external_strings) {
   QualifiedId result;
   for (StringId part : external_string.parts) {
-    result.parts.push_back(import_external_string(part, external_module));
+    result.parts.push_back(import_external_string(part, external_strings));
   }
   return result;
 }
@@ -48,6 +48,14 @@ void SemanticAnalyzer::convert_to_rvalue(
   cast->value_category = ValueCategory::RVALUE;
 
   expression = std::move(cast);
+}
+
+void SemanticAnalyzer::as_function_parameter(
+    std::unique_ptr<Expression>& expression) {
+  // primitive types and ailiases to primitive types must be converted to rvalue
+  if (expression->type->is_passed_by_value()) {
+    convert_to_rvalue(expression);
+  }
 }
 
 bool SemanticAnalyzer::after_traverse(ASTNode& node) {
@@ -69,14 +77,17 @@ bool SemanticAnalyzer::after_traverse(ASTNode& node) {
 }
 
 bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
-  FunctionSymbolInfo* fun = current_scope_->get_parent_function();
-  if (fun == nullptr) {
+  SymbolInfo* info = current_scope_->get_parent_symbol();
+  if (info == nullptr || !info->is_function()) {
     scold_user(node, "Return statements are allowed only inside function.");
   }
 
-  if (node.value->type != fun->type->return_type) {
-    auto left_type = node.value->type->to_string();
-    auto right_type = fun->type->return_type->to_string();
+  FunctionType* fun_ty = std::get<FunctionSymbolInfo>(*info).type;
+
+  if (node.value->type != fun_ty->return_type) {
+    auto left_type = node.value->type->to_string(context_.get_strings_pool());
+    auto right_type =
+        fun_ty->return_type->to_string(context_.get_strings_pool());
 
     scold_user(
         node,
@@ -91,6 +102,14 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
   convert_to_rvalue(node.value);
 
   return true;
+}
+
+void SemanticAnalyzer::add_to_exported_if_necessary(SymbolInfo& info) {
+  Declaration& decl = info.get_declaration();
+
+  if (decl.specifiers.is_exported()) {
+    context_.exported_symbols.push_back(info);
+  }
 }
 
 void SemanticAnalyzer::analyze() {
@@ -108,10 +127,11 @@ void SemanticAnalyzer::analyze() {
 
   traverse(*context_.ast_root);
 
-  ScopePrinter printer(context_, std::cout);
-  printer.print();
+  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+                       // std::cout);
+  // printer.print();
 
-  ASTPrinter ast_printer(context_, std::cout);
-  ast_printer.print();
+  // ASTPrinter ast_printer(context_, std::cout);
+  // ast_printer.print();
 }
 }  // namespace Front

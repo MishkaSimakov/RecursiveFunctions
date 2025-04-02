@@ -54,22 +54,27 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
         llvm_module_(
             std::make_unique<llvm::Module>(module.name, llvm_context_)),
         llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
-        mangler_(module),
+        mangler_(module.get_strings_pool()),
         module_(module) {}
+
+  bool traverse_if_statement(const IfStmt& value);
+  bool traverse_while_statement(const WhileStmt& value);
+  bool traverse_return_statement(const ReturnStmt& value);
+  bool traverse_assignment_statement(const AssignmentStmt& value);
+
+  bool traverse_variable_declaration(const VariableDecl& value);
+  bool traverse_function_declaration(const FunctionDecl& value);
 
   bool traverse_implicit_lvalue_to_rvalue_conversion_expression(
       const ImplicitLvalueToRvalueConversionExpr& value);
-  bool traverse_assignment_statement(const AssignmentStmt& value);
-  bool traverse_if_statement(const IfStmt& value);
-  bool traverse_while_statement(const WhileStmt& value);
   bool traverse_call_expression(const CallExpr& value);
-  bool traverse_variable_declaration(const VariableDecl& value);
   bool traverse_id_expression(const IdExpr& value);
   bool traverse_binary_operator(const BinaryOperator& value);
-  bool traverse_function_declaration(const FunctionDecl& value);
-  bool traverse_return_statement(const ReturnStmt& value);
   bool visit_integer_literal(const IntegerLiteral& value);
   bool visit_bool_literal(const BoolLiteral& value);
+  bool traverse_member_expression(const MemberExpr& value);
+  bool traverse_tuple_expression(const TupleExpr& value);
+  bool traverse_tuple_index_expression(const TupleIndexExpr& value);
 
   std::unique_ptr<llvm::Module> compile();
 };

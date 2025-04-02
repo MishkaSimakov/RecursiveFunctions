@@ -9,15 +9,8 @@ bool SemanticAnalyzer::traverse_if_statement(IfStmt& node) {
                "Condition of if statement must be of boolean type.");
   }
 
-  {
-    NestedScopeRAII scope_guard(*this);
-    traverse(*node.true_branch);
-  }
-
-  {
-    NestedScopeRAII scope_guard(*this);
-    traverse(*node.false_branch);
-  }
+  traverse(*node.true_branch);
+  traverse(*node.false_branch);
 
   return true;
 }

@@ -14,7 +14,7 @@ TEST_F(SyntaxTestCase, empty_program_test) {
 
 TEST_F(SyntaxTestCase, simple_function_test) {
   auto& context = parse(R"(
-    function: () -> void = {}
+    function: () -> () = {}
   )");
 
   auto& root = *context.ast_root;
@@ -26,7 +26,11 @@ TEST_F(SyntaxTestCase, simple_function_test) {
   ASSERT_STRING_EQ(function.name, "function");
   ASSERT_FALSE(function.specifiers.is_exported());
   ASSERT_TRUE(function.parameters.empty());
-  ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::VOID);
+  ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::TUPLE);
+
+  TupleTypeNode* return_ty =
+      static_cast<TupleTypeNode*>(function.return_type.get());
+  ASSERT_TRUE(return_ty->elements.empty());
 
   auto& body = dynamic_cast<CompoundStmt&>(*function.body);
 
@@ -47,7 +51,7 @@ TEST_F(SyntaxTestCase, function_with_parameters) {
   ASSERT_STRING_EQ(function.name, "function");
   ASSERT_FALSE(function.specifiers.is_exported());
   ASSERT_EQ(function.parameters.size(), 2);
-  ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::INT);
+  ASSERT_TYPE_NODE_EQ(function.return_type, TypeKind::SIGNED_INT);
 
   auto& first_param = function.parameters[0];
   auto& second_param = function.parameters[1];
@@ -55,7 +59,7 @@ TEST_F(SyntaxTestCase, function_with_parameters) {
   ASSERT_STRING_EQ(first_param->name, "first");
   ASSERT_STRING_EQ(second_param->name, "second");
 
-  ASSERT_TYPE_NODE_EQ(first_param->type, TypeKind::INT);
+  ASSERT_TYPE_NODE_EQ(first_param->type, TypeKind::SIGNED_INT);
   ASSERT_TYPE_NODE_EQ(second_param->type, TypeKind::BOOL);
 
   auto& body = dynamic_cast<CompoundStmt&>(*function.body);

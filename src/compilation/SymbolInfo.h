@@ -15,38 +15,66 @@ struct Scope;
 
 struct SymbolInfo;
 
-struct InternalSymbolInfo {
+struct BaseSymbolInfo {
   Scope* scope;
-  NamedDecl& declaration;
+  Declaration& declaration;
 
   StringId get_unqualified_name() const { return declaration.name; }
   QualifiedId get_fully_qualified_name() const;
+  DeclarationSpecifiers get_specifiers() const {
+    return declaration.specifiers;
+  }
 };
 
-struct VariableSymbolInfo : InternalSymbolInfo {
+struct VariableSymbolInfo;
+
+// class or function
+struct ScopefulSymbolInfo : BaseSymbolInfo {
+  Scope* subscope;
+  std::vector<VariableSymbolInfo*> local_variables;
+
+  ScopefulSymbolInfo(Scope* scope, Declaration& declaration, Scope* subscope)
+      : BaseSymbolInfo(scope, declaration), subscope(subscope) {}
+};
+
+struct VariableSymbolInfo : BaseSymbolInfo {
   Type* type;
 
-  VariableSymbolInfo(Scope* scope, NamedDecl& declaration, Type* type)
-      : InternalSymbolInfo(scope, declaration), type(type) {}
+  VariableSymbolInfo(Scope* scope, Declaration& declaration, Type* type)
+      : BaseSymbolInfo(scope, declaration), type(type) {}
 };
 
-struct FunctionSymbolInfo : InternalSymbolInfo {
+struct FunctionSymbolInfo : ScopefulSymbolInfo {
   FunctionType* type;
   std::vector<std::reference_wrapper<VariableSymbolInfo>> local_variables;
 
-  FunctionSymbolInfo(Scope* scope, NamedDecl& declaration, FunctionType* type)
-      : InternalSymbolInfo(scope, declaration), type(type) {}
+  FunctionSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration,
+                     FunctionType* type)
+      : ScopefulSymbolInfo(scope, declaration, subscope), type(type) {}
 };
 
-struct NamespaceSymbolInfo : InternalSymbolInfo {
-  Scope* subscope;
+struct NamespaceSymbolInfo : ScopefulSymbolInfo {
+  NamespaceSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
+      : ScopefulSymbolInfo(scope, declaration, subscope) {}
+};
 
-  NamespaceSymbolInfo(Scope* scope, NamedDecl& declaration, Scope* subscope)
-      : InternalSymbolInfo(scope, declaration), subscope(subscope) {}
+struct ClassSymbolInfo : ScopefulSymbolInfo {
+  ClassType* type{nullptr};
+
+  ClassSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
+      : ScopefulSymbolInfo(scope, declaration, subscope) {}
+};
+
+struct TypeAliasSymbolInfo : BaseSymbolInfo {
+  AliasType* type;
+
+  TypeAliasSymbolInfo(Scope* scope, Declaration& declaration, AliasType* type)
+      : BaseSymbolInfo(scope, declaration), type(type) {}
 };
 
 using SymbolInfoVariant =
-    std::variant<VariableSymbolInfo, NamespaceSymbolInfo, FunctionSymbolInfo>;
+    std::variant<VariableSymbolInfo, NamespaceSymbolInfo, FunctionSymbolInfo,
+                 ClassSymbolInfo, TypeAliasSymbolInfo>;
 
 struct SymbolInfo : SymbolInfoVariant {
   using SymbolInfoVariant::SymbolInfoVariant;
@@ -63,6 +91,12 @@ struct SymbolInfo : SymbolInfoVariant {
         *this);
   }
 
+  Declaration& get_declaration() const {
+    return std::visit(
+        [](const auto& value) -> Declaration& { return value.declaration; },
+        *this);
+  }
+
   bool is_variable() const {
     return std::holds_alternative<VariableSymbolInfo>(*this);
   }
@@ -74,6 +108,8 @@ struct SymbolInfo : SymbolInfoVariant {
   bool is_namespace() const {
     return std::holds_alternative<NamespaceSymbolInfo>(*this);
   }
+
+  Type* get_type() const;
 };
 
 }  // namespace Front

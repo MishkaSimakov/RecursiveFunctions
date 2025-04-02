@@ -5,12 +5,14 @@
 
 namespace Front {
 class ScopePrinter : TreePrinter {
-  const ModuleContext& context_;
+  const StringPool& strings_;
+  const Scope& root_scope_;
 
-  void traverse_scope_recursively(Scope& scope, bool is_root_scope);
+  void traverse_scope_recursively(const Scope& scope);
 
  public:
-  explicit ScopePrinter(const ModuleContext& context, std::ostream& os);
+  explicit ScopePrinter(const StringPool& strings, const Scope& root_scope,
+                        std::ostream& os);
 
   void print();
 };

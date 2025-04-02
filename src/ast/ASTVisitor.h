@@ -73,6 +73,8 @@ class ASTVisitor {
 #include "ast/NodesList.h"
 
 #undef NODE
+      default:
+        unreachable("All nodes types are enumerated above.");
     }
 
     if (!child().after_traverse(node)) {
@@ -114,7 +116,30 @@ class ASTVisitor {
     }
     return true;
   }
-  bool traverse_type_node(wrap_const<TypeNode>& node) { return true; }
+  bool traverse_tuple_index_expression(wrap_const<TupleIndexExpr>& node) {
+    if (!traverse(*node.left)) {
+      return false;
+    }
+    return true;
+  }
+  bool traverse_pointer_type(wrap_const<PointerTypeNode>& node) {
+    return traverse(*node.child);
+  }
+  bool traverse_primitive_type(wrap_const<PrimitiveTypeNode>& node) {
+    return true;
+  }
+  bool traverse_tuple_type(wrap_const<TupleTypeNode>& node) {
+    for (auto& child : node.elements) {
+      if (!traverse(*child)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+  bool traverse_user_defined_type(wrap_const<UserDefinedTypeNode>& node) {
+    return true;
+  }
   bool traverse_compound_statement(wrap_const<CompoundStmt>& node) {
     for (auto& stmt : node.statements) {
       if (!traverse(*stmt)) {
@@ -124,7 +149,7 @@ class ASTVisitor {
 
     return true;
   }
-  bool traverse_program_declaration(wrap_const<ProgramDecl>& node) {
+  bool traverse_program(wrap_const<ProgramNode>& node) {
     for (auto& import_decl : node.imports) {
       if (!traverse(*import_decl)) {
         return false;
@@ -226,10 +251,31 @@ class ASTVisitor {
     return true;
   }
   bool traverse_break_statement(wrap_const<BreakStmt>& node) { return true; }
-
   bool traverse_implicit_lvalue_to_rvalue_conversion_expression(
       wrap_const<ImplicitLvalueToRvalueConversionExpr>& node) {
     return traverse(*node.value);
+  }
+  bool traverse_type_alias_declaration(wrap_const<TypeAliasDecl>& node) {
+    return traverse(*node.original);
+  }
+  bool traverse_class_declaration(wrap_const<ClassDecl>& node) {
+    for (auto& decl : node.body) {
+      if (!traverse(*decl)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  bool traverse_member_expression(wrap_const<MemberExpr>& node) {
+    return traverse(*node.left);
+  }
+  bool traverse_tuple_expression(wrap_const<TupleExpr>& node) {
+    for (auto& element : node.elements) {
+      if (!traverse(*element)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   NodeTraverseType before_traverse(wrap_const<ASTNode>& node) {

@@ -14,15 +14,33 @@ class TypesStorage {
   }
 
   PointerType* add_pointer(Type* type) {
-    Type* ptr_type = storage_.get_emplace<PointerType>(type);
-    return static_cast<PointerType*>(ptr_type);
+    return storage_.get_emplace<PointerType>(type);
   }
 
   template <typename T>
     requires std::is_base_of_v<PrimitiveType, T>
-  T* add_primitive() {
-    Type* primitive_type = storage_.get_emplace<T>();
-    return static_cast<T*>(primitive_type);
+  T* add_primitive(size_t width) {
+    return storage_.get_emplace<T>(width);
+  }
+
+  PrimitiveType* add_primitive(Type::Kind type_kind, size_t width) {
+    switch (type_kind) {
+      case Type::Kind::SIGNED_INT:
+        return add_primitive<SignedIntType>(width);
+      case Type::Kind::UNSIGNED_INT:
+        return add_primitive<UnsignedIntType>(width);
+      case Type::Kind::BOOL:
+        return add_primitive<BoolType>(width);
+      case Type::Kind::CHAR:
+        return add_primitive<CharType>(width);
+      default:
+        throw std::runtime_error("`type_kind` is not primitive.");
+    }
+  }
+
+  AliasType* add_alias(QualifiedId name, Type* type) {
+    Type* alias = storage_.get_emplace<AliasType>(std::move(name), type);
+    return static_cast<AliasType*>(alias);
   }
 
   auto types_cbegin() const { return storage_.cbegin(); }

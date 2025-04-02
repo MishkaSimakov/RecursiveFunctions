@@ -1,7 +1,5 @@
 144
 //
-import "testing"
-
 math: namespace = {
     sqr: (value: i64) -> i64 = {
         return value * value;
@@ -10,9 +8,9 @@ math: namespace = {
 
 main: () -> i64 = {
     value: i64 = 12;
-    squared: i64 = math::sqr(squared);
+    squared: i64 = math::sqr(value);
 
-    testing::output(squared);
+    output(squared);
 
     return 0;
 }

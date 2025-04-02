@@ -5,12 +5,41 @@
 namespace Front {
 llvm::Type* IRASTVisitor::map_type(Type* type) const {
   switch (type->get_kind()) {
-    case Type::Kind::INT:
-      return llvm::Type::getInt64Ty(llvm_context_);
+    case Type::Kind::SIGNED_INT:
+    case Type::Kind::UNSIGNED_INT:
+    case Type::Kind::CHAR: {
+      auto* ptype = static_cast<PrimitiveType*>(type);
+      return llvm::Type::getIntNTy(llvm_context_, ptype->width);
+    }
     case Type::Kind::BOOL:
       return llvm::Type::getInt1Ty(llvm_context_);
-    case Type::Kind::VOID:
-      return llvm::Type::getVoidTy(llvm_context_);
+    case Type::Kind::ALIAS: {
+      AliasType* alias_ty = static_cast<AliasType*>(type);
+      return map_type(alias_ty->original);
+    }
+    case Type::Kind::TUPLE: {
+      TupleType* tuple_ty = static_cast<TupleType*>(type);
+
+      std::vector<llvm::Type*> mapped_elements;
+      for (Type* element : tuple_ty->elements) {
+        mapped_elements.push_back(map_type(element));
+      }
+      return llvm::StructType::get(llvm_context_, std::move(mapped_elements));
+    }
+    case Type::Kind::CLASS: {
+      ClassType* class_ty = static_cast<ClassType*>(type);
+
+      auto name = class_ty->name.to_string(module_.get_strings_pool());
+      std::vector<llvm::Type*> mapped_elements;
+      for (Type* member : class_ty->members | std::views::values) {
+        mapped_elements.push_back(map_type(member));
+      }
+
+      return llvm::StructType::create(llvm_context_, std::move(mapped_elements),
+                                      name);
+    }
+    case Type::Kind::POINTER:
+      return llvm::PointerType::get(llvm_context_, 0);
     default:
       not_implemented();
   }
@@ -35,11 +64,19 @@ llvm::Function* IRASTVisitor::get_or_insert_function(
   // create new function
   std::vector<llvm::Type*> arguments;
   for (Type* argument_type : info.type->arguments) {
+    if (!argument_type->is_passed_by_value()) {
+      argument_type = module_.types_storage.add_pointer(argument_type);
+    }
+
     arguments.emplace_back(map_type(argument_type));
   }
 
-  auto llvm_func_type = llvm::FunctionType::get(
-      map_type(info.type->return_type), arguments, false);
+  Type* ret_ty = info.type->return_type;
+  llvm::Type* llvm_ret_ty = ret_ty->is_unit()
+                                ? llvm::Type::getVoidTy(llvm_context_)
+                                : map_type(ret_ty);
+
+  auto llvm_func_type = llvm::FunctionType::get(llvm_ret_ty, arguments, false);
 
   return llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
                                 name, llvm_module_.get());
@@ -51,11 +88,6 @@ void IRASTVisitor::allocate_local_variables(const FunctionSymbolInfo& info) {
 
     auto var_alloca = llvm_ir_builder_->CreateAlloca(map_type(variable.type));
     identifiers_addresses_.emplace(&declaration, var_alloca);
-
-    if (declaration.initializer != nullptr) {
-      auto initial_value = compile_expression(*declaration.initializer);
-      llvm_ir_builder_->CreateStore(initial_value, var_alloca);
-    }
   }
 }
 
@@ -146,25 +178,31 @@ bool IRASTVisitor::traverse_call_expression(const CallExpr& value) {
 }
 
 bool IRASTVisitor::traverse_variable_declaration(const VariableDecl& value) {
+  if (value.initializer != nullptr) {
+    llvm::Value* var_ptr = identifiers_addresses_.at(&value);
+    auto initial_value = compile_expression(*value.initializer);
+    llvm_ir_builder_->CreateStore(initial_value, var_ptr);
+  }
+
   return true;
 }
 
 bool IRASTVisitor::traverse_id_expression(const IdExpr& value) {
   const SymbolInfo& info = module_.symbols_info.at(&value);
 
-  std::visit(Overloaded{[](const NamespaceSymbolInfo& nmsp) {
-                          unreachable(
-                              "SemanticAnalyzer ensures that no IdExpr "
-                              "references namespace.");
-                        },
-                        [&](const VariableSymbolInfo& var) {
-                          current_expr_value_ =
-                              identifiers_addresses_.at(&var.declaration);
-                        },
-                        [&](const FunctionSymbolInfo& fun) {
-                          current_expr_value_ = get_or_insert_function(fun);
-                        }},
-             info);
+  std::visit(
+      Overloaded{
+          [&](const auto&) {
+            unreachable(
+                "SemanticAnalyzer ensures that other options are impossible.");
+          },
+          [&](const VariableSymbolInfo& var) {
+            current_expr_value_ = identifiers_addresses_.at(&var.declaration);
+          },
+          [&](const FunctionSymbolInfo& fun) {
+            current_expr_value_ = get_or_insert_function(fun);
+          }},
+      info);
 
   return true;
 }
@@ -228,11 +266,14 @@ bool IRASTVisitor::traverse_function_declaration(const FunctionDecl& value) {
     return true;
   }
 
-  auto basic_block = llvm::BasicBlock::Create(llvm_context_, "entry", fun);
-  llvm_ir_builder_->SetInsertPoint(basic_block);
+  auto alloca_bb = llvm::BasicBlock::Create(llvm_context_, "alloca", fun);
+  auto entry_bb = llvm::BasicBlock::Create(llvm_context_, "entry", fun);
 
+  llvm_ir_builder_->SetInsertPoint(alloca_bb);
   allocate_local_variables(function_info);
+  // here must be a br instruction, but we add it after all allocas are added
 
+  llvm_ir_builder_->SetInsertPoint(entry_bb);
   for (size_t i = 0; i < value.parameters.size(); ++i) {
     traverse(*value.parameters[i]);
 
@@ -242,7 +283,15 @@ bool IRASTVisitor::traverse_function_declaration(const FunctionDecl& value) {
         param_value, identifiers_addresses_[value.parameters[i].get()]);
   }
 
-  traverse(*value.body);
+  // if function returns `unit` then we can create implicit return
+  bool has_no_return = traverse(*value.body);
+  if (has_no_return && value.return_type->value->is_unit()) {
+    llvm_ir_builder_->CreateRetVoid();
+  }
+
+  // add br to basic block with allocas
+  llvm_ir_builder_->SetInsertPoint(alloca_bb);
+  llvm_ir_builder_->CreateBr(entry_bb);
 
   llvm::verifyFunction(*fun, &llvm::outs());
   identifiers_addresses_.clear();
@@ -268,8 +317,55 @@ bool IRASTVisitor::visit_bool_literal(const BoolLiteral& value) {
   return true;
 }
 
+bool IRASTVisitor::traverse_member_expression(const MemberExpr& value) {
+  llvm::Type* result_type = map_type(value.type);
+  llvm::Value* cls_pointer = compile_expression(*value.left);
+  llvm::Value* index = llvm_ir_builder_->getInt32(value.member_index);
+
+  current_expr_value_ =
+      llvm_ir_builder_->CreateInBoundsGEP(result_type, cls_pointer, {index});
+
+  return true;
+}
+
+bool IRASTVisitor::traverse_tuple_expression(const TupleExpr& value) {
+  llvm::Type* tuple_ty = map_type(value.type);
+
+  llvm::IRBuilder temp_builder{llvm_context_};
+  llvm::BasicBlock& alloca_bb =
+      llvm_ir_builder_->GetInsertPoint()->getFunction()->getEntryBlock();
+  temp_builder.SetInsertPoint(&alloca_bb);
+  llvm::Value* tuple = temp_builder.CreateAlloca(tuple_ty);
+
+  for (size_t i = 0; i < value.elements.size(); ++i) {
+    Expression& element = *value.elements[i];
+    llvm::Type* element_ty = map_type(element.type);
+    llvm::Value* index = llvm_ir_builder_->getInt32(i);
+
+    llvm::Value* element_ptr =
+        llvm_ir_builder_->CreateInBoundsGEP(element_ty, tuple, {index});
+    llvm_ir_builder_->CreateStore(compile_expression(element), element_ptr);
+  }
+
+  current_expr_value_ = tuple;
+  return true;
+}
+
+bool IRASTVisitor::traverse_tuple_index_expression(
+    const TupleIndexExpr& value) {
+  llvm::Type* result_type = map_type(value.type);
+  llvm::Value* tuple_ptr = compile_expression(*value.left);
+  llvm::Value* index = llvm_ir_builder_->getInt32(value.index);
+
+  current_expr_value_ =
+      llvm_ir_builder_->CreateInBoundsGEP(result_type, tuple_ptr, {index});
+  return true;
+}
+
 std::unique_ptr<llvm::Module> IRASTVisitor::compile() {
   traverse(*module_.ast_root);
+  llvm::verifyModule(*llvm_module_, &llvm::errs());
+
   return std::move(llvm_module_);
 }
 }  // namespace Front

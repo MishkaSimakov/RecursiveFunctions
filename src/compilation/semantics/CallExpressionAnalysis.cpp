@@ -18,13 +18,11 @@ bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
 
   for (size_t i = 0; i < type->arguments.size(); ++i) {
     if (type->arguments[i] != node.arguments[i]->type) {
-      scold_user(*node.arguments[i],
-                 fmt::format("Argument type mismatch: {} != {}",
-                             type->arguments[i]->to_string(),
-                             node.arguments[i]->type->to_string()));
+      scold_user(*node.arguments[i], "Argument type mismatch: {} != {}",
+                 type->arguments[i], node.arguments[i]->type);
     }
 
-    convert_to_rvalue(node.arguments[i]);
+    as_function_parameter(node.arguments[i]);
   }
 
   node.type = type->return_type;

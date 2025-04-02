@@ -2,7 +2,28 @@
 
 namespace Front {
 bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
-  NestedScopeRAII scope_guard(*this, node.name);
+  Scope& scope = *current_scope_;
+  if (scope.has_symbol(node.name)) {
+    auto name = context_.get_string(node.name);
+    scold_user(
+        node,
+        fmt::format("Function name conflicts with other declaration.", name));
+  }
+
+  Scope& subscope = current_scope_->add_child(node.name);
+
+  SymbolInfo& info = scope.add_function(node.name, node, nullptr, &subscope);
+  FunctionSymbolInfo& fun_info = std::get<FunctionSymbolInfo>(info);
+  subscope.parent_symbol = &info;
+
+  NestedScopeRAII scope_guard(*this, subscope);
+
+  // traverse parameters to calculate their types
+  for (auto& parameter : node.parameters) {
+    traverse(*parameter);
+  }
+
+  traverse(*node.return_type);
 
   // build function type
   auto arguments_view =
@@ -15,34 +36,11 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
   Type* return_type = node.return_type->value;
   FunctionType* type =
       types().make_type<FunctionType>(std::move(arguments), return_type);
+  fun_info.type = type;
 
-  if (current_scope_->has_symbol(node.name)) {
-    auto name = context_.get_string(node.name);
-    scold_user(
-        node,
-        fmt::format("Function name conflicts with other declaration.", name));
-  }
+  context_.functions_info.emplace(&node, fun_info);
 
-  SymbolInfo& info =
-      current_scope_->parent->add_function(node.name, node, type);
-  current_scope_->parent_symbol = &info;
-  context_.functions_info.emplace(&node, std::get<FunctionSymbolInfo>(info));
-
-  bool prev_is_in_exported_scope = is_in_exported_scope_;
-  if (node.specifiers.is_exported()) {
-    if (is_in_exported_scope_) {
-      scold_user(node,
-                 "Symbol is marked \"exported\" but it is already in "
-                 "exported context. Remove unnecessary \"exported\".");
-    }
-
-    context_.exported_symbols.push_back(info);
-    is_in_exported_scope_ = true;
-  }
-
-  for (auto& parameter : node.parameters) {
-    traverse(*parameter);
-  }
+  add_to_exported_if_necessary(info);
 
   if (!node.specifiers.is_extern()) {
     // we skip CompoundStmt node and return type
@@ -50,8 +48,6 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
       traverse(*stmt);
     }
   }
-
-  is_in_exported_scope_ = prev_is_in_exported_scope;
 
   return true;
 }

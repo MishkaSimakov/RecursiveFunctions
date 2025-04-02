@@ -4,11 +4,12 @@
 #include <ranges>
 #include <vector>
 
-#include "compilation/StringId.h"
+#include "compilation/DeclarationSpecifiers.h"
+#include "compilation/QualifiedId.h"
 #include "compilation/types/Type.h"
 #include "errors/Helpers.h"
 #include "lexis/Token.h"
-#include "utils/Hashers.h"
+#include "utils/StringId.h"
 
 // Here all AST Nodes are defined. To add new node:
 // 1. Create class and inherit it from ASTNode
@@ -18,64 +19,44 @@
 // 5. Add visit_* method in ASTPrinter
 
 namespace Front {
-struct QualifiedId {
-  std::vector<StringId> parts;
-
-  StringId unqualified_id() const {
-    return parts.back();
-  }
-
-  size_t hash() const noexcept {
-    StreamHasher hasher;
-    for (StringId part : parts) {
-      hasher << part;
-    }
-    return hasher.get_hash();
-  }
-
-  StringId pop_name() {
-    StringId name = parts.back();
-    parts.pop_back();
-    return name;
-  }
-};
-}  // namespace Front
-
-template <>
-struct std::hash<Front::QualifiedId> {
-  size_t operator()(const Front::QualifiedId& id) const noexcept {
-    return id.hash();
-  }
-};
-
-namespace Front {
 struct ASTNode {
   // clang-format off
   ENUM(Kind,
-    COMPOUND_STMT,
-    PROGRAM_DECL,
-    FUNCTION_DECL,
-    RETURN_STMT,
-    INTEGER_LITERAL_EXPR,
-    STRING_LITERAL_EXPR,
-    BOOL_LITERAL_EXPR,
-    ID_EXPR,
+    PROGRAM,
+
     IMPORT_DECL,
-    BINARY_OPERATOR_EXPR,
-    UNARY_OPERATOR_EXPR,
-    CALL_EXPR,
-    TYPE_NODE,
+    NAMESPACE_DECL,
     VARIABLE_DECL,
+    FUNCTION_DECL,
+    TYPE_ALIAS_DECL,
+    CLASS_DECL,
+
+    COMPOUND_STMT,
+    RETURN_STMT,
     ASSIGNMENT_STMT,
     DECLARATION_STMT,
     EXPRESSION_STMT,
-    NAMESPACE_DECL,
     WHILE_STMT,
     IF_STMT,
     CONTINUE_STMT,
     BREAK_STMT,
 
+    INTEGER_LITERAL_EXPR,
+    STRING_LITERAL_EXPR,
+    BOOL_LITERAL_EXPR,
+    ID_EXPR,
+    BINARY_OPERATOR_EXPR,
+    UNARY_OPERATOR_EXPR,
+    CALL_EXPR,
+    MEMBER_EXPR,
+    TUPLE_EXPR,
     IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR,
+    TUPLE_INDEX_EXPR,
+
+    POINTER_TYPE,
+    PRIMITIVE_TYPE,
+    TUPLE_TYPE,
+    USER_DEFINED_TYPE
   );
   // clang-format on
 
@@ -95,21 +76,75 @@ struct Statement : ASTNode {
   using ASTNode::ASTNode;
 };
 struct Declaration : ASTNode {
-  using ASTNode::ASTNode;
-};
-struct TypeNode : ASTNode {
-  Type* value;
-
-  TypeNode(SourceRange source_range, Type* value)
-      : ASTNode(source_range), value(value) {}
-  Kind get_kind() const override { return Kind::TYPE_NODE; }
-};
-
-struct NamedDecl : Declaration {
   StringId name;
+  DeclarationSpecifiers specifiers;
 
-  NamedDecl(SourceRange source_range, StringId name)
-      : Declaration(source_range), name(name) {}
+  Declaration(SourceRange source_range, StringId name)
+      : ASTNode(source_range), name(name) {}
+};
+
+// types
+struct TypeNode : ASTNode {
+  Type* value{nullptr};
+
+  TypeNode(SourceRange source_range) : ASTNode(source_range) {}
+};
+
+struct PointerTypeNode final : TypeNode {
+  std::unique_ptr<TypeNode> child;
+
+  PointerTypeNode(SourceRange source_range, std::unique_ptr<TypeNode> child)
+      : TypeNode(source_range), child(std::move(child)) {}
+
+  Kind get_kind() const override { return Kind::POINTER_TYPE; }
+};
+struct PrimitiveTypeNode final : TypeNode {
+  // These fields are only relevant before SemanticAnalyzer pass
+  // then you should use `value` instead.
+  Type::Kind kind;
+  size_t width;
+
+  PrimitiveTypeNode(SourceRange source_range, Type::Kind kind, size_t width)
+      : TypeNode(source_range), kind(kind), width(width) {}
+
+  Kind get_kind() const override { return Kind::PRIMITIVE_TYPE; }
+};
+struct TupleTypeNode final : TypeNode {
+  std::vector<std::unique_ptr<TypeNode>> elements;
+
+  TupleTypeNode(SourceRange source_range,
+                std::vector<std::unique_ptr<TypeNode>> elements)
+      : TypeNode(source_range), elements(std::move(elements)) {}
+  explicit TupleTypeNode(SourceRange source_range) : TypeNode(source_range) {}
+
+  Kind get_kind() const override { return Kind::TUPLE_TYPE; }
+};
+struct UserDefinedTypeNode final : TypeNode {
+  QualifiedId name;
+
+  UserDefinedTypeNode(SourceRange source_range, QualifiedId name)
+      : TypeNode(source_range), name(std::move(name)) {}
+
+  Kind get_kind() const override { return Kind::USER_DEFINED_TYPE; }
+};
+
+struct TypeAliasDecl final : Declaration {
+  std::unique_ptr<TypeNode> original;
+
+  TypeAliasDecl(SourceRange source_range, StringId alias,
+                std::unique_ptr<TypeNode> original)
+      : Declaration(source_range, alias), original(std::move(original)) {}
+
+  Kind get_kind() const override { return Kind::TYPE_ALIAS_DECL; }
+};
+struct ClassDecl final : Declaration {
+  std::vector<std::unique_ptr<Declaration>> body;
+
+  ClassDecl(SourceRange source_range, StringId name,
+            std::vector<std::unique_ptr<Declaration>> body)
+      : Declaration(source_range, name), body(std::move(body)) {}
+
+  Kind get_kind() const override { return Kind::CLASS_DECL; }
 };
 
 enum class ValueCategory {
@@ -148,9 +183,9 @@ struct ReturnStmt : Statement {
 };
 
 struct IntegerLiteral : Expression {
-  int value;
+  int64_t value;
 
-  IntegerLiteral(SourceRange source_range, int value)
+  IntegerLiteral(SourceRange source_range, int64_t value)
       : Expression(source_range), value(value) {}
 
   Kind get_kind() const override { return Kind::INTEGER_LITERAL_EXPR; }
@@ -181,11 +216,43 @@ struct IdExpr : Expression {
   Kind get_kind() const override { return Kind::ID_EXPR; }
 };
 
-struct ImportDecl : Declaration {
-  StringId id;
+struct MemberExpr : Expression {
+  std::unique_ptr<Expression> left;
+  QualifiedId member;
+  size_t member_index{0};
 
-  ImportDecl(SourceRange source_range, StringId id)
-      : Declaration(source_range), id(id) {}
+  MemberExpr(SourceRange source_range, std::unique_ptr<Expression> left,
+             QualifiedId member)
+      : Expression(source_range),
+        left(std::move(left)),
+        member(std::move(member)) {}
+
+  Kind get_kind() const override { return Kind::MEMBER_EXPR; }
+};
+struct TupleIndexExpr : Expression {
+  std::unique_ptr<Expression> left;
+  size_t index{0};
+
+  TupleIndexExpr(SourceRange source_range, std::unique_ptr<Expression> left,
+                 size_t index)
+      : Expression(source_range), left(std::move(left)), index(index) {}
+
+  Kind get_kind() const override { return Kind::TUPLE_INDEX_EXPR; }
+};
+
+struct TupleExpr : Expression {
+  std::vector<std::unique_ptr<Expression>> elements;
+
+  TupleExpr(SourceRange source_range,
+            std::vector<std::unique_ptr<Expression>> elements)
+      : Expression(source_range), elements(std::move(elements)) {}
+
+  Kind get_kind() const override { return Kind::TUPLE_EXPR; }
+};
+
+struct ImportDecl : Declaration {
+  ImportDecl(SourceRange source_range, StringId module_name)
+      : Declaration(source_range, module_name) {}
 
   Kind get_kind() const override { return Kind::IMPORT_DECL; }
 };
@@ -308,14 +375,14 @@ struct CallExpr : Expression {
   Kind get_kind() const override { return Kind::CALL_EXPR; }
 };
 
-struct VariableDecl : NamedDecl {
+struct VariableDecl final : Declaration {
   std::unique_ptr<TypeNode> type;
   std::unique_ptr<Expression> initializer;
 
   VariableDecl(SourceRange source_range, StringId name,
                std::unique_ptr<TypeNode> type,
                std::unique_ptr<Expression> initializer)
-      : NamedDecl(source_range, name),
+      : Declaration(source_range, name),
         type(std::move(type)),
         initializer(std::move(initializer)) {}
 
@@ -335,57 +402,30 @@ struct AssignmentStmt : Statement {
   Kind get_kind() const override { return Kind::ASSIGNMENT_STMT; }
 };
 
-struct Specifiers {
- private:
-  constexpr static size_t kExportedId = 0;
-  constexpr static size_t kExternId = 1;
-
-  std::bitset<2> specifiers_{0};
-
- public:
-  Specifiers() = default;
-
-  Specifiers& set_exported(bool is_exported) {
-    specifiers_[kExportedId] = is_exported;
-    return *this;
-  }
-
-  Specifiers& set_extern(bool is_extern) {
-    specifiers_[kExternId] = is_extern;
-    return *this;
-  }
-
-  bool is_exported() const { return specifiers_[kExportedId]; }
-
-  bool is_extern() const { return specifiers_[kExternId]; }
-};
-
-struct FunctionDecl : NamedDecl {
+struct FunctionDecl final : Declaration {
   std::vector<std::unique_ptr<VariableDecl>> parameters;
   std::unique_ptr<TypeNode> return_type;
   std::unique_ptr<CompoundStmt> body;
-  Specifiers specifiers;
 
   FunctionDecl(SourceRange source_range, StringId name,
                std::vector<std::unique_ptr<VariableDecl>> parameters,
                std::unique_ptr<TypeNode> return_type,
-               std::unique_ptr<CompoundStmt> body, Specifiers specifiers)
-      : NamedDecl(source_range, name),
+               std::unique_ptr<CompoundStmt> body)
+      : Declaration(source_range, name),
         parameters(std::move(parameters)),
         return_type(std::move(return_type)),
-        body(std::move(body)),
-        specifiers(specifiers) {}
+        body(std::move(body)) {}
 
   Kind get_kind() const override { return Kind::FUNCTION_DECL; }
 };
 
-struct ProgramDecl : Declaration {
+struct ProgramNode : ASTNode {
   std::vector<std::unique_ptr<ImportDecl>> imports;
   std::vector<std::unique_ptr<Declaration>> declarations;
 
-  ProgramDecl(SourceRange source_range) : Declaration(source_range) {}
+  explicit ProgramNode(SourceRange source_range) : ASTNode(source_range) {}
 
-  Kind get_kind() const override { return Kind::PROGRAM_DECL; }
+  Kind get_kind() const override { return Kind::PROGRAM; }
 };
 
 struct DeclarationStmt : Statement {
@@ -408,17 +448,12 @@ struct ExpressionStmt : Statement {
   Kind get_kind() const override { return Kind::EXPRESSION_STMT; }
 };
 
-struct NamespaceDecl : NamedDecl {
+struct NamespaceDecl final : Declaration {
   std::vector<std::unique_ptr<Declaration>> body;
 
-  bool is_exported;
-
   NamespaceDecl(SourceRange source_range, StringId name,
-                std::vector<std::unique_ptr<Declaration>> body,
-                bool is_exported)
-      : NamedDecl(source_range, name),
-        body(std::move(body)),
-        is_exported(is_exported) {}
+                std::vector<std::unique_ptr<Declaration>> body)
+      : Declaration(source_range, name), body(std::move(body)) {}
 
   Kind get_kind() const override { return Kind::NAMESPACE_DECL; }
 };
@@ -505,10 +540,6 @@ struct NodesList final : SupplementaryNode {
   void add_item(std::unique_ptr<NodeT> node) {
     nodes.push_back(std::move(node));
   }
-};
-
-struct SpecifiersNode : SupplementaryNode, Specifiers {
-  using SupplementaryNode::SupplementaryNode;
 };
 
 }  // namespace Front

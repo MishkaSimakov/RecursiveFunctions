@@ -8,14 +8,27 @@ ENUM(TokenType,
      IDENTIFIER,  // variable or function name
 
      // keywords
-     KW_BREAK, KW_CONTINUE, KW_ELSE, KW_IMPORT, KW_EXPORT, KW_EXTERN, KW_IF,
-     KW_NAMESPACE, KW_RETURN, KW_USING, KW_WHILE,
+     // flow control
+     KW_BREAK, KW_CONTINUE, KW_ELSE, KW_IF, KW_RETURN, KW_WHILE,
+
+     //
+     KW_IMPORT, KW_EXPORT, KW_EXTERN, KW_NAMESPACE, KW_TYPE,
 
      // literals
      KW_NULLPTR, KW_FALSE, KW_TRUE,
 
      // types
-     KW_U64, KW_I64, KW_F64, KW_BOOL, KW_CHAR, KW_VOID,
+     // signed int
+     KW_I8, KW_I16, KW_I32, KW_I64,
+
+     // unsigned int
+     KW_U8, KW_U16, KW_U32, KW_U64,
+
+     // char
+     KW_C8,
+
+     // bool
+     KW_B8,
      // keywords end
 
      NUMBER,  // number literal
@@ -48,6 +61,7 @@ ENUM(TokenType,
      SEMICOLON,    // ;
      COLON,        // :
      COMMA,        // ,
+     DOT,          // .
 
      // special values
      WHITESPACE,  // used only inside lexical analyzer
