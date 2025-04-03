@@ -52,6 +52,7 @@ struct ASTNode {
     TUPLE_EXPR,
     IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR,
     TUPLE_INDEX_EXPR,
+    IMPLICIT_TUPLE_COPY_EXPR,
 
     POINTER_TYPE,
     PRIMITIVE_TYPE,
@@ -508,6 +509,16 @@ struct ImplicitLvalueToRvalueConversionExpr : Expression {
   Kind get_kind() const override {
     return Kind::IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR;
   }
+};
+
+// TODO: this node is similar to copy-constructor call
+struct ImplicitTupleCopyExpr : Expression {
+  std::unique_ptr<Expression> value;
+
+  ImplicitTupleCopyExpr(SourceRange source_range, std::unique_ptr<Expression> value)
+      : Expression(source_range), value(std::move(value)) {}
+
+  Kind get_kind() const override { return Kind::IMPLICIT_TUPLE_COPY_EXPR; }
 };
 
 // ASTNodes that follow this line are supplementary.

@@ -16,20 +16,28 @@
 #include "llvm/IR/Verifier.h"
 
 namespace Front {
-struct IRASTVisitorConfig : ASTVisitorConfig {
+struct IRGeneratorConfig : ASTVisitorConfig {
   static constexpr auto order() { return Order::POSTORDER; }
   static constexpr auto is_const() { return true; }
   static constexpr auto override_all() { return true; }
 };
 
-class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
+class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   llvm::LLVMContext& llvm_context_;
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<llvm::IRBuilder<>> llvm_ir_builder_;
 
   Mangler mangler_;
 
-  std::unordered_map<const Declaration*, llvm::Value*> identifiers_addresses_;
+  // information about current function
+  struct LocalVariableInfo {
+    bool has_indirection{false};
+    llvm::Type* original_type{nullptr};
+    llvm::Value* pointer{nullptr};
+  };
+  std::unordered_map<const Declaration*, LocalVariableInfo> local_variables_;
+
+  llvm::Value* current_initializing_value_{nullptr};
 
   ModuleContext& module_;
 
@@ -43,13 +51,20 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
 
   llvm::Type* map_type(Type* type) const;
   llvm::Value* compile_expression(const Expression& expr);
+  llvm::Value* compile_initializer_for(llvm::Value* var_ptr,
+                                       const Expression& expr);
 
+  void store_argument_value(const VariableDecl& argument, llvm::Value* value);
+  void create_function_arguments(const FunctionSymbolInfo& info,
+                                 llvm::Function* llvm_fun);
+  llvm::Value* get_local_variable_value(const VariableDecl& decl);
   llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
-
-  void allocate_local_variables(const FunctionSymbolInfo& info);
+  llvm::Value* create_local_variable_gep(const VariableDecl& decl,
+                                         size_t index);
+  std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();
 
  public:
-  IRASTVisitor(llvm::LLVMContext& llvm_context, ModuleContext& module)
+  IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module)
       : llvm_context_(llvm_context),
         llvm_module_(
             std::make_unique<llvm::Module>(module.name, llvm_context_)),
@@ -57,14 +72,17 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
         mangler_(module.get_strings_pool()),
         module_(module) {}
 
+  // statements
   bool traverse_if_statement(const IfStmt& value);
   bool traverse_while_statement(const WhileStmt& value);
   bool traverse_return_statement(const ReturnStmt& value);
   bool traverse_assignment_statement(const AssignmentStmt& value);
 
+  // declarations
   bool traverse_variable_declaration(const VariableDecl& value);
   bool traverse_function_declaration(const FunctionDecl& value);
 
+  // expressions
   bool traverse_implicit_lvalue_to_rvalue_conversion_expression(
       const ImplicitLvalueToRvalueConversionExpr& value);
   bool traverse_call_expression(const CallExpr& value);
@@ -75,6 +93,8 @@ class IRASTVisitor : public ASTVisitor<IRASTVisitor, IRASTVisitorConfig> {
   bool traverse_member_expression(const MemberExpr& value);
   bool traverse_tuple_expression(const TupleExpr& value);
   bool traverse_tuple_index_expression(const TupleIndexExpr& value);
+  bool traverse_implicit_tuple_copy_expression(
+      const ImplicitTupleCopyExpr& value);
 
   std::unique_ptr<llvm::Module> compile();
 };

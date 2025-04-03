@@ -22,7 +22,7 @@ bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
                  type->arguments[i], node.arguments[i]->type);
     }
 
-    as_function_parameter(node.arguments[i]);
+    as_initializer(node.arguments[i]);
   }
 
   node.type = type->return_type;

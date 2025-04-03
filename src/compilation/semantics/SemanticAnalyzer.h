@@ -84,7 +84,10 @@ class SemanticAnalyzer
   };
 
   void convert_to_rvalue(std::unique_ptr<Expression>& expression);
-  void as_function_parameter(std::unique_ptr<Expression>& expression);
+
+  // this function is called for function arguments and initializer expressions
+  // for variables.
+  void as_initializer(std::unique_ptr<Expression>& expression);
 
  public:
   bool after_traverse(ASTNode& node);

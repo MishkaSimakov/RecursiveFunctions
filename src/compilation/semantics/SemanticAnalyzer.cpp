@@ -50,10 +50,14 @@ void SemanticAnalyzer::convert_to_rvalue(
   expression = std::move(cast);
 }
 
-void SemanticAnalyzer::as_function_parameter(
-    std::unique_ptr<Expression>& expression) {
-  // primitive types and ailiases to primitive types must be converted to rvalue
-  if (expression->type->is_passed_by_value()) {
+void SemanticAnalyzer::as_initializer(std::unique_ptr<Expression>& expression) {
+  if (expression->type->get_original()->get_kind() == Type::Kind::TUPLE) {
+    const Expression& tuple = *expression;
+    expression = std::make_unique<ImplicitTupleCopyExpr>(tuple.source_range,
+                                                         std::move(expression));
+    expression->type = tuple.type;
+    expression->value_category = ValueCategory::RVALUE;
+  } else {
     convert_to_rvalue(expression);
   }
 }
@@ -128,7 +132,7 @@ void SemanticAnalyzer::analyze() {
   traverse(*context_.ast_root);
 
   // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
-                       // std::cout);
+  // std::cout);
   // printer.print();
 
   // ASTPrinter ast_printer(context_, std::cout);

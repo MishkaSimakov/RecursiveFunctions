@@ -1,0 +1,20 @@
+1
+2
+3
+4
+//
+flatten: (value: ((i64, i64), (i64, i64))) -> (i64, i64, i64, i64) = {
+    return (value.0.0, value.0.1, value.1.0, value.1.1);
+}
+
+main: () -> i64 = {
+    tuple: ((i64, i64), (i64, i64)) = ((1, 2), (3, 4));
+    flattened: (i64, i64, i64, i64) = flatten(tuple);
+
+    output(flattened.0);
+    output(flattened.1);
+    output(flattened.2);
+    output(flattened.3);
+
+    return 0;
+}

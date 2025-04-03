@@ -9,7 +9,7 @@
 
 #include "ast/ASTPrinter.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
-#include "ir/IRASTVisitor.h"
+#include "ir/IRGenerator.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -189,7 +189,7 @@ void TeaFrontend::build_symbols_table_and_compile() {
       throw;
     }
 
-    auto ir_compiler = IRASTVisitor(*llvm_context_, current_module);
+    auto ir_compiler = IRGenerator(*llvm_context_, current_module);
     llvm_modules_.emplace_back(std::move(ir_compiler.compile()));
 
     current_module.state = ModuleContext::ModuleState::AFTER_IR_COMPILER;

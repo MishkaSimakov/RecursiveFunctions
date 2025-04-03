@@ -255,6 +255,10 @@ class ASTVisitor {
       wrap_const<ImplicitLvalueToRvalueConversionExpr>& node) {
     return traverse(*node.value);
   }
+  bool traverse_implicit_tuple_copy_expression(
+      wrap_const<ImplicitTupleCopyExpr>& node) {
+    return traverse(*node.value);
+  }
   bool traverse_type_alias_declaration(wrap_const<TypeAliasDecl>& node) {
     return traverse(*node.original);
   }

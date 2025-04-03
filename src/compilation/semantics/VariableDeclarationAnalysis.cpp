@@ -24,10 +24,13 @@ bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
     }
   }
 
-  if (node.initializer != nullptr &&
-      node.initializer->type != node.type->value) {
-    scold_user(node,
-               "Type of variable initializer must be same as variable type.");
+  if (node.initializer != nullptr) {
+    if (node.initializer->type != node.type->value) {
+      scold_user(node,
+                 "Type of variable initializer must be same as variable type.");
+    }
+
+    as_initializer(node.initializer);
   }
 
   add_to_exported_if_necessary(info);

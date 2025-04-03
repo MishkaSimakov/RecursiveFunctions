@@ -35,6 +35,7 @@ NODE(MEMBER_EXPR, MemberExpr, member_expression);
 NODE(TUPLE_EXPR, TupleExpr, tuple_expression);
 NODE(IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR, ImplicitLvalueToRvalueConversionExpr, implicit_lvalue_to_rvalue_conversion_expression);
 NODE(TUPLE_INDEX_EXPR, TupleIndexExpr, tuple_index_expression);
+NODE(IMPLICIT_TUPLE_COPY_EXPR, ImplicitTupleCopyExpr, implicit_tuple_copy_expression);
 
 NODE(POINTER_TYPE, PointerTypeNode, pointer_type);
 NODE(PRIMITIVE_TYPE, PrimitiveTypeNode, primitive_type);

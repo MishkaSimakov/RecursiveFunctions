@@ -1,9 +1,9 @@
-#include "IRASTVisitor.h"
+#include "IRGenerator.h"
 
 #include <iostream>
 
 namespace Front {
-llvm::Type* IRASTVisitor::map_type(Type* type) const {
+llvm::Type* IRGenerator::map_type(Type* type) const {
   switch (type->get_kind()) {
     case Type::Kind::SIGNED_INT:
     case Type::Kind::UNSIGNED_INT:
@@ -45,7 +45,7 @@ llvm::Type* IRASTVisitor::map_type(Type* type) const {
   }
 }
 
-llvm::Value* IRASTVisitor::compile_expression(const Expression& expr) {
+llvm::Value* IRGenerator::compile_expression(const Expression& expr) {
   current_expr_value_ = nullptr;
   traverse(expr);
   assert(current_expr_value_ != nullptr &&
@@ -53,7 +53,64 @@ llvm::Value* IRASTVisitor::compile_expression(const Expression& expr) {
   return std::exchange(current_expr_value_, nullptr);
 }
 
-llvm::Function* IRASTVisitor::get_or_insert_function(
+llvm::Value* IRGenerator::compile_initializer_for(llvm::Value* var_ptr,
+                                                  const Expression& expr) {
+  current_expr_value_ = nullptr;
+  current_initializing_value_ = var_ptr;
+  traverse(expr);
+  current_initializing_value_ = nullptr;
+  return std::exchange(current_expr_value_, nullptr);
+}
+
+void IRGenerator::store_argument_value(const VariableDecl& argument,
+                                       llvm::Value* value) {
+  LocalVariableInfo info = local_variables_.at(&argument);
+  if (argument.type->value->is_passed_by_value()) {
+    llvm_ir_builder_->CreateStore(value, info.pointer);
+  }
+}
+
+void IRGenerator::create_function_arguments(const FunctionSymbolInfo& info,
+                                            llvm::Function* llvm_fun) {
+  const auto& decl = static_cast<const FunctionDecl&>(info.declaration);
+  for (size_t i = 0; i < decl.parameters.size(); ++i) {
+    VariableDecl& parameter = *decl.parameters[i];
+
+    LocalVariableInfo parameter_info;
+
+    Type* arg_ty = parameter.type->value->get_original();
+    parameter_info.original_type = map_type(arg_ty);
+
+    if (!arg_ty->is_passed_by_value()) {
+      parameter_info.has_indirection = true;
+      arg_ty = module_.types_storage.add_pointer(arg_ty);
+      parameter_info.pointer = llvm_fun->getArg(i);
+    } else {
+      parameter_info.has_indirection = false;
+      parameter_info.pointer =
+          get_alloca_builder()->CreateAlloca(map_type(arg_ty));
+    }
+
+    local_variables_.emplace(&parameter, parameter_info);
+  }
+}
+
+llvm::Value* IRGenerator::get_local_variable_value(const VariableDecl& decl) {
+  auto itr = local_variables_.find(&decl);
+
+  if (itr == local_variables_.end()) {
+    LocalVariableInfo info;
+    info.original_type = map_type(decl.type->value);
+    info.pointer = get_alloca_builder()->CreateAlloca(info.original_type);
+    info.has_indirection = false;
+    std::tie(itr, std::ignore) = local_variables_.emplace(&decl, info);
+  }
+
+  LocalVariableInfo& info = itr->second;
+  return info.pointer;
+}
+
+llvm::Function* IRGenerator::get_or_insert_function(
     const FunctionSymbolInfo& info) {
   std::string name = mangler_.mangle(info);
   llvm::Function* function = llvm_module_->getFunction(name);
@@ -72,9 +129,17 @@ llvm::Function* IRASTVisitor::get_or_insert_function(
   }
 
   Type* ret_ty = info.type->return_type;
-  llvm::Type* llvm_ret_ty = ret_ty->is_unit()
-                                ? llvm::Type::getVoidTy(llvm_context_)
-                                : map_type(ret_ty);
+  llvm::Type* llvm_ret_ty;
+
+  if (ret_ty->is_unit()) {
+    llvm_ret_ty = llvm_ir_builder_->getVoidTy();
+  } else {
+    if (!ret_ty->is_passed_by_value()) {
+      ret_ty = module_.types_storage.add_pointer(ret_ty);
+    }
+
+    llvm_ret_ty = map_type(ret_ty);
+  }
 
   auto llvm_func_type = llvm::FunctionType::get(llvm_ret_ty, arguments, false);
 
@@ -82,23 +147,26 @@ llvm::Function* IRASTVisitor::get_or_insert_function(
                                 name, llvm_module_.get());
 }
 
-void IRASTVisitor::allocate_local_variables(const FunctionSymbolInfo& info) {
-  for (VariableSymbolInfo& variable : info.local_variables) {
-    auto& declaration = static_cast<VariableDecl&>(variable.declaration);
+std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
+  auto temp_builder = std::make_unique<llvm::IRBuilder<>>(llvm_context_);
+  llvm::Function* current_function =
+      llvm_ir_builder_->GetInsertBlock()->getParent();
 
-    auto var_alloca = llvm_ir_builder_->CreateAlloca(map_type(variable.type));
-    identifiers_addresses_.emplace(&declaration, var_alloca);
-  }
+  assert(current_function != nullptr);
+
+  llvm::BasicBlock& alloca_bb = current_function->getEntryBlock();
+  temp_builder->SetInsertPoint(&alloca_bb);
+  return temp_builder;
 }
 
-bool IRASTVisitor::traverse_implicit_lvalue_to_rvalue_conversion_expression(
+bool IRGenerator::traverse_implicit_lvalue_to_rvalue_conversion_expression(
     const ImplicitLvalueToRvalueConversionExpr& value) {
   llvm::Value* ptr = compile_expression(*value.value);
   current_expr_value_ = llvm_ir_builder_->CreateLoad(map_type(value.type), ptr);
   return true;
 }
 
-bool IRASTVisitor::traverse_assignment_statement(const AssignmentStmt& value) {
+bool IRGenerator::traverse_assignment_statement(const AssignmentStmt& value) {
   auto left = compile_expression(*value.left);
   auto right = compile_expression(*value.right);
 
@@ -106,7 +174,7 @@ bool IRASTVisitor::traverse_assignment_statement(const AssignmentStmt& value) {
   return true;
 }
 
-bool IRASTVisitor::traverse_if_statement(const IfStmt& value) {
+bool IRGenerator::traverse_if_statement(const IfStmt& value) {
   llvm::Value* condition = compile_expression(*value.condition);
   llvm::Function* current_function =
       llvm_ir_builder_->GetInsertBlock()->getParent();
@@ -134,7 +202,7 @@ bool IRASTVisitor::traverse_if_statement(const IfStmt& value) {
   return true;
 }
 
-bool IRASTVisitor::traverse_while_statement(const WhileStmt& value) {
+bool IRGenerator::traverse_while_statement(const WhileStmt& value) {
   llvm::Function* function = llvm_ir_builder_->GetInsertBlock()->getParent();
 
   // create basic blocks
@@ -163,31 +231,46 @@ bool IRASTVisitor::traverse_while_statement(const WhileStmt& value) {
   return true;
 }
 
-bool IRASTVisitor::traverse_call_expression(const CallExpr& value) {
+bool IRGenerator::traverse_call_expression(const CallExpr& value) {
   llvm::Function* callee =
       llvm::dyn_cast<llvm::Function>(compile_expression(*value.callee));
 
   std::vector<llvm::Value*> arguments;
   arguments.reserve(value.arguments.size());
   for (auto& argument : value.arguments) {
-    arguments.emplace_back(compile_expression(*argument));
+    Type* arg_ty = argument->type->get_original();
+
+    if (arg_ty->is_passed_by_value()) {
+      arguments.emplace_back(compile_expression(*argument));
+    } else {
+      // create temporary
+      llvm::Value* tmp_ptr =
+          get_alloca_builder()->CreateAlloca(map_type(arg_ty));
+      compile_initializer_for(tmp_ptr, *argument);
+      arguments.emplace_back(tmp_ptr);
+    }
   }
 
   current_expr_value_ = llvm_ir_builder_->CreateCall(callee, arguments);
   return true;
 }
 
-bool IRASTVisitor::traverse_variable_declaration(const VariableDecl& value) {
+bool IRGenerator::traverse_variable_declaration(const VariableDecl& value) {
   if (value.initializer != nullptr) {
-    llvm::Value* var_ptr = identifiers_addresses_.at(&value);
-    auto initial_value = compile_expression(*value.initializer);
-    llvm_ir_builder_->CreateStore(initial_value, var_ptr);
+    llvm::Value* var_ptr = get_local_variable_value(value);
+    auto initial_value = compile_initializer_for(var_ptr, *value.initializer);
+
+    // for complex types compile_initializer_for emits code that
+    // includes store into var_ptr so we don't need another one
+    if (initial_value != nullptr) {
+      llvm_ir_builder_->CreateStore(initial_value, var_ptr);
+    }
   }
 
   return true;
 }
 
-bool IRASTVisitor::traverse_id_expression(const IdExpr& value) {
+bool IRGenerator::traverse_id_expression(const IdExpr& value) {
   const SymbolInfo& info = module_.symbols_info.at(&value);
 
   std::visit(
@@ -197,7 +280,8 @@ bool IRASTVisitor::traverse_id_expression(const IdExpr& value) {
                 "SemanticAnalyzer ensures that other options are impossible.");
           },
           [&](const VariableSymbolInfo& var) {
-            current_expr_value_ = identifiers_addresses_.at(&var.declaration);
+            auto& decl = static_cast<const VariableDecl&>(var.declaration);
+            current_expr_value_ = get_local_variable_value(decl);
           },
           [&](const FunctionSymbolInfo& fun) {
             current_expr_value_ = get_or_insert_function(fun);
@@ -207,7 +291,7 @@ bool IRASTVisitor::traverse_id_expression(const IdExpr& value) {
   return true;
 }
 
-bool IRASTVisitor::traverse_binary_operator(const BinaryOperator& value) {
+bool IRGenerator::traverse_binary_operator(const BinaryOperator& value) {
   auto left_op = compile_expression(*value.left);
   auto right_op = compile_expression(*value.right);
 
@@ -257,7 +341,7 @@ bool IRASTVisitor::traverse_binary_operator(const BinaryOperator& value) {
   return true;
 }
 
-bool IRASTVisitor::traverse_function_declaration(const FunctionDecl& value) {
+bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   const FunctionSymbolInfo& function_info = module_.functions_info.at(&value);
   llvm::Function* fun = get_or_insert_function(function_info);
 
@@ -269,18 +353,20 @@ bool IRASTVisitor::traverse_function_declaration(const FunctionDecl& value) {
   auto alloca_bb = llvm::BasicBlock::Create(llvm_context_, "alloca", fun);
   auto entry_bb = llvm::BasicBlock::Create(llvm_context_, "entry", fun);
 
-  llvm_ir_builder_->SetInsertPoint(alloca_bb);
-  allocate_local_variables(function_info);
-  // here must be a br instruction, but we add it after all allocas are added
-
   llvm_ir_builder_->SetInsertPoint(entry_bb);
+  create_function_arguments(function_info, fun);
+
   for (size_t i = 0; i < value.parameters.size(); ++i) {
-    traverse(*value.parameters[i]);
+    VariableDecl& parameter = *value.parameters[i];
+    // for now default arguments values are not supported
+    // traverse(*value.parameters[i]);
+    if (parameter.initializer != nullptr) {
+      not_implemented("default function arguments");
+    }
 
     // load parameter into allocated local variable
     llvm::Value* param_value = fun->getArg(i);
-    llvm_ir_builder_->CreateStore(
-        param_value, identifiers_addresses_[value.parameters[i].get()]);
+    store_argument_value(parameter, param_value);
   }
 
   // if function returns `unit` then we can create implicit return
@@ -294,12 +380,12 @@ bool IRASTVisitor::traverse_function_declaration(const FunctionDecl& value) {
   llvm_ir_builder_->CreateBr(entry_bb);
 
   llvm::verifyFunction(*fun, &llvm::outs());
-  identifiers_addresses_.clear();
+  local_variables_.clear();
 
   return true;
 }
 
-bool IRASTVisitor::traverse_return_statement(const ReturnStmt& value) {
+bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
   auto return_value = compile_expression(*value.value);
   llvm_ir_builder_->CreateRet(return_value);
 
@@ -307,43 +393,38 @@ bool IRASTVisitor::traverse_return_statement(const ReturnStmt& value) {
   return false;
 }
 
-bool IRASTVisitor::visit_integer_literal(const IntegerLiteral& value) {
+bool IRGenerator::visit_integer_literal(const IntegerLiteral& value) {
   current_expr_value_ = llvm_ir_builder_->getInt64(value.value);
   return true;
 }
 
-bool IRASTVisitor::visit_bool_literal(const BoolLiteral& value) {
+bool IRGenerator::visit_bool_literal(const BoolLiteral& value) {
   current_expr_value_ = llvm_ir_builder_->getInt1(value.value);
   return true;
 }
 
-bool IRASTVisitor::traverse_member_expression(const MemberExpr& value) {
+bool IRGenerator::traverse_member_expression(const MemberExpr& value) {
   llvm::Type* result_type = map_type(value.type);
   llvm::Value* cls_pointer = compile_expression(*value.left);
   llvm::Value* index = llvm_ir_builder_->getInt32(value.member_index);
 
   current_expr_value_ =
-      llvm_ir_builder_->CreateInBoundsGEP(result_type, cls_pointer, {index});
+      llvm_ir_builder_->CreateGEP(result_type, cls_pointer, {index});
 
   return true;
 }
 
-bool IRASTVisitor::traverse_tuple_expression(const TupleExpr& value) {
+bool IRGenerator::traverse_tuple_expression(const TupleExpr& value) {
   llvm::Type* tuple_ty = map_type(value.type);
-
-  llvm::IRBuilder temp_builder{llvm_context_};
-  llvm::BasicBlock& alloca_bb =
-      llvm_ir_builder_->GetInsertPoint()->getFunction()->getEntryBlock();
-  temp_builder.SetInsertPoint(&alloca_bb);
-  llvm::Value* tuple = temp_builder.CreateAlloca(tuple_ty);
+  llvm::Value* tuple = get_alloca_builder()->CreateAlloca(tuple_ty);
 
   for (size_t i = 0; i < value.elements.size(); ++i) {
     Expression& element = *value.elements[i];
-    llvm::Type* element_ty = map_type(element.type);
+    llvm::Value* zero = llvm_ir_builder_->getInt32(0);
     llvm::Value* index = llvm_ir_builder_->getInt32(i);
 
     llvm::Value* element_ptr =
-        llvm_ir_builder_->CreateInBoundsGEP(element_ty, tuple, {index});
+        llvm_ir_builder_->CreateGEP(tuple_ty, tuple, {zero, index});
     llvm_ir_builder_->CreateStore(compile_expression(element), element_ptr);
   }
 
@@ -351,18 +432,43 @@ bool IRASTVisitor::traverse_tuple_expression(const TupleExpr& value) {
   return true;
 }
 
-bool IRASTVisitor::traverse_tuple_index_expression(
-    const TupleIndexExpr& value) {
-  llvm::Type* result_type = map_type(value.type);
+bool IRGenerator::traverse_tuple_index_expression(const TupleIndexExpr& value) {
+  llvm::Type* tuple_ty = map_type(value.left->type);
   llvm::Value* tuple_ptr = compile_expression(*value.left);
+  llvm::Value* zero = llvm_ir_builder_->getInt32(0);
   llvm::Value* index = llvm_ir_builder_->getInt32(value.index);
 
   current_expr_value_ =
-      llvm_ir_builder_->CreateInBoundsGEP(result_type, tuple_ptr, {index});
+      llvm_ir_builder_->CreateGEP(tuple_ty, tuple_ptr, {zero, index});
   return true;
 }
 
-std::unique_ptr<llvm::Module> IRASTVisitor::compile() {
+bool IRGenerator::traverse_implicit_tuple_copy_expression(
+    const ImplicitTupleCopyExpr& value) {
+  std::vector<llvm::Type*> types{
+      llvm_ir_builder_->getPtrTy(),
+      llvm_ir_builder_->getPtrTy(),
+      llvm_ir_builder_->getInt64Ty(),
+  };
+
+  llvm::Type* tuple_ty = map_type(value.type);
+  auto size = llvm_ir_builder_->getInt64(
+      llvm_module_->getDataLayout().getTypeAllocSize(tuple_ty));
+
+  llvm::Function* memcpy_fun = llvm::Intrinsic::getDeclaration(
+      llvm_module_.get(), llvm::Intrinsic::memcpy, std::move(types));
+
+  assert(current_initializing_value_ != nullptr);
+  llvm::Value* dest_ptr = current_initializing_value_;
+
+  llvm::Value* source_ptr = compile_expression(*value.value);
+
+  llvm_ir_builder_->CreateCall(memcpy_fun, {dest_ptr, source_ptr, size,
+                                            llvm_ir_builder_->getInt1(false)});
+  return true;
+}
+
+std::unique_ptr<llvm::Module> IRGenerator::compile() {
   traverse(*module_.ast_root);
   llvm::verifyModule(*llvm_module_, &llvm::errs());
 
