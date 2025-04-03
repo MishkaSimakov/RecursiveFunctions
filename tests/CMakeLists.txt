@@ -25,6 +25,21 @@ gtest_discover_tests(Tests)
 
 set(TESTS_PROGRAMS_DIR ${CMAKE_SOURCE_DIR}/tests/feature/programs)
 
+# feature tests require llc and clang++ to run .tea programs
+find_program(LLVM_LLC NAMES "llc" DOC "Path to llvm llc tool")
+if (NOT LLVM_LLC)
+    message(WARNING "Failed to find LLVM llc tool.")
+endif ()
+target_compile_definitions(Tests PUBLIC TESTS_LLC_PATH="${LLVM_LLC}")
+
+find_program(LLVM_CLANG NAMES "clang++" DOC "Path to llvm clang++ tool")
+if (NOT LLVM_CLANG)
+    message(WARNING "Failed to find LLVM clang tool.")
+endif ()
+target_compile_definitions(Tests PUBLIC TESTS_CLANG_PATH="${LLVM_CLANG}")
+
+
+
 # we create separate file for communication between feature test programs and testing system
 set(TESTS_PROGRAMS_COMMUNICATION_FILE "${TESTS_RUNTIME_DIR}/channel")
 

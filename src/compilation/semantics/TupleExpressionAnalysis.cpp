@@ -7,7 +7,7 @@ bool SemanticAnalyzer::visit_tuple_expression(TupleExpr& node) {
 
   std::vector<Type*> elements_types(tuple_size);
   for (size_t i = 0; i < tuple_size; ++i) {
-    convert_to_rvalue(node.elements[i]);
+    as_initializer(node.elements[i]);
     elements_types[i] = node.elements[i]->type;
   }
 

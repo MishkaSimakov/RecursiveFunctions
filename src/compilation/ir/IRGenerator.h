@@ -63,6 +63,8 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
                                          size_t index);
   std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();
 
+  void emit_store(Expression& source, llvm::Value* destination);
+
  public:
   IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module)
       : llvm_context_(llvm_context),

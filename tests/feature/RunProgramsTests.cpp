@@ -6,11 +6,15 @@
 #include <fstream>
 #include <random>
 
-const auto kCompilerPath = TESTS_RUNTIME_DIR "/cli";
-const auto kProgramsPath = TESTS_RUNTIME_DIR "/programs";
-const auto kTestingLibraryPath = TESTS_RUNTIME_DIR "/liblibrary.a";
-const auto kLLCPath = "/opt/homebrew/Cellar/llvm/19.1.7_1/bin/llc";
-const auto kCommunicationFilePath = TESTS_PROGRAMS_COMMUNICATION_FILE;
+// filepaths
+constexpr auto kCompilerPath = TESTS_RUNTIME_DIR "/cli";
+constexpr auto kProgramsPath = TESTS_RUNTIME_DIR "/programs";
+constexpr auto kTestingLibraryPath = TESTS_RUNTIME_DIR "/liblibrary.a";
+constexpr auto kCommunicationFilePath = TESTS_PROGRAMS_COMMUNICATION_FILE;
+
+// external tools for running program
+constexpr auto kLLCPath = TESTS_LLC_PATH;
+constexpr auto kClangPath = TESTS_CLANG_PATH;
 
 std::filesystem::path get_temp_filepath() {
   auto temp_dir = std::filesystem::temp_directory_path();
@@ -61,8 +65,9 @@ std::filesystem::path compile_and_link_for_testsing(std::string program) {
   auto tea_program = compile_tea_program(program);
   auto exe_filepath = get_temp_filepath();
 
-  auto link_command = fmt::format("clang++ {} {} -o {}", tea_program.c_str(),
-                                  kTestingLibraryPath, exe_filepath.c_str());
+  auto link_command =
+      fmt::format("{} {} {} -o {}", kClangPath, tea_program.c_str(),
+                  kTestingLibraryPath, exe_filepath.c_str());
   std::system(link_command.c_str());
 
   return exe_filepath;

@@ -83,12 +83,13 @@ void IRGenerator::create_function_arguments(const FunctionSymbolInfo& info,
 
     if (!arg_ty->is_passed_by_value()) {
       parameter_info.has_indirection = true;
-      arg_ty = module_.types_storage.add_pointer(arg_ty);
       parameter_info.pointer = llvm_fun->getArg(i);
     } else {
+      auto name = fmt::format("{}.addr", module_.get_string(decl.name));
+
       parameter_info.has_indirection = false;
       parameter_info.pointer =
-          get_alloca_builder()->CreateAlloca(map_type(arg_ty));
+          get_alloca_builder()->CreateAlloca(map_type(arg_ty), nullptr, name);
     }
 
     local_variables_.emplace(&parameter, parameter_info);
@@ -101,7 +102,8 @@ llvm::Value* IRGenerator::get_local_variable_value(const VariableDecl& decl) {
   if (itr == local_variables_.end()) {
     LocalVariableInfo info;
     info.original_type = map_type(decl.type->value);
-    info.pointer = get_alloca_builder()->CreateAlloca(info.original_type);
+    info.pointer = get_alloca_builder()->CreateAlloca(
+        info.original_type, nullptr, module_.get_string(decl.name));
     info.has_indirection = false;
     std::tie(itr, std::ignore) = local_variables_.emplace(&decl, info);
   }
@@ -143,8 +145,17 @@ llvm::Function* IRGenerator::get_or_insert_function(
 
   auto llvm_func_type = llvm::FunctionType::get(llvm_ret_ty, arguments, false);
 
-  return llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
-                                name, llvm_module_.get());
+  llvm::Function* fun =
+      llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
+                             name, llvm_module_.get());
+
+  // set names for arguments
+  FunctionDecl& decl = static_cast<FunctionDecl&>(info.declaration);
+  for (size_t i = 0; i < decl.parameters.size(); ++i) {
+    fun->getArg(i)->setName(module_.get_string(decl.parameters[i]->name));
+  }
+
+  return fun;
 }
 
 std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
@@ -157,6 +168,20 @@ std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
   llvm::BasicBlock& alloca_bb = current_function->getEntryBlock();
   temp_builder->SetInsertPoint(&alloca_bb);
   return temp_builder;
+}
+
+void IRGenerator::emit_store(Expression& source, llvm::Value* destination) {
+  current_expr_value_ = nullptr;
+  current_initializing_value_ = destination;
+  traverse(source);
+  current_initializing_value_ = nullptr;
+  llvm::Value* source_value = std::exchange(current_expr_value_, nullptr);
+
+  // for complex types compile_initializer_for emits code that
+  // includes store into var_ptr so we don't need another one
+  if (source_value != nullptr) {
+    llvm_ir_builder_->CreateStore(source_value, destination);
+  }
 }
 
 bool IRGenerator::traverse_implicit_lvalue_to_rvalue_conversion_expression(
@@ -258,13 +283,7 @@ bool IRGenerator::traverse_call_expression(const CallExpr& value) {
 bool IRGenerator::traverse_variable_declaration(const VariableDecl& value) {
   if (value.initializer != nullptr) {
     llvm::Value* var_ptr = get_local_variable_value(value);
-    auto initial_value = compile_initializer_for(var_ptr, *value.initializer);
-
-    // for complex types compile_initializer_for emits code that
-    // includes store into var_ptr so we don't need another one
-    if (initial_value != nullptr) {
-      llvm_ir_builder_->CreateStore(initial_value, var_ptr);
-    }
+    emit_store(*value.initializer, var_ptr);
   }
 
   return true;
@@ -425,7 +444,7 @@ bool IRGenerator::traverse_tuple_expression(const TupleExpr& value) {
 
     llvm::Value* element_ptr =
         llvm_ir_builder_->CreateGEP(tuple_ty, tuple, {zero, index});
-    llvm_ir_builder_->CreateStore(compile_expression(element), element_ptr);
+    emit_store(element, element_ptr);
   }
 
   current_expr_value_ = tuple;
