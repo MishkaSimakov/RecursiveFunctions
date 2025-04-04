@@ -19,9 +19,6 @@ using TypeKind = Front::Type::Kind;
 #define ASSERT_STRING_EQ(string_id, expected) \
   ASSERT_EQ(module().get_string(string_id), expected)
 
-#define ASSERT_TYPE_NODE_EQ(ast_node, expected) \
-  ASSERT_EQ(ast_node->value->get_kind(), expected)
-
 #define ASSERT_ID_EQ(id_node, ...) \
   ASSERT_TRUE(is_identifier_equal(id_node, __VA_ARGS__))
 
