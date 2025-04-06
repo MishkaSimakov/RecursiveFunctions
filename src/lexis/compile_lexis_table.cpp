@@ -68,6 +68,7 @@ int main() {
   generator[TokenType::MINUS] = "\\-";
   generator[TokenType::STAR] = "\\*";
   generator[TokenType::PERCENT] = "%";
+  generator[TokenType::NOT] = "!";
   generator[TokenType::AMPERSAND] = "&";
   generator[TokenType::LESS] = "<";
   generator[TokenType::GREATER] = ">";

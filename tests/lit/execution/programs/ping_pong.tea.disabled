@@ -4,6 +4,8 @@
 // CHECK-NEXT:  42
 // CHECK-NEXT:  42
 
+extern print: (value: i64) -> ()
+
 ping: (ball: (i64, i64, i64)) -> (i64, i64, i64) = {
     return (ball.0 + 1, ball.1 + 2, ball.2 + 3);
 }

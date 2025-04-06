@@ -40,6 +40,7 @@ ENUM(TokenType,
      MINUS,       // -
      STAR,        // *
      PERCENT,     // %
+     NOT,         // !
      AMPERSAND,   // &
      LESS,        // <
      GREATER,     // >

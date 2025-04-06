@@ -95,6 +95,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   bool traverse_tuple_index_expression(const TupleIndexExpr& value);
   bool traverse_implicit_tuple_copy_expression(
       const ImplicitTupleCopyExpr& value);
+  bool traverse_unary_operator(const UnaryOperator& value);
 
   std::unique_ptr<llvm::Module> compile();
 };

@@ -500,6 +500,18 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
   return true;
 }
 
+bool IRGenerator::traverse_unary_operator(const UnaryOperator& value) {
+  if (value.op_type == UnaryOperator::OpType::NOT) {
+    llvm::Value* argument = compile_expression(*value.value);
+    llvm::Value* truth = llvm_ir_builder_->getInt1(true);
+    current_expr_value_ = llvm_ir_builder_->CreateXor(argument, truth);
+  } else {
+    not_implemented("unary operator");
+  }
+
+  return true;
+}
+
 std::unique_ptr<llvm::Module> IRGenerator::compile() {
   traverse(*module_.ast_root);
   llvm::verifyModule(*llvm_module_, &llvm::errs());

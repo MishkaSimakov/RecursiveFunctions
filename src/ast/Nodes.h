@@ -334,6 +334,7 @@ struct UnaryOperator : Expression {
   enum class OpType {
     PLUS,
     MINUS,
+    NOT,
     PREINCREMENT,
     PREDECREMENT,
   };
@@ -351,6 +352,8 @@ struct UnaryOperator : Expression {
         return "+";
       case OpType::MINUS:
         return "-";
+      case OpType::NOT:
+        return "!";
       case OpType::PREINCREMENT:
         return "++";
       case OpType::PREDECREMENT:
@@ -515,7 +518,8 @@ struct ImplicitLvalueToRvalueConversionExpr : Expression {
 struct ImplicitTupleCopyExpr : Expression {
   std::unique_ptr<Expression> value;
 
-  ImplicitTupleCopyExpr(SourceRange source_range, std::unique_ptr<Expression> value)
+  ImplicitTupleCopyExpr(SourceRange source_range,
+                        std::unique_ptr<Expression> value)
       : Expression(source_range), value(std::move(value)) {}
 
   Kind get_kind() const override { return Kind::IMPLICIT_TUPLE_COPY_EXPR; }

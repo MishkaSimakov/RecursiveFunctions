@@ -185,7 +185,7 @@ void TeaFrontend::build_symbols_table_and_compile() {
         context_.source_manager.add_annotation(position, error);
       }
 
-      context_.source_manager.print_annotations(std::cout);
+      context_.source_manager.print_annotations(std::cerr);
       throw;
     }
 

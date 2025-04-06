@@ -54,7 +54,20 @@ bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
 }
 
 bool SemanticAnalyzer::visit_unary_operator(UnaryOperator& node) {
-  not_implemented();
+  Type* value_ty = node.value->type;
+  if (node.op_type == UnaryOperator::OpType::NOT) {
+    if (value_ty->get_kind() != Type::Kind::BOOL) {
+      scold_user(node, "not operator is applicable only to bool.");
+    }
+
+    convert_to_rvalue(node.value);
+
+    node.type = types().add_primitive<BoolType>(8);
+    node.value_category = ValueCategory::RVALUE;
+  } else {
+    not_implemented("unary operators");
+  }
+
   return true;
 }
 }  // namespace Front
