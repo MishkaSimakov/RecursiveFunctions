@@ -33,6 +33,6 @@ add_executable(cli_installation ${CLI_SOURCES})
 target_link_libraries(cli_installation PUBLIC TeaLang)
 target_compile_definitions(cli_installation PUBLIC BUILD_FOR_INSTALLATION=true)
 
-add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(tests)
 
 include(install_cli)

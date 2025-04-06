@@ -1,0 +1,4 @@
+// RUN: %tlang -emit-ir %s -o - | %FileCheck %s
+
+// CHECK: @_Zmain
+main: () -> i64 = {}

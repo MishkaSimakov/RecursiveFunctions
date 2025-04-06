@@ -1,0 +1,11 @@
+import os
+
+config.src_root = r'@CMAKE_SOURCE_DIR@'
+config.obj_root = r'@CMAKE_BINARY_DIR@'
+config.tea_path = r'@TEA_COMPILER@'
+config.filecheck_path = r'@LLVM_FILE_CHECK@'
+
+lit_config.load_config(
+    config,
+    os.path.join(config.src_root, "tests/lit/lit.cfg.py")
+)
