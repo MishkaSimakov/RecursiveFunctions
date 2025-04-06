@@ -1,0 +1,29 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK:       42
+// CHECK-NEXT:  42
+// CHECK-NEXT:  42
+
+ping: (ball: (i64, i64, i64)) -> (i64, i64, i64) = {
+    return (ball.0 + 1, ball.1 + 2, ball.2 + 3);
+}
+
+pong: (ball: (i64, i64, i64)) -> (i64, i64, i64) = {
+    return (ball.0 + 1, ball.1, ball.2 - 1);
+}
+
+main: () -> i64 = {
+    counter: i64 = 0;
+    ball: (i64, i64, i64) = (0, 0, 0);
+
+    while (counter != 42) {
+        ball = ping(pong(ball));
+        counter = counter + 1;
+    }
+
+    println(ball.0);
+    println(ball.1);
+    println(ball.2);
+
+    return 0;
+}

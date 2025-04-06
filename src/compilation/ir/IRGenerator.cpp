@@ -1,6 +1,6 @@
 #include "IRGenerator.h"
 
-#include <iostream>
+#include <llvm/IR/Verifier.h>
 
 namespace Front {
 llvm::Type* IRGenerator::map_type(Type* type) const {
@@ -160,13 +160,10 @@ llvm::Function* IRGenerator::get_or_insert_function(
 
 std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
   auto temp_builder = std::make_unique<llvm::IRBuilder<>>(llvm_context_);
-  llvm::Function* current_function =
-      llvm_ir_builder_->GetInsertBlock()->getParent();
 
-  assert(current_function != nullptr);
+  assert(alloca_block_ != nullptr);
 
-  llvm::BasicBlock& alloca_bb = current_function->getEntryBlock();
-  temp_builder->SetInsertPoint(&alloca_bb);
+  temp_builder->SetInsertPoint(alloca_block_);
   return temp_builder;
 }
 
@@ -183,6 +180,17 @@ void IRGenerator::emit_store(Expression& source, llvm::Value* destination) {
     llvm_ir_builder_->CreateStore(source_value, destination);
   }
 }
+IRContext IRGenerator::get_context() {
+  return IRContext{*llvm_module_, mangler_, module_.get_strings_pool(),
+                   module_.types_storage};
+}
+
+IRGenerator::IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module)
+    : llvm_context_(llvm_context),
+      llvm_module_(std::make_unique<llvm::Module>(module.name, llvm_context_)),
+      llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
+      mangler_(module.get_strings_pool()),
+      module_(module) {}
 
 bool IRGenerator::traverse_implicit_lvalue_to_rvalue_conversion_expression(
     const ImplicitLvalueToRvalueConversionExpr& value) {
@@ -372,6 +380,8 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   auto alloca_bb = llvm::BasicBlock::Create(llvm_context_, "alloca", fun);
   auto entry_bb = llvm::BasicBlock::Create(llvm_context_, "entry", fun);
 
+  alloca_block_ = alloca_bb;
+
   llvm_ir_builder_->SetInsertPoint(entry_bb);
   create_function_arguments(function_info, fun);
 
@@ -399,7 +409,10 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   llvm_ir_builder_->CreateBr(entry_bb);
 
   llvm::verifyFunction(*fun, &llvm::outs());
+
+  // cleanup
   local_variables_.clear();
+  alloca_block_ = nullptr;
 
   return true;
 }

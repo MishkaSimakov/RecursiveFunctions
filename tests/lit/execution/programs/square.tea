@@ -1,0 +1,20 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK: 144
+
+extern print: (value: i64) -> ()
+
+math: namespace = {
+    sqr: (value: i64) -> i64 = {
+        return value * value;
+    }
+}
+
+main: () -> i64 = {
+    value: i64 = 12;
+    squared: i64 = math::sqr(value);
+
+    print(squared);
+
+    return 0;
+}

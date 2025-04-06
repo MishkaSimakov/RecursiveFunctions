@@ -1,25 +1,28 @@
 #pragma once
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+
 #include "ast/ASTVisitor.h"
-#include "compilation/GlobalContext.h"
 #include "compilation/ModuleContext.h"
 #include "compilation/mangling/Mangler.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
 
 namespace Front {
 struct IRGeneratorConfig : ASTVisitorConfig {
   static constexpr auto order() { return Order::POSTORDER; }
   static constexpr auto is_const() { return true; }
   static constexpr auto override_all() { return true; }
+};
+
+struct IRContext {
+  llvm::Module& llvm_module;
+
+  Mangler& mangler;
+  StringPool& strings;
+  TypesStorage& types;
+
+  llvm::LLVMContext& get_llvm_context() { return llvm_module.getContext(); }
 };
 
 class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
@@ -36,6 +39,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
     llvm::Value* pointer{nullptr};
   };
   std::unordered_map<const Declaration*, LocalVariableInfo> local_variables_;
+  llvm::BasicBlock* alloca_block_{nullptr};
 
   llvm::Value* current_initializing_value_{nullptr};
 
@@ -59,20 +63,14 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
                                  llvm::Function* llvm_fun);
   llvm::Value* get_local_variable_value(const VariableDecl& decl);
   llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
-  llvm::Value* create_local_variable_gep(const VariableDecl& decl,
-                                         size_t index);
   std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();
 
   void emit_store(Expression& source, llvm::Value* destination);
 
+  IRContext get_context();
+
  public:
-  IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module)
-      : llvm_context_(llvm_context),
-        llvm_module_(
-            std::make_unique<llvm::Module>(module.name, llvm_context_)),
-        llvm_ir_builder_(std::make_unique<llvm::IRBuilder<>>(llvm_context_)),
-        mangler_(module.get_strings_pool()),
-        module_(module) {}
+  IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module);
 
   // statements
   bool traverse_if_statement(const IfStmt& value);
