@@ -45,6 +45,10 @@ struct Type {
     return get_original()->is_primitive() || get_kind().in<Kind::POINTER>();
   }
 
+  bool is_structural() const {
+    return get_original()->get_kind().in<Kind::TUPLE, Kind::CLASS>();
+  }
+
   bool is_unit() const;
 
   virtual Type* get_original() { return this; }
@@ -106,40 +110,6 @@ struct CharType final : PrimitiveType {
     return fmt::format("c{}", width);
   }
   Kind get_kind() const override { return Kind::CHAR; }
-};
-
-struct TupleType final : Type {
-  std::vector<Type*> elements;
-
-  bool operator==(const Type& other) const override {
-    const TupleType* other_ptr = dynamic_cast<const TupleType*>(&other);
-    if (other_ptr == nullptr) {
-      return false;
-    }
-
-    return elements == other_ptr->elements;
-  }
-
-  size_t hash() const override {
-    auto hasher = init_hasher();
-    for (const Type* child : elements) {
-      hasher << static_cast<const void*>(child);
-    }
-    return hasher.get_hash();
-  }
-
-  std::string to_string(const StringPool& strings) const override {
-    auto elements_view =
-        elements | std::views::transform([&strings](const Type* type) {
-          return type->to_string(strings);
-        });
-    return fmt::format("({})", fmt::join(elements_view, ", "));
-  }
-
-  Kind get_kind() const override { return Kind::TUPLE; }
-
-  explicit TupleType(std::vector<Type*> elements)
-      : elements(std::move(elements)) {}
 };
 
 struct PointerType final : Type {
@@ -240,7 +210,11 @@ struct AliasType final : Type {
       : name(std::move(name)), original(original) {}
 };
 
-struct ClassType final : Type {
+struct StructuralType : Type {
+  virtual Type* get_member_type(size_t index) const = 0;
+};
+
+struct ClassType final : StructuralType {
   QualifiedId name;
   std::vector<std::pair<StringId, Type*>> members;
 
@@ -266,6 +240,46 @@ struct ClassType final : Type {
 
   Kind get_kind() const override { return Kind::CLASS; }
 
+  Type* get_member_type(size_t index) const override {
+    return members[index].second;
+  }
+
   explicit ClassType(QualifiedId name) : name(std::move(name)) {}
+};
+
+struct TupleType final : StructuralType {
+  std::vector<Type*> elements;
+
+  bool operator==(const Type& other) const override {
+    const TupleType* other_ptr = dynamic_cast<const TupleType*>(&other);
+    if (other_ptr == nullptr) {
+      return false;
+    }
+
+    return elements == other_ptr->elements;
+  }
+
+  size_t hash() const override {
+    auto hasher = init_hasher();
+    for (const Type* child : elements) {
+      hasher << static_cast<const void*>(child);
+    }
+    return hasher.get_hash();
+  }
+
+  std::string to_string(const StringPool& strings) const override {
+    auto elements_view =
+        elements | std::views::transform([&strings](const Type* type) {
+          return type->to_string(strings);
+        });
+    return fmt::format("({})", fmt::join(elements_view, ", "));
+  }
+
+  Kind get_kind() const override { return Kind::TUPLE; }
+
+  Type* get_member_type(size_t index) const override { return elements[index]; }
+
+  explicit TupleType(std::vector<Type*> elements)
+      : elements(std::move(elements)) {}
 };
 }  // namespace Front

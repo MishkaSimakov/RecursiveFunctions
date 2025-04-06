@@ -42,6 +42,10 @@ struct VariableSymbolInfo : BaseSymbolInfo {
 
   VariableSymbolInfo(Scope* scope, Declaration& declaration, Type* type)
       : BaseSymbolInfo(scope, declaration), type(type) {}
+
+  VariableDecl& get_decl() const {
+    return static_cast<VariableDecl&>(declaration);
+  }
 };
 
 struct FunctionSymbolInfo : ScopefulSymbolInfo {
@@ -51,6 +55,10 @@ struct FunctionSymbolInfo : ScopefulSymbolInfo {
   FunctionSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration,
                      FunctionType* type)
       : ScopefulSymbolInfo(scope, declaration, subscope), type(type) {}
+
+  FunctionDecl& get_decl() const {
+    return static_cast<FunctionDecl&>(declaration);
+  }
 };
 
 struct NamespaceSymbolInfo : ScopefulSymbolInfo {

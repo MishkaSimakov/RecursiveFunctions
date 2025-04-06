@@ -1,0 +1,15 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+main: () -> i64 = {
+    // CHECK: [[FIRST_PTR:%[0-9]+]] = getelementptr { i64, i64 }
+    // CHECK-SAME: 0
+
+    // CHECK: store i64 61, ptr [[FIRST_PTR]]
+
+    // CHECK: [[SECOND_PTR:%[0-9]+]] = getelementptr { i64, i64 }
+    // CHECK-SAME: 1
+
+    // CHECK: store i64 42, ptr [[SECOND_PTR]]
+    tuple: (i64, i64) = (61, 42);
+    return 0;
+}

@@ -1,0 +1,37 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+// CHECK: @_Z1fv
+f: () -> () = {}
+
+// CHECK: @_Z1gx
+g: (a: i64) -> () = {}
+
+// CHECK: @_Z1hxx
+h: (a: i64, b: i64) -> () = {}
+
+// CHECK: @_Z4funcb
+func: (a: b8) -> i64 = {
+    return 0;
+}
+
+nmsp: namespace = {
+
+    // CHECK: @_ZN4nmsp1fEv
+    f: () -> () = {}
+
+    // CHECK: @_ZN4nmsp1gEyc
+    g: (a: u64, b: c8) -> () = {}
+
+    nested: namespace = {
+
+        // CHECK: @_ZN4nmsp6nested1fEv
+        f: () -> () = {}
+
+    }
+}
+
+nmsp: namespace = {
+
+    // CHECK: @_ZN4nmsp1hEv
+    h: () -> () = {}
+}

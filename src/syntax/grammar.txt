@@ -173,9 +173,15 @@ primary-expression:
     qualified-id                        [id_expression]
     OPEN_PAREN expression CLOSE_PAREN   [pass<1>]
 
+tuple-expression:
+    primary-expression                                      [pass<0>]
+    OPEN_PAREN CLOSE_PAREN                                  [tuple_expression]
+    OPEN_PAREN expression COMMA CLOSE_PAREN                 [tuple_expression]
+    OPEN_PAREN expression COMMA expression-list CLOSE_PAREN [tuple_expression]
+
 postfix-expression:
-    primary-expression                  [pass<0>]
-    primary-expression call-arguments   [call_expression]
+    tuple-expression                    [pass<0>]
+    tuple-expression call-arguments     [call_expression]
     postfix-expression DOT qualified-id [member_expression]
     postfix-expression DOT NUMBER       [tuple_index_expression]
 
@@ -197,18 +203,12 @@ add-expression:
     add-expression PLUS multiply-expression     [binary_op<PLUS>]
     add-expression MINUS multiply-expression    [binary_op<MINUS>]
 
-tuple-expression:
-    add-expression                                          [pass<0>]
-    OPEN_PAREN CLOSE_PAREN                                  [tuple_expression]
-    OPEN_PAREN expression COMMA CLOSE_PAREN                 [tuple_expression]
-    OPEN_PAREN expression COMMA expression-list CLOSE_PAREN [tuple_expression]
-
 relational-expression:
-    tuple-expression                                    [pass<0>]
-    relational-expression LESS tuple-expression         [binary_op<LESS>]
-    relational-expression GREATER tuple-expression      [binary_op<GREATER>]
-    relational-expression LESS_EQ tuple-expression      [binary_op<LESS_EQ>]
-    relational-expression GREATER_EQ tuple-expression   [binary_op<GREATER_EQ>]
+    add-expression                                  [pass<0>]
+    relational-expression LESS add-expression       [binary_op<LESS>]
+    relational-expression GREATER add-expression    [binary_op<GREATER>]
+    relational-expression LESS_EQ add-expression    [binary_op<LESS_EQ>]
+    relational-expression GREATER_EQ add-expression [binary_op<GREATER_EQ>]
 
 equality-expression:
     relational-expression                                   [pass<0>]

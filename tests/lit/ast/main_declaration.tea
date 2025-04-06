@@ -1,0 +1,10 @@
+// RUN: %tlang %s --emit ast | %FileCheck %s
+
+// CHECK: FunctionDecl
+// CHECK-SAME: main
+main: () -> i64 = {
+    // CHECK: ReturnStmt
+    // CHECK-NEXT: IntegerLiteral
+    // CHECK-SAME: 0
+    return 0;
+}

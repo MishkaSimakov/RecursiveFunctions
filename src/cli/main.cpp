@@ -17,9 +17,9 @@ class Main {
  public:
   static int main(int argc, char* argv[]) {
     return ExceptionsHandler::execute([argc, argv] {
-      auto arguments = ArgumentsReader::read(argc, argv);
+      auto config = ArgumentsReader::read(argc, argv);
 
-      auto front = Front::TeaFrontend(arguments.sources, arguments.output);
+      auto front = Front::TeaFrontend(std::move(config));
       front.compile();
 
       // Front::GlobalContext context;

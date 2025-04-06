@@ -27,7 +27,7 @@ class Mangler {
   std::string mangle_name(const QualifiedId& name) const;
 
  public:
-  Mangler(const StringPool& strings) : strings_(strings) {}
+  explicit Mangler(const StringPool& strings) : strings_(strings) {}
 
   std::string mangle(const SymbolInfo& symbol) const;
 };

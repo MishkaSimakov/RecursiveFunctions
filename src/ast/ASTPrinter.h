@@ -14,7 +14,7 @@ namespace Front {
 struct ASTPrinterConfig : ASTVisitorConfig {
   static constexpr auto order() { return Order::PREORDER; }
   static constexpr auto is_const() { return true; }
-  static constexpr auto override_all() { return false; }
+  static constexpr auto override_all() { return true; }
 };
 
 class ASTPrinter : public ASTVisitor<ASTPrinter, ASTPrinterConfig>,
@@ -74,8 +74,7 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, ASTPrinterConfig>,
   }
   bool visit_variable_declaration(const VariableDecl& value) {
     std::string_view name = context_.get_string(value.name);
-    add_node(fmt::format("VariableDecl {} {} {} {}", range_string(value), name,
-                         value.type->value->to_string(strings()),
+    add_node(fmt::format("VariableDecl {} {} {}", range_string(value), name,
                          get_specifiers_string(value)));
     return true;
   }
@@ -200,8 +199,8 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, ASTPrinterConfig>,
     return true;
   }
   bool visit_primitive_type(const PrimitiveTypeNode& value) {
-    add_node(fmt::format("PrimitiveType {} {}", range_string(value),
-                         value.value->to_string(strings())));
+    add_node(fmt::format("PrimitiveType {} {}{}", range_string(value),
+                         value.kind.to_string(), value.width));
     return true;
   }
   bool visit_tuple_type(const TupleTypeNode& value) {

@@ -5,6 +5,8 @@
 namespace Front {
 
 std::string Mangler::mangle_type(Type* type) const {
+  type = type->get_original();
+
   const std::unordered_map<size_t, std::string> signed_int_mapping = {
       {8, "a"},
       {16, "s"},
