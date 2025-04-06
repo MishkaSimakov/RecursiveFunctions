@@ -150,7 +150,7 @@ llvm::Function* IRGenerator::get_or_insert_function(
                              name, llvm_module_.get());
 
   // set names for arguments
-  FunctionDecl& decl = static_cast<FunctionDecl&>(info.declaration);
+  auto& decl = static_cast<FunctionDecl&>(info.declaration);
   for (size_t i = 0; i < decl.parameters.size(); ++i) {
     fun->getArg(i)->setName(module_.get_string(decl.parameters[i]->name));
   }
@@ -161,9 +161,9 @@ llvm::Function* IRGenerator::get_or_insert_function(
 std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
   auto temp_builder = std::make_unique<llvm::IRBuilder<>>(llvm_context_);
 
-  assert(alloca_block_ != nullptr);
+  assert(current_function_.has_value());
 
-  temp_builder->SetInsertPoint(alloca_block_);
+  temp_builder->SetInsertPoint(current_function_->get_alloca_block());
   return temp_builder;
 }
 
@@ -379,9 +379,15 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
 
   auto alloca_bb = llvm::BasicBlock::Create(llvm_context_, "alloca", fun);
   auto entry_bb = llvm::BasicBlock::Create(llvm_context_, "entry", fun);
+  auto return_bb = llvm::BasicBlock::Create(llvm_context_, "return", fun);
 
-  alloca_block_ = alloca_bb;
+  llvm_ir_builder_->SetInsertPoint(alloca_bb);
+  llvm::Value* result_ptr = llvm_ir_builder_->CreateAlloca(
+      map_type(value.return_type->value), nullptr, "result");
 
+  current_function_ = IRFunction(alloca_bb, return_bb, result_ptr);
+
+  // swap
   llvm_ir_builder_->SetInsertPoint(entry_bb);
   create_function_arguments(function_info, fun);
 
@@ -401,25 +407,34 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   // if function returns `unit` then we can create implicit return
   bool has_no_return = traverse(*value.body);
   if (has_no_return && value.return_type->value->is_unit()) {
-    llvm_ir_builder_->CreateRetVoid();
+    llvm_ir_builder_->CreateBr(current_function_->get_return_block());
   }
 
   // add br to basic block with allocas
   llvm_ir_builder_->SetInsertPoint(alloca_bb);
   llvm_ir_builder_->CreateBr(entry_bb);
 
+  llvm_ir_builder_->SetInsertPoint(return_bb);
+  auto result =
+      llvm_ir_builder_->CreateLoad(map_type(value.return_type->value),
+                                   current_function_->get_return_value());
+  llvm_ir_builder_->CreateRet(result);
+
   llvm::verifyFunction(*fun, &llvm::outs());
 
   // cleanup
   local_variables_.clear();
-  alloca_block_ = nullptr;
+
+  current_function_ = std::nullopt;
 
   return true;
 }
 
 bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
   auto return_value = compile_expression(*value.value);
-  llvm_ir_builder_->CreateRet(return_value);
+  llvm_ir_builder_->CreateStore(return_value,
+                                current_function_->get_return_value());
+  llvm_ir_builder_->CreateBr(current_function_->get_return_block());
 
   // we must stop generating IR for current scope after return statement
   return false;

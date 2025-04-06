@@ -4,6 +4,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 
+#include "Context.h"
+#include "Function.h"
 #include "ast/ASTVisitor.h"
 #include "compilation/ModuleContext.h"
 #include "compilation/mangling/Mangler.h"
@@ -13,16 +15,6 @@ struct IRGeneratorConfig : ASTVisitorConfig {
   static constexpr auto order() { return Order::POSTORDER; }
   static constexpr auto is_const() { return true; }
   static constexpr auto override_all() { return true; }
-};
-
-struct IRContext {
-  llvm::Module& llvm_module;
-
-  Mangler& mangler;
-  StringPool& strings;
-  TypesStorage& types;
-
-  llvm::LLVMContext& get_llvm_context() { return llvm_module.getContext(); }
 };
 
 class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
@@ -39,7 +31,8 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
     llvm::Value* pointer{nullptr};
   };
   std::unordered_map<const Declaration*, LocalVariableInfo> local_variables_;
-  llvm::BasicBlock* alloca_block_{nullptr};
+
+  std::optional<IRFunction> current_function_{std::nullopt};
 
   llvm::Value* current_initializing_value_{nullptr};
 
