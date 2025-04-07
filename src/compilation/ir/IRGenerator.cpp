@@ -54,21 +54,16 @@ llvm::Value* IRGenerator::compile_expr(
   return std::exchange(current_expr_value_, nullptr);
 }
 
-llvm::Value* IRGenerator::compile_expr_to(
-    llvm::Value* variable, const std::unique_ptr<Expression>& expr) {
+void IRGenerator::compile_expr_to(llvm::Value* variable,
+                                  const std::unique_ptr<Expression>& expr) {
   current_expr_value_ = nullptr;
-  current_initializing_value_ = variable;
-  traverse(*expr);
-  current_initializing_value_ = nullptr;
-  return std::exchange(current_expr_value_, nullptr);
-}
+  // slot_ = variable;
+  // traverse(*expr);
+  // slot_ = nullptr;
 
-void IRGenerator::store_argument_value(const VariableDecl& argument,
-                                       llvm::Value* value) {
-  LocalVariableInfo info = local_variables_.at(&argument);
-  if (argument.type->value->is_passed_by_value()) {
-    llvm_ir_builder_->CreateStore(value, info.pointer);
-  }
+  llvm::Value* result = compile_expr(expr);
+  llvm_ir_builder_->CreateStore(result, variable);
+  current_expr_value_ = nullptr;
 }
 
 void IRGenerator::create_function_arguments(const FunctionSymbolInfo& info,
@@ -79,18 +74,21 @@ void IRGenerator::create_function_arguments(const FunctionSymbolInfo& info,
 
     LocalVariableInfo parameter_info;
 
+    llvm::Value* llvm_arg = llvm_fun->getArg(i);
     Type* arg_ty = parameter.type->value->get_original();
     parameter_info.original_type = map_type(arg_ty);
 
     if (!arg_ty->is_passed_by_value()) {
       parameter_info.has_indirection = true;
-      parameter_info.pointer = llvm_fun->getArg(i);
+      parameter_info.pointer = llvm_arg;
     } else {
       auto name = fmt::format("{}.addr", module_.get_string(decl.name));
 
       parameter_info.has_indirection = false;
+      auto builder = get_alloca_builder();
       parameter_info.pointer =
-          get_alloca_builder()->CreateAlloca(map_type(arg_ty), nullptr, name);
+          builder->CreateAlloca(map_type(arg_ty), nullptr, name);
+      builder->CreateStore(llvm_arg, parameter_info.pointer);
     }
 
     local_variables_.emplace(&parameter, parameter_info);
@@ -168,19 +166,6 @@ std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
   return temp_builder;
 }
 
-void IRGenerator::emit_store(Expression& source, llvm::Value* destination) {
-  current_expr_value_ = nullptr;
-  current_initializing_value_ = destination;
-  traverse(source);
-  current_initializing_value_ = nullptr;
-  llvm::Value* source_value = std::exchange(current_expr_value_, nullptr);
-
-  // for complex types compile_initializer_for emits code that
-  // includes store into var_ptr so we don't need another one
-  if (source_value != nullptr) {
-    llvm_ir_builder_->CreateStore(source_value, destination);
-  }
-}
 IRContext IRGenerator::get_context() {
   return IRContext{*llvm_module_, mangler_, module_.get_strings_pool(),
                    module_.types_storage};
@@ -201,10 +186,7 @@ bool IRGenerator::traverse_implicit_lvalue_to_rvalue_conversion_expression(
 }
 
 bool IRGenerator::traverse_assignment_statement(const AssignmentStmt& value) {
-  auto left = compile_expr(value.left);
-  auto right = compile_expr(value.right);
-
-  llvm_ir_builder_->CreateStore(right, left);
+  compile_expr_to(compile_expr(value.left), value.right);
   return true;
 }
 
@@ -292,7 +274,7 @@ bool IRGenerator::traverse_call_expression(const CallExpr& value) {
 bool IRGenerator::traverse_variable_declaration(const VariableDecl& value) {
   if (value.initializer != nullptr) {
     llvm::Value* var_ptr = get_local_variable_value(value);
-    emit_store(*value.initializer, var_ptr);
+    compile_expr_to(var_ptr, value.initializer);
   }
 
   return true;
@@ -399,10 +381,6 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
     if (parameter.initializer != nullptr) {
       not_implemented("default function arguments");
     }
-
-    // load parameter into allocated local variable
-    llvm::Value* param_value = fun->getArg(i);
-    store_argument_value(parameter, param_value);
   }
 
   // if function returns `unit` then we can create implicit return
@@ -432,9 +410,10 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
 }
 
 bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
-  // compile_expr_to(current_function_->get_return_value(), value.value);
-  llvm::Value* result = compile_expr(value.value);
-  llvm_ir_builder_->CreateStore(result, current_function_->get_return_value());
+  compile_expr_to(current_function_->get_return_value(), value.value);
+  // llvm::Value* result = compile_expr(value.value);
+  // llvm_ir_builder_->CreateStore(result,
+  // current_function_->get_return_value());
   llvm_ir_builder_->CreateBr(current_function_->get_return_block());
 
   // we must stop generating IR for current scope after return statement
@@ -470,13 +449,12 @@ bool IRGenerator::traverse_tuple_expression(const TupleExpr& value) {
   llvm::Value* tuple = get_alloca_builder()->CreateAlloca(tuple_ty);
 
   for (size_t i = 0; i < value.elements.size(); ++i) {
-    Expression& element = *value.elements[i];
     llvm::Value* zero = llvm_ir_builder_->getInt32(0);
     llvm::Value* index = llvm_ir_builder_->getInt32(i);
 
     llvm::Value* element_ptr =
         llvm_ir_builder_->CreateGEP(tuple_ty, tuple, {zero, index});
-    emit_store(element, element_ptr);
+    compile_expr_to(element_ptr, value.elements[i]);
   }
 
   current_expr_value_ = tuple;
@@ -509,13 +487,18 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
   llvm::Function* memcpy_fun = llvm::Intrinsic::getDeclaration(
       llvm_module_.get(), llvm::Intrinsic::memcpy, std::move(types));
 
-  assert(current_initializing_value_ != nullptr);
-  llvm::Value* dest_ptr = current_initializing_value_;
+  llvm::Value* dest_ptr;
+  if (slot_ != nullptr) {
+    dest_ptr = slot_;
+  } else {
+    dest_ptr = get_alloca_builder()->CreateAlloca(map_type(value.type));
+  }
 
   llvm::Value* source_ptr = compile_expr(value.value);
 
   llvm_ir_builder_->CreateCall(memcpy_fun, {dest_ptr, source_ptr, size,
                                             llvm_ir_builder_->getInt1(false)});
+  current_expr_value_ = dest_ptr;
   return true;
 }
 

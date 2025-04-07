@@ -34,7 +34,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
 
   std::optional<IRFunction> current_function_{std::nullopt};
 
-  llvm::Value* current_initializing_value_{nullptr};
+  llvm::Value* slot_{nullptr};
 
   ModuleContext& module_;
 
@@ -48,17 +48,14 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
 
   llvm::Type* map_type(Type* type) const;
   llvm::Value* compile_expr(const std::unique_ptr<Expression>& expr);
-  llvm::Value* compile_expr_to(llvm::Value* variable,
-                               const std::unique_ptr<Expression>& expr);
+  void compile_expr_to(llvm::Value* variable,
+                       const std::unique_ptr<Expression>& expr);
 
-  void store_argument_value(const VariableDecl& argument, llvm::Value* value);
   void create_function_arguments(const FunctionSymbolInfo& info,
                                  llvm::Function* llvm_fun);
   llvm::Value* get_local_variable_value(const VariableDecl& decl);
   llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
   std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();
-
-  void emit_store(Expression& source, llvm::Value* destination);
 
   IRContext get_context();
 
