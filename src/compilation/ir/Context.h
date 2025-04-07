@@ -5,6 +5,7 @@ class Module;
 class LLVMContext;
 class Value;
 class BasicBlock;
+class Type;
 }  // namespace llvm
 
 class StringPool;
@@ -21,7 +22,7 @@ struct IRContext {
   StringPool& strings;
   TypesStorage& types;
 
-  llvm::LLVMContext& get_llvm_context() { return llvm_module.getContext(); }
+  llvm::LLVMContext& get_llvm_context();
 };
 
 }  // namespace Front

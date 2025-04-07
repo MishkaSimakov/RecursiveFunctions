@@ -1,11 +1,10 @@
 #pragma once
-#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
-#include <llvm/IR/Type.h>
 
 #include "Context.h"
 #include "Function.h"
+#include "TypesMapper.h"
 #include "ast/ASTVisitor.h"
 #include "compilation/ModuleContext.h"
 #include "compilation/mangling/Mangler.h"
@@ -22,7 +21,10 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   std::unique_ptr<llvm::Module> llvm_module_;
   std::unique_ptr<llvm::IRBuilder<>> llvm_ir_builder_;
 
+  ModuleContext& module_;
+
   Mangler mangler_;
+  TypesMapper types_mapper_;
 
   // information about current function
   struct LocalVariableInfo {
@@ -35,9 +37,6 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   std::optional<IRFunction> current_function_{std::nullopt};
 
   llvm::Value* slot_{nullptr};
-
-  ModuleContext& module_;
-
   llvm::Value* current_expr_value_{nullptr};
 
   // compiler must not pass through some kind of nodes. If it does, then I've
@@ -46,13 +45,11 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
     unreachable("Compiler doesn't pass through this kind of nodes.");
   }
 
-  llvm::Type* map_type(Type* type) const;
   llvm::Value* compile_expr(const std::unique_ptr<Expression>& expr);
   void compile_expr_to(llvm::Value* variable,
                        const std::unique_ptr<Expression>& expr);
 
-  void create_function_arguments(const FunctionSymbolInfo& info,
-                                 llvm::Function* llvm_fun);
+  void create_function_arguments();
   llvm::Value* get_local_variable_value(const VariableDecl& decl);
   llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
   std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();

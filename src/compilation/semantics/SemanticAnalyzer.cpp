@@ -51,6 +51,10 @@ void SemanticAnalyzer::convert_to_rvalue(
 }
 
 void SemanticAnalyzer::as_initializer(std::unique_ptr<Expression>& expression) {
+  if (expression->value_category == ValueCategory::RVALUE) {
+    return;
+  }
+
   if (expression->type->get_original()->get_kind() == Type::Kind::TUPLE) {
     const Expression& tuple = *expression;
     expression = std::make_unique<ImplicitTupleCopyExpr>(tuple.source_range,

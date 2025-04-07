@@ -7,3 +7,7 @@ f: () -> (i64, i64) = {
     // CHECK: ret void
     return (1, 2);
 }
+
+g: () -> () = {
+    tuple: (i64, i64) = f();
+}
