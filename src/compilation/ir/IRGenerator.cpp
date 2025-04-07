@@ -86,53 +86,7 @@ IRFunctionDecl IRGenerator::get_or_insert_function(
     return IRFunctionDecl(function, &info);
   }
 
-  // create new function
-  std::vector<llvm::Type*> arguments;
-  bool return_through_arg = !info.type->return_type->is_passed_by_value();
-  size_t arguments_offset = 0;
-  if (return_through_arg) {
-    arguments_offset = 1;
-    arguments.push_back(llvm_ir_builder_->getPtrTy());
-  }
-
-  for (Type* argument_type : info.type->arguments) {
-    if (!argument_type->is_passed_by_value()) {
-      argument_type = module_.types_storage.add_pointer(argument_type);
-    }
-
-    arguments.emplace_back(types_mapper_(argument_type));
-  }
-
-  Type* ret_ty = info.type->return_type;
-  llvm::Type* llvm_ret_ty;
-
-  if (ret_ty->is_unit() || !ret_ty->is_passed_by_value()) {
-    llvm_ret_ty = llvm_ir_builder_->getVoidTy();
-  } else {
-    llvm_ret_ty = types_mapper_(ret_ty);
-  }
-
-  auto llvm_func_type = llvm::FunctionType::get(llvm_ret_ty, arguments, false);
-
-  llvm::Function* fun =
-      llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
-                             name, llvm_module_.get());
-
-  if (return_through_arg) {
-    fun->addParamAttr(
-        0, llvm::Attribute::get(llvm_context_, llvm::Attribute::StructRet,
-                                types_mapper_(info.type->return_type)));
-    fun->getArg(0)->setName("result");
-  }
-
-  // set names for arguments
-  auto& decl = static_cast<FunctionDecl&>(info.declaration);
-  for (size_t i = 0; i < decl.parameters.size(); ++i) {
-    fun->getArg(i + arguments_offset)
-        ->setName(module_.get_string(decl.parameters[i]->name));
-  }
-
-  return IRFunctionDecl(fun, &info);
+  return IRFunctionDecl::create(get_context(), info);
 }
 
 std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
@@ -144,9 +98,17 @@ std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
   return temp_builder;
 }
 
+llvm::Value* IRGenerator::get_slot(Type* type) {
+  if (slot_ != nullptr) {
+    return std::exchange(slot_, nullptr);
+  }
+
+  return get_alloca_builder()->CreateAlloca(types_mapper_(type));
+}
+
 IRContext IRGenerator::get_context() {
   return IRContext{*llvm_module_, mangler_, module_.get_strings_pool(),
-                   module_.types_storage};
+                   module_.types_storage, types_mapper_};
 }
 
 IRGenerator::IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module)
@@ -236,14 +198,7 @@ bool IRGenerator::traverse_call_expression(const CallExpr& value) {
   bool return_through_arg = !fun_ty->return_type->is_passed_by_value();
   llvm::Value* result;
   if (return_through_arg) {
-    if (slot_ != nullptr) {
-      result = slot_;
-      slot_ = nullptr;
-    } else {
-      result = get_alloca_builder()->CreateAlloca(
-          types_mapper_(fun_ty->return_type));
-    }
-
+    result = get_slot(fun_ty->return_type);
     arguments.push_back(result);
   }
 
@@ -351,36 +306,38 @@ bool IRGenerator::traverse_binary_operator(const BinaryOperator& value) {
 
 bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   FunctionSymbolInfo& info = module_.functions_info.at(&value);
-  llvm::Function* fun = get_or_insert_function(info).get_llvm_function();
+  IRFunctionDecl decl = get_or_insert_function(info);
 
   // external function doesn't have a body
   if (value.specifiers.is_extern()) {
     return true;
   }
 
-  auto alloca_bb = llvm::BasicBlock::Create(llvm_context_, "alloca", fun);
-  auto entry_bb = llvm::BasicBlock::Create(llvm_context_, "entry", fun);
-  auto return_bb = llvm::BasicBlock::Create(llvm_context_, "return", fun);
+  auto alloca_bb = llvm::BasicBlock::Create(llvm_context_, "alloca",
+                                            decl.get_llvm_function());
+  auto entry_bb = llvm::BasicBlock::Create(llvm_context_, "entry",
+                                           decl.get_llvm_function());
+  auto return_bb = llvm::BasicBlock::Create(llvm_context_, "return",
+                                            decl.get_llvm_function());
 
   llvm_ir_builder_->SetInsertPoint(alloca_bb);
   llvm::Value* result_ptr;
-  bool return_through_arg = !info.type->return_type->is_passed_by_value();
+  bool return_through_arg = decl.return_through_argument();
 
   if (info.type->return_type->is_unit()) {
     result_ptr = nullptr;
   } else if (return_through_arg) {
-    result_ptr = fun->getArg(0);
+    result_ptr = decl.get_llvm_function()->getArg(0);
   } else {
     result_ptr = llvm_ir_builder_->CreateAlloca(
         types_mapper_(value.return_type->value), nullptr, "result");
   }
 
-  current_function_ = IRFunction(fun, &info, alloca_bb, return_bb, result_ptr);
+  current_function_ = IRFunction(decl, alloca_bb, return_bb, result_ptr);
 
-  // swap
-  llvm_ir_builder_->SetInsertPoint(entry_bb);
   create_function_arguments();
 
+  llvm_ir_builder_->SetInsertPoint(entry_bb);
   for (size_t i = 0; i < value.parameters.size(); ++i) {
     VariableDecl& parameter = *value.parameters[i];
     // for now default arguments values are not supported
@@ -410,7 +367,7 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
     llvm_ir_builder_->CreateRet(result);
   }
 
-  llvm::verifyFunction(*fun, &llvm::outs());
+  llvm::verifyFunction(*decl.get_llvm_function(), &llvm::outs());
 
   // cleanup
   local_variables_.clear();
@@ -458,13 +415,7 @@ bool IRGenerator::traverse_member_expression(const MemberExpr& value) {
 
 bool IRGenerator::traverse_tuple_expression(const TupleExpr& value) {
   llvm::Type* tuple_ty = types_mapper_(value.type);
-  llvm::Value* tuple;
-  if (slot_ != nullptr) {
-    tuple = slot_;
-    slot_ = nullptr;
-  } else {
-    tuple = get_alloca_builder()->CreateAlloca(tuple_ty);
-  }
+  llvm::Value* tuple = get_slot(value.type);
 
   for (size_t i = 0; i < value.elements.size(); ++i) {
     llvm::Value* zero = llvm_ir_builder_->getInt32(0);
@@ -494,14 +445,7 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
     const ImplicitTupleCopyExpr& value) {
   // for empty tuple do nothing
   if (value.type->is_unit()) {
-    if (slot_ != nullptr) {
-      current_expr_value_ = slot_;
-      slot_ = nullptr;
-    } else {
-      current_expr_value_ =
-          get_alloca_builder()->CreateAlloca(types_mapper_(value.type));
-    }
-
+    current_expr_value_ = get_slot(value.type);
     return true;
   }
 
@@ -518,14 +462,7 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
   llvm::Function* memcpy_fun = llvm::Intrinsic::getDeclaration(
       llvm_module_.get(), llvm::Intrinsic::memcpy, std::move(types));
 
-  llvm::Value* dest_ptr;
-  if (slot_ != nullptr) {
-    dest_ptr = slot_;
-    slot_ = nullptr;
-  } else {
-    dest_ptr = get_alloca_builder()->CreateAlloca(types_mapper_(value.type));
-  }
-
+  llvm::Value* dest_ptr = get_slot(value.type);
   llvm::Value* source_ptr = compile_expr(value.value);
 
   llvm_ir_builder_->CreateCall(memcpy_fun, {dest_ptr, source_ptr, size,

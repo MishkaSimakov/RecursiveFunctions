@@ -10,10 +10,9 @@ class IRFunction : public IRFunctionDecl {
   llvm::Value* return_value_{nullptr};
 
  public:
-  IRFunction(llvm::Function* llvm_function, FunctionSymbolInfo* info,
-             llvm::BasicBlock* alloca_block, llvm::BasicBlock* return_block,
-             llvm::Value* return_value)
-      : IRFunctionDecl(llvm_function, info),
+  IRFunction(IRFunctionDecl declaration, llvm::BasicBlock* alloca_block,
+             llvm::BasicBlock* return_block, llvm::Value* return_value)
+      : IRFunctionDecl(declaration),
         alloca_block_(alloca_block),
         return_block_(return_block),
         return_value_(return_value) {}

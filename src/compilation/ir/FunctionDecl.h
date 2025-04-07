@@ -15,6 +15,9 @@ class IRFunctionDecl {
   IRFunctionDecl(llvm::Function* llvm_function, const FunctionSymbolInfo* info)
       : llvm_function_(llvm_function), info_(info) {}
 
+  static IRFunctionDecl create(IRContext context,
+                               const FunctionSymbolInfo& info);
+
   llvm::Function* get_llvm_function() { return llvm_function_; }
   const FunctionSymbolInfo* get_info() { return info_; }
 

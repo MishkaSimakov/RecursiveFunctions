@@ -15,6 +15,7 @@ namespace Front {
 
 class Mangler;
 class TypesStorage;
+class TypesMapper;
 
 struct IRContext {
   llvm::Module& llvm_module;
@@ -22,6 +23,7 @@ struct IRContext {
   Mangler& mangler;
   StringPool& strings;
   TypesStorage& types;
+  TypesMapper& types_mapper;
 
   llvm::LLVMContext& get_llvm_context();
 };

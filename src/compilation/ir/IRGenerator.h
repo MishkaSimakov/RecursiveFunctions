@@ -54,6 +54,8 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   IRFunctionDecl get_or_insert_function(const FunctionSymbolInfo& info);
   std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();
 
+  llvm::Value* get_slot(Type* type);
+
   IRContext get_context();
 
  public:
