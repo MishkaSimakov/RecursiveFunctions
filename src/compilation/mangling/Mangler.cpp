@@ -69,6 +69,10 @@ std::string Mangler::mangle_type(Type* type) const {
       // TODO: full name mangling
       return mangle_source_name(class_ty->name.parts.back());
     }
+    case Type::Kind::POINTER: {
+      auto* pointer_ty = static_cast<PointerType*>(type);
+      return "P" + mangle_type(pointer_ty->child);
+    }
 
     default:
       not_implemented();

@@ -1,13 +1,19 @@
 // RUN: %tlang %s --emit ir | %FileCheck %s
 
-// CHECK: @_Z1fv
-f: () -> () = {}
+// CHECK: @_Z1av
+a: () -> () = {}
 
-// CHECK: @_Z1gx
-g: (a: i64) -> () = {}
+// CHECK: @_Z1bx
+b: (a: i64) -> () = {}
 
-// CHECK: @_Z1hxx
-h: (a: i64, b: i64) -> () = {}
+// CHECK: @_Z1cxx
+c: (a: i64, b: i64) -> () = {}
+
+// CHECK: @_Z1dPc
+d: (a: *c8) -> () = {}
+
+// CHECK: @_Z1ePPc
+e: (a: **c8) -> () = {}
 
 // CHECK: @_Z4funcb
 func: (a: b8) -> i64 = {

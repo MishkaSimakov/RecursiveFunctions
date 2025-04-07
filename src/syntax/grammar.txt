@@ -71,7 +71,7 @@ parameter-declaration:
 
 // types
 type-name:
-    type-name STAR      [pointer_type]
+    STAR type-name      [pointer_type]
     primitive-type      [pass<0>]
     tuple-type          [pass<0>]
     user-defined-type   [pass<0>]

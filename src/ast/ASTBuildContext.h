@@ -193,7 +193,7 @@ class ASTBuildContext {
   }
 
   NodePtr pointer_type(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto child = cast_move<TypeNode>(std::move(nodes[0]));
+    auto child = cast_move<TypeNode>(std::move(nodes[1]));
     return make_node<PointerTypeNode>(source_range, std::move(child));
   }
 
