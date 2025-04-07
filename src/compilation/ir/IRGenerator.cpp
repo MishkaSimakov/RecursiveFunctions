@@ -33,8 +33,7 @@ void IRGenerator::compile_expr_to(llvm::Value* variable,
 void IRGenerator::create_function_arguments() {
   const auto& decl = static_cast<const FunctionDecl&>(
       current_function_->get_info()->declaration);
-  bool return_through_arg =
-      !current_function_->get_info()->type->return_type->is_passed_by_value();
+  bool return_through_arg = current_function_->return_through_argument();
   size_t arguments_offset = return_through_arg ? 1 : 0;
   for (size_t i = 0; i < decl.parameters.size(); ++i) {
     VariableDecl& parameter = *decl.parameters[i];

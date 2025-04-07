@@ -1,11 +1,12 @@
 #pragma once
 
 namespace llvm {
-class Module;
 class LLVMContext;
-class Value;
+class Module;
+class Function;
 class BasicBlock;
 class Type;
+class Value;
 }  // namespace llvm
 
 class StringPool;

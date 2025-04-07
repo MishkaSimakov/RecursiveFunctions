@@ -1,15 +1,10 @@
 #pragma once
 
-#include "Context.h"
+#include "FunctionDecl.h"
 
 namespace Front {
-struct FunctionSymbolInfo;
-
-class IRFunction {
+class IRFunction : public IRFunctionDecl {
  private:
-  llvm::Function* llvm_function_;
-  FunctionSymbolInfo* info_;
-
   llvm::BasicBlock* alloca_block_{nullptr};
   llvm::BasicBlock* return_block_{nullptr};
   llvm::Value* return_value_{nullptr};
@@ -18,8 +13,7 @@ class IRFunction {
   IRFunction(llvm::Function* llvm_function, FunctionSymbolInfo* info,
              llvm::BasicBlock* alloca_block, llvm::BasicBlock* return_block,
              llvm::Value* return_value)
-      : llvm_function_(llvm_function),
-        info_(info),
+      : IRFunctionDecl(llvm_function, info),
         alloca_block_(alloca_block),
         return_block_(return_block),
         return_value_(return_value) {}
