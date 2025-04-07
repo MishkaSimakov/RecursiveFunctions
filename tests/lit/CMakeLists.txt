@@ -23,6 +23,6 @@ file(GENERATE
 
 add_custom_target(
         tests.lit
-        COMMAND ${LLVM_LIT} "${CMAKE_CURRENT_BINARY_DIR}" -v
+        COMMAND ${LLVM_LIT} "${CMAKE_CURRENT_BINARY_DIR}" -v --max-time=5
         DEPENDS cli tests.lit.execution.library
 )

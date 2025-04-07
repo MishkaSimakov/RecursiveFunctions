@@ -45,19 +45,20 @@ llvm::Type* IRGenerator::map_type(Type* type) const {
   }
 }
 
-llvm::Value* IRGenerator::compile_expression(const Expression& expr) {
+llvm::Value* IRGenerator::compile_expr(
+    const std::unique_ptr<Expression>& expr) {
   current_expr_value_ = nullptr;
-  traverse(expr);
+  traverse(*expr);
   assert(current_expr_value_ != nullptr &&
          "Expression value must be calculated.");
   return std::exchange(current_expr_value_, nullptr);
 }
 
-llvm::Value* IRGenerator::compile_initializer_for(llvm::Value* var_ptr,
-                                                  const Expression& expr) {
+llvm::Value* IRGenerator::compile_expr_to(
+    llvm::Value* variable, const std::unique_ptr<Expression>& expr) {
   current_expr_value_ = nullptr;
-  current_initializing_value_ = var_ptr;
-  traverse(expr);
+  current_initializing_value_ = variable;
+  traverse(*expr);
   current_initializing_value_ = nullptr;
   return std::exchange(current_expr_value_, nullptr);
 }
@@ -194,21 +195,21 @@ IRGenerator::IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module)
 
 bool IRGenerator::traverse_implicit_lvalue_to_rvalue_conversion_expression(
     const ImplicitLvalueToRvalueConversionExpr& value) {
-  llvm::Value* ptr = compile_expression(*value.value);
+  llvm::Value* ptr = compile_expr(value.value);
   current_expr_value_ = llvm_ir_builder_->CreateLoad(map_type(value.type), ptr);
   return true;
 }
 
 bool IRGenerator::traverse_assignment_statement(const AssignmentStmt& value) {
-  auto left = compile_expression(*value.left);
-  auto right = compile_expression(*value.right);
+  auto left = compile_expr(value.left);
+  auto right = compile_expr(value.right);
 
   llvm_ir_builder_->CreateStore(right, left);
   return true;
 }
 
 bool IRGenerator::traverse_if_statement(const IfStmt& value) {
-  llvm::Value* condition = compile_expression(*value.condition);
+  llvm::Value* condition = compile_expr(value.condition);
   llvm::Function* current_function =
       llvm_ir_builder_->GetInsertBlock()->getParent();
 
@@ -249,7 +250,7 @@ bool IRGenerator::traverse_while_statement(const WhileStmt& value) {
 
   // compile loop condition
   llvm_ir_builder_->SetInsertPoint(condition_block);
-  llvm::Value* condition = compile_expression(*value.condition);
+  llvm::Value* condition = compile_expr(value.condition);
   llvm_ir_builder_->CreateCondBr(condition, loop_block, after_loop_block);
 
   // compile loop body
@@ -266,7 +267,7 @@ bool IRGenerator::traverse_while_statement(const WhileStmt& value) {
 
 bool IRGenerator::traverse_call_expression(const CallExpr& value) {
   llvm::Function* callee =
-      llvm::dyn_cast<llvm::Function>(compile_expression(*value.callee));
+      llvm::dyn_cast<llvm::Function>(compile_expr(value.callee));
 
   std::vector<llvm::Value*> arguments;
   arguments.reserve(value.arguments.size());
@@ -274,12 +275,12 @@ bool IRGenerator::traverse_call_expression(const CallExpr& value) {
     Type* arg_ty = argument->type->get_original();
 
     if (arg_ty->is_passed_by_value()) {
-      arguments.emplace_back(compile_expression(*argument));
+      arguments.emplace_back(compile_expr(argument));
     } else {
       // create temporary
       llvm::Value* tmp_ptr =
           get_alloca_builder()->CreateAlloca(map_type(arg_ty));
-      compile_initializer_for(tmp_ptr, *argument);
+      compile_expr_to(tmp_ptr, argument);
       arguments.emplace_back(tmp_ptr);
     }
   }
@@ -319,8 +320,8 @@ bool IRGenerator::traverse_id_expression(const IdExpr& value) {
 }
 
 bool IRGenerator::traverse_binary_operator(const BinaryOperator& value) {
-  auto left_op = compile_expression(*value.left);
-  auto right_op = compile_expression(*value.right);
+  auto left_op = compile_expr(value.left);
+  auto right_op = compile_expr(value.right);
 
   auto get_llvm_binary_op_type = [](BinaryOperator::OpType op_type) {
     using BinaryOps = llvm::Instruction::BinaryOps;
@@ -431,9 +432,9 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
 }
 
 bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
-  auto return_value = compile_expression(*value.value);
-  llvm_ir_builder_->CreateStore(return_value,
-                                current_function_->get_return_value());
+  // compile_expr_to(current_function_->get_return_value(), value.value);
+  llvm::Value* result = compile_expr(value.value);
+  llvm_ir_builder_->CreateStore(result, current_function_->get_return_value());
   llvm_ir_builder_->CreateBr(current_function_->get_return_block());
 
   // we must stop generating IR for current scope after return statement
@@ -442,6 +443,9 @@ bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
 
 bool IRGenerator::visit_integer_literal(const IntegerLiteral& value) {
   current_expr_value_ = llvm_ir_builder_->getInt64(value.value);
+
+  // llvm_ir_builder_->CreateStore(llvm_ir_builder_->getInt64(value.value),
+  // current_initializing_value_);
   return true;
 }
 
@@ -452,7 +456,7 @@ bool IRGenerator::visit_bool_literal(const BoolLiteral& value) {
 
 bool IRGenerator::traverse_member_expression(const MemberExpr& value) {
   llvm::Type* result_type = map_type(value.type);
-  llvm::Value* cls_pointer = compile_expression(*value.left);
+  llvm::Value* cls_pointer = compile_expr(value.left);
   llvm::Value* index = llvm_ir_builder_->getInt32(value.member_index);
 
   current_expr_value_ =
@@ -481,7 +485,7 @@ bool IRGenerator::traverse_tuple_expression(const TupleExpr& value) {
 
 bool IRGenerator::traverse_tuple_index_expression(const TupleIndexExpr& value) {
   llvm::Type* tuple_ty = map_type(value.left->type);
-  llvm::Value* tuple_ptr = compile_expression(*value.left);
+  llvm::Value* tuple_ptr = compile_expr(value.left);
   llvm::Value* zero = llvm_ir_builder_->getInt32(0);
   llvm::Value* index = llvm_ir_builder_->getInt32(value.index);
 
@@ -508,7 +512,7 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
   assert(current_initializing_value_ != nullptr);
   llvm::Value* dest_ptr = current_initializing_value_;
 
-  llvm::Value* source_ptr = compile_expression(*value.value);
+  llvm::Value* source_ptr = compile_expr(value.value);
 
   llvm_ir_builder_->CreateCall(memcpy_fun, {dest_ptr, source_ptr, size,
                                             llvm_ir_builder_->getInt1(false)});
@@ -517,7 +521,7 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
 
 bool IRGenerator::traverse_unary_operator(const UnaryOperator& value) {
   if (value.op_type == UnaryOperator::OpType::NOT) {
-    llvm::Value* argument = compile_expression(*value.value);
+    llvm::Value* argument = compile_expr(value.value);
     llvm::Value* truth = llvm_ir_builder_->getInt1(true);
     current_expr_value_ = llvm_ir_builder_->CreateXor(argument, truth);
   } else {

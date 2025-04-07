@@ -47,9 +47,9 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   }
 
   llvm::Type* map_type(Type* type) const;
-  llvm::Value* compile_expression(const Expression& expr);
-  llvm::Value* compile_initializer_for(llvm::Value* var_ptr,
-                                       const Expression& expr);
+  llvm::Value* compile_expr(const std::unique_ptr<Expression>& expr);
+  llvm::Value* compile_expr_to(llvm::Value* variable,
+                               const std::unique_ptr<Expression>& expr);
 
   void store_argument_value(const VariableDecl& argument, llvm::Value* value);
   void create_function_arguments(const FunctionSymbolInfo& info,
