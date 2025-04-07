@@ -1,0 +1,17 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+f: () -> () = {
+    // CHECK-NOT: %result
+    // CHECK: ret void
+}
+
+g: () -> () = {
+    // CHECK-NOT: %result
+    // CHECK: ret void
+    return f();
+}
+
+h: () -> () = {
+    // CHECK-NOT: store
+    res: () = f();
+}

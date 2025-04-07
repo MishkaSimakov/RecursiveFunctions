@@ -122,6 +122,12 @@ llvm::Function* IRGenerator::get_or_insert_function(
 
   // create new function
   std::vector<llvm::Type*> arguments;
+  bool return_through_arg = !info.type->return_type->is_passed_by_value();
+  size_t arguments_offset = 0;
+  if (return_through_arg) {
+    arguments_offset = 1;
+    arguments.push_back(llvm_ir_builder_->getPtrTy());
+  }
 
   for (Type* argument_type : info.type->arguments) {
     if (!argument_type->is_passed_by_value()) {
@@ -134,13 +140,9 @@ llvm::Function* IRGenerator::get_or_insert_function(
   Type* ret_ty = info.type->return_type;
   llvm::Type* llvm_ret_ty;
 
-  if (ret_ty->is_unit()) {
+  if (ret_ty->is_unit() || !ret_ty->is_passed_by_value()) {
     llvm_ret_ty = llvm_ir_builder_->getVoidTy();
   } else {
-    if (!ret_ty->is_passed_by_value()) {
-      ret_ty = module_.types_storage.add_pointer(ret_ty);
-    }
-
     llvm_ret_ty = map_type(ret_ty);
   }
 
@@ -150,10 +152,18 @@ llvm::Function* IRGenerator::get_or_insert_function(
       llvm::Function::Create(llvm_func_type, llvm::Function::ExternalLinkage,
                              name, llvm_module_.get());
 
+  if (return_through_arg) {
+    fun->addParamAttr(
+        0, llvm::Attribute::get(llvm_context_, llvm::Attribute::StructRet,
+                                map_type(info.type->return_type)));
+    fun->getArg(0)->setName("result");
+  }
+
   // set names for arguments
   auto& decl = static_cast<FunctionDecl&>(info.declaration);
   for (size_t i = 0; i < decl.parameters.size(); ++i) {
-    fun->getArg(i)->setName(module_.get_string(decl.parameters[i]->name));
+    fun->getArg(i + arguments_offset)
+        ->setName(module_.get_string(decl.parameters[i]->name));
   }
 
   return fun;
@@ -354,8 +364,8 @@ bool IRGenerator::traverse_binary_operator(const BinaryOperator& value) {
 }
 
 bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
-  const FunctionSymbolInfo& function_info = module_.functions_info.at(&value);
-  llvm::Function* fun = get_or_insert_function(function_info);
+  const FunctionSymbolInfo& info = module_.functions_info.at(&value);
+  llvm::Function* fun = get_or_insert_function(info);
 
   // external function doesn't have a body
   if (value.specifiers.is_extern()) {
@@ -367,14 +377,23 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   auto return_bb = llvm::BasicBlock::Create(llvm_context_, "return", fun);
 
   llvm_ir_builder_->SetInsertPoint(alloca_bb);
-  llvm::Value* result_ptr = llvm_ir_builder_->CreateAlloca(
-      map_type(value.return_type->value), nullptr, "result");
+  llvm::Value* result_ptr;
+  bool return_through_arg = !info.type->return_type->is_passed_by_value();
+
+  if (info.type->return_type->is_unit()) {
+    result_ptr = nullptr;
+  } else if (return_through_arg) {
+    result_ptr = fun->getArg(0);
+  } else {
+    result_ptr = llvm_ir_builder_->CreateAlloca(
+        map_type(value.return_type->value), nullptr, "result");
+  }
 
   current_function_ = IRFunction(alloca_bb, return_bb, result_ptr);
 
   // swap
   llvm_ir_builder_->SetInsertPoint(entry_bb);
-  create_function_arguments(function_info, fun);
+  create_function_arguments(info, fun);
 
   for (size_t i = 0; i < value.parameters.size(); ++i) {
     VariableDecl& parameter = *value.parameters[i];
@@ -396,10 +415,14 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   llvm_ir_builder_->CreateBr(entry_bb);
 
   llvm_ir_builder_->SetInsertPoint(return_bb);
-  auto result =
-      llvm_ir_builder_->CreateLoad(map_type(value.return_type->value),
-                                   current_function_->get_return_value());
-  llvm_ir_builder_->CreateRet(result);
+  if (return_through_arg || info.type->return_type->is_unit()) {
+    llvm_ir_builder_->CreateRetVoid();
+  } else {
+    auto result =
+        llvm_ir_builder_->CreateLoad(map_type(value.return_type->value),
+                                     current_function_->get_return_value());
+    llvm_ir_builder_->CreateRet(result);
+  }
 
   llvm::verifyFunction(*fun, &llvm::outs());
 
@@ -412,10 +435,11 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
 }
 
 bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
-  compile_expr_to(current_function_->get_return_value(), value.value);
-  // llvm::Value* result = compile_expr(value.value);
-  // llvm_ir_builder_->CreateStore(result,
-  // current_function_->get_return_value());
+  if (value.value->type->is_unit()) {
+    compile_expr(value.value);
+  } else {
+    compile_expr_to(current_function_->get_return_value(), value.value);
+  }
   llvm_ir_builder_->CreateBr(current_function_->get_return_block());
 
   // we must stop generating IR for current scope after return statement
@@ -476,6 +500,19 @@ bool IRGenerator::traverse_tuple_index_expression(const TupleIndexExpr& value) {
 
 bool IRGenerator::traverse_implicit_tuple_copy_expression(
     const ImplicitTupleCopyExpr& value) {
+  // for empty tuple do nothing
+  if (value.type->is_unit()) {
+    if (slot_ != nullptr) {
+      current_expr_value_ = slot_;
+      slot_ = nullptr;
+    } else {
+      current_expr_value_ =
+          get_alloca_builder()->CreateAlloca(map_type(value.type));
+    }
+
+    return true;
+  }
+
   std::vector<llvm::Type*> types{
       llvm_ir_builder_->getPtrTy(),
       llvm_ir_builder_->getPtrTy(),

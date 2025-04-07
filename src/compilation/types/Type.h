@@ -42,7 +42,8 @@ struct Type {
   }
 
   bool is_passed_by_value() const {
-    return get_original()->is_primitive() || get_kind().in<Kind::POINTER>();
+    return get_original()->is_primitive() || get_kind().in<Kind::POINTER>() ||
+           is_unit();
   }
 
   bool is_structural() const {
