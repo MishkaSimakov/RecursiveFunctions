@@ -56,14 +56,15 @@ llvm::Value* IRGenerator::compile_expr(
 
 void IRGenerator::compile_expr_to(llvm::Value* variable,
                                   const std::unique_ptr<Expression>& expr) {
-  current_expr_value_ = nullptr;
-  // slot_ = variable;
-  // traverse(*expr);
-  // slot_ = nullptr;
-
+  llvm::Value* old_slot = std::exchange(slot_, variable);
   llvm::Value* result = compile_expr(expr);
-  llvm_ir_builder_->CreateStore(result, variable);
-  current_expr_value_ = nullptr;
+
+  if (slot_ != nullptr) {
+    assert(slot_ == variable);
+    llvm_ir_builder_->CreateStore(result, variable);
+  }
+
+  slot_ = old_slot;
 }
 
 void IRGenerator::create_function_arguments(const FunctionSymbolInfo& info,
@@ -121,6 +122,7 @@ llvm::Function* IRGenerator::get_or_insert_function(
 
   // create new function
   std::vector<llvm::Type*> arguments;
+
   for (Type* argument_type : info.type->arguments) {
     if (!argument_type->is_passed_by_value()) {
       argument_type = module_.types_storage.add_pointer(argument_type);
@@ -490,6 +492,7 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
   llvm::Value* dest_ptr;
   if (slot_ != nullptr) {
     dest_ptr = slot_;
+    slot_ = nullptr;
   } else {
     dest_ptr = get_alloca_builder()->CreateAlloca(map_type(value.type));
   }
