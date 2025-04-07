@@ -51,7 +51,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
 
   void create_function_arguments();
   llvm::Value* get_local_variable_value(const VariableDecl& decl);
-  llvm::Function* get_or_insert_function(const FunctionSymbolInfo& info);
+  IRFunctionDecl get_or_insert_function(const FunctionSymbolInfo& info);
   std::unique_ptr<llvm::IRBuilder<>> get_alloca_builder();
 
   IRContext get_context();

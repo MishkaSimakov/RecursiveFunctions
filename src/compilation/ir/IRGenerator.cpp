@@ -78,12 +78,12 @@ llvm::Value* IRGenerator::get_local_variable_value(const VariableDecl& decl) {
   return info.pointer;
 }
 
-llvm::Function* IRGenerator::get_or_insert_function(
+IRFunctionDecl IRGenerator::get_or_insert_function(
     const FunctionSymbolInfo& info) {
   std::string name = mangler_.mangle(info);
   llvm::Function* function = llvm_module_->getFunction(name);
   if (function != nullptr) {
-    return function;
+    return IRFunctionDecl(function, &info);
   }
 
   // create new function
@@ -132,7 +132,7 @@ llvm::Function* IRGenerator::get_or_insert_function(
         ->setName(module_.get_string(decl.parameters[i]->name));
   }
 
-  return fun;
+  return IRFunctionDecl(fun, &info);
 }
 
 std::unique_ptr<llvm::IRBuilder<>> IRGenerator::get_alloca_builder() {
@@ -291,7 +291,8 @@ bool IRGenerator::traverse_id_expression(const IdExpr& value) {
             current_expr_value_ = get_local_variable_value(decl);
           },
           [&](const FunctionSymbolInfo& fun) {
-            current_expr_value_ = get_or_insert_function(fun);
+            current_expr_value_ =
+                get_or_insert_function(fun).get_llvm_function();
           }},
       info);
 
@@ -350,7 +351,7 @@ bool IRGenerator::traverse_binary_operator(const BinaryOperator& value) {
 
 bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   FunctionSymbolInfo& info = module_.functions_info.at(&value);
-  llvm::Function* fun = get_or_insert_function(info);
+  llvm::Function* fun = get_or_insert_function(info).get_llvm_function();
 
   // external function doesn't have a body
   if (value.specifiers.is_extern()) {

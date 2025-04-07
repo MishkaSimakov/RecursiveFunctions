@@ -18,9 +18,6 @@ class IRFunction : public IRFunctionDecl {
         return_block_(return_block),
         return_value_(return_value) {}
 
-  llvm::Function* get_llvm_function() { return llvm_function_; }
-  FunctionSymbolInfo* get_info() { return info_; }
-
   llvm::BasicBlock* get_alloca_block() { return alloca_block_; }
   llvm::BasicBlock* get_return_block() { return return_block_; }
 
