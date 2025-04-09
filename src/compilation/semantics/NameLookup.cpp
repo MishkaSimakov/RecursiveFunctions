@@ -56,7 +56,9 @@ void SemanticAnalyzer::inject_symbol(ModuleContext& module,
             local_scope->add_variable(local_name, var.declaration, var_ty);
           },
           [&](const NamespaceSymbolInfo& nmsp) {
-            not_implemented("exported namespaces are not implemented");
+            for (auto& nmsp_symbol : nmsp.subscope->symbols) {
+              inject_symbol(module, nmsp_symbol.second);
+            }
           },
           [&](const FunctionSymbolInfo& fun) {
             Type* fun_ty = inject_type(fun.type, external_strings);

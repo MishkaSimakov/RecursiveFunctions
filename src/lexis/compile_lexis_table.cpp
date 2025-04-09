@@ -35,9 +35,9 @@ int main() {
   generator[TokenType::KW_EXTERN] = "extern";
   generator[TokenType::KW_NAMESPACE] = "namespace";
   generator[TokenType::KW_TYPE] = "type";
+  generator[TokenType::KW_AS] = "as";
 
   // literals
-  generator[TokenType::KW_NULLPTR] = "nullptr";
   generator[TokenType::KW_FALSE] = "false";
   generator[TokenType::KW_TRUE] = "true";
 

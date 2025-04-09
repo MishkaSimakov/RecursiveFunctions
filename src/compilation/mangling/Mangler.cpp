@@ -4,7 +4,7 @@
 
 namespace Front {
 
-std::string Mangler::mangle_type(Type* type) const {
+MangledMess Mangler::mangle_type(Type* type) const {
   type = type->get_original();
 
   const std::unordered_map<size_t, std::string> signed_int_mapping = {
@@ -26,42 +26,45 @@ std::string Mangler::mangle_type(Type* type) const {
   };
 
   switch (type->get_kind()) {
-    case Type::Kind::FUNCTION:
-      return "F" + mangle_bare_function_type(static_cast<FunctionType*>(type));
+    case Type::Kind::FUNCTION: {
+      auto* fun_ty = static_cast<FunctionType*>(type);
+
+      MangledMess result;
+      result.append("F", false);
+      result.append(mangle_bare_function_type(fun_ty));
+      return result;
+    }
     case Type::Kind::BOOL:
-      return "b";
+      return {"b", false};
     case Type::Kind::SIGNED_INT: {
       auto* int_type = static_cast<SignedIntType*>(type);
-      return signed_int_mapping.at(int_type->width);
+      return {signed_int_mapping.at(int_type->width), false};
     }
     case Type::Kind::UNSIGNED_INT: {
       auto* int_type = static_cast<UnsignedIntType*>(type);
-      return unsigned_int_mapping.at(int_type->width);
+      return {unsigned_int_mapping.at(int_type->width), false};
     }
     case Type::Kind::CHAR: {
       auto* char_type = static_cast<CharType*>(type);
-      return char_mapping.at(char_type->width);
+      return {char_mapping.at(char_type->width), false};
     }
     case Type::Kind::TUPLE: {
       auto* tuple_ty = static_cast<TupleType*>(type);
-      if (tuple_ty->elements.empty()) {
-        return "v";
-      }
 
       constexpr auto kTupleTypeName = "tuple";
       // vendor-specific builtin extended type prefix
-      std::string result = "u";
-      result += mangle_source_name(kTupleTypeName);
+      MangledMess result = {"u", false};
+      result.append(mangle_source_name(kTupleTypeName));
 
       // template parameters prefix
-      result += "I";
+      result.append("I", false);
 
       for (Type* element : tuple_ty->elements) {
-        result += mangle_type(element);
+        result.append(mangle_type(element));
       }
 
       // template parameters suffix
-      result += "E";
+      result.append("E", false);
       return result;
     }
     case Type::Kind::CLASS: {
@@ -71,7 +74,12 @@ std::string Mangler::mangle_type(Type* type) const {
     }
     case Type::Kind::POINTER: {
       auto* pointer_ty = static_cast<PointerType*>(type);
-      return "P" + mangle_type(pointer_ty->child);
+
+      MangledMess result;
+      result.append("P", false);
+      result.append(mangle_type(pointer_ty->child));
+
+      return result;
     }
 
     default:
@@ -79,15 +87,15 @@ std::string Mangler::mangle_type(Type* type) const {
   }
 }
 
-std::string Mangler::mangle_bare_function_type(FunctionType* type) const {
-  std::string result;
-
+MangledMess Mangler::mangle_bare_function_type(FunctionType* type) const {
   if (type->arguments.empty()) {
-    result += "v";
-  } else {
-    for (Type* argument : type->arguments) {
-      result += mangle_type(argument);
-    }
+    return {"v", false};
+  }
+
+  MangledMess result;
+
+  for (Type* argument : type->arguments) {
+    result.append(mangle_type(argument));
   }
 
   // "Non-template function names do not have return types encoded."
@@ -95,29 +103,29 @@ std::string Mangler::mangle_bare_function_type(FunctionType* type) const {
   return result;
 }
 
-std::string Mangler::mangle_source_name(StringId name) const {
+MangledMess Mangler::mangle_source_name(StringId name) const {
   std::string_view name_view = strings_.get_string(name);
   return mangle_source_name(name_view);
 }
 
-std::string Mangler::mangle_source_name(std::string_view name_view) const {
-  return std::to_string(name_view.size()) + std::string(name_view);
+MangledMess Mangler::mangle_source_name(std::string_view name_view) const {
+  return {std::to_string(name_view.size()) + std::string(name_view), true};
 }
 
-std::string Mangler::mangle_name(const QualifiedId& name) const {
-  std::string result;
+MangledMess Mangler::mangle_name(const QualifiedId& name) const {
+  MangledMess result;
   bool is_nested = name.parts.size() > 1;
 
   if (is_nested) {
-    result += "N";
+    result.append("N", false);
   }
 
   for (StringId part : name.parts) {
-    result += mangle_source_name(part);
+    result.append(mangle_source_name(part));
   }
 
   if (is_nested) {
-    result += "E";
+    result.append("E", false);
   }
 
   return result;
@@ -134,8 +142,12 @@ std::string Mangler::mangle(const SymbolInfo& symbol) const {
     }
 
     FunctionType* function_type = std::get<FunctionSymbolInfo>(symbol).type;
-    return "_Z" + mangle_name(qualified_name) +
-           mangle_bare_function_type(function_type);
+    MangledMess result;
+    result.append("_Z", false);
+    result.append(mangle_name(qualified_name));
+    result.append(mangle_bare_function_type(function_type));
+
+    return result.join_all();
   }
 
   not_implemented();

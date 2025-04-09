@@ -7,10 +7,12 @@
 namespace Front {
 llvm::Value* IRGenerator::compile_expr(
     const std::unique_ptr<Expression>& expr) {
+  llvm::Value* old_slot = std::exchange(slot_, nullptr);
   current_expr_value_ = nullptr;
   traverse(*expr);
   assert(current_expr_value_ != nullptr &&
          "Expression value must be calculated.");
+  slot_ = old_slot;
   return std::exchange(current_expr_value_, nullptr);
 }
 
@@ -31,34 +33,27 @@ void IRGenerator::compile_expr_to(llvm::Value* variable,
 }
 
 void IRGenerator::create_function_arguments() {
-  const auto& decl = static_cast<const FunctionDecl&>(
-      current_function_->get_info()->declaration);
-  bool return_through_arg = current_function_->return_through_argument();
-  size_t arguments_offset = return_through_arg ? 1 : 0;
+  const FunctionDecl& decl = current_function_->get_info()->get_decl();
+
   for (size_t i = 0; i < decl.parameters.size(); ++i) {
     VariableDecl& parameter = *decl.parameters[i];
+    llvm::Value* llvm_arg = current_function_->get_llvm_argument(i);
 
-    LocalVariableInfo parameter_info;
-
-    llvm::Value* llvm_arg =
-        current_function_->get_llvm_function()->getArg(i + arguments_offset);
     Type* arg_ty = parameter.type->value->get_original();
-    parameter_info.original_type = types_mapper_(arg_ty);
+
+    llvm::Value* ptr;
 
     if (!arg_ty->is_passed_by_value()) {
-      parameter_info.has_indirection = true;
-      parameter_info.pointer = llvm_arg;
+      ptr = llvm_arg;
     } else {
       auto name = fmt::format("{}.addr", module_.get_string(decl.name));
 
-      parameter_info.has_indirection = false;
       auto builder = get_alloca_builder();
-      parameter_info.pointer =
-          builder->CreateAlloca(types_mapper_(arg_ty), nullptr, name);
-      builder->CreateStore(llvm_arg, parameter_info.pointer);
+      ptr = builder->CreateAlloca(types_mapper_(arg_ty), nullptr, name);
+      builder->CreateStore(llvm_arg, ptr);
     }
 
-    local_variables_.emplace(&parameter, parameter_info);
+    local_variables_.emplace(&parameter, ptr);
   }
 }
 
@@ -66,16 +61,13 @@ llvm::Value* IRGenerator::get_local_variable_value(const VariableDecl& decl) {
   auto itr = local_variables_.find(&decl);
 
   if (itr == local_variables_.end()) {
-    LocalVariableInfo info;
-    info.original_type = types_mapper_(decl.type->value);
-    info.pointer = get_alloca_builder()->CreateAlloca(
-        info.original_type, nullptr, module_.get_string(decl.name));
-    info.has_indirection = false;
-    std::tie(itr, std::ignore) = local_variables_.emplace(&decl, info);
+    llvm::Value* ptr = get_alloca_builder()->CreateAlloca(
+        types_mapper_(decl.type->value), nullptr,
+        module_.get_string(decl.name));
+    std::tie(itr, std::ignore) = local_variables_.emplace(&decl, ptr);
   }
 
-  LocalVariableInfo& info = itr->second;
-  return info.pointer;
+  return itr->second;
 }
 
 IRFunctionDecl IRGenerator::get_or_insert_function(
@@ -193,7 +185,6 @@ bool IRGenerator::traverse_call_expression(const CallExpr& value) {
   FunctionType* fun_ty = static_cast<FunctionType*>(value.callee->type);
   llvm::Function* callee =
       llvm::dyn_cast<llvm::Function>(compile_expr(value.callee));
-
   std::vector<llvm::Value*> arguments;
   bool return_through_arg = !fun_ty->return_type->is_passed_by_value();
   llvm::Value* result;

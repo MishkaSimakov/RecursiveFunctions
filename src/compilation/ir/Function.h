@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include "FunctionDecl.h"
 
 namespace Front {
@@ -21,6 +23,8 @@ class IRFunction : public IRFunctionDecl {
   llvm::BasicBlock* get_return_block() { return return_block_; }
 
   llvm::Value* get_return_value() { return return_value_; }
+
+  llvm::Value* get_llvm_argument(size_t index);
 };
 
 }  // namespace Front

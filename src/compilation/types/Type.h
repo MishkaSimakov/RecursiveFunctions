@@ -25,7 +25,7 @@ struct Type {
 
  public:
   ENUM(Kind, SIGNED_INT, UNSIGNED_INT, BOOL, CHAR, POINTER, TUPLE, FUNCTION,
-       ALIAS, CLASS);
+       ALIAS, CLASS, NULLPTR);
 
   virtual bool operator==(const Type&) const = 0;
   virtual size_t hash() const = 0;
@@ -136,6 +136,24 @@ struct PointerType final : Type {
   Kind get_kind() const override { return Kind::POINTER; }
 
   explicit PointerType(Type* child) : child(child) {}
+};
+
+struct NullptrType final : Type {
+  bool operator==(const Type& other) const override {
+    const NullptrType* other_ptr = dynamic_cast<const NullptrType*>(&other);
+    return other_ptr != nullptr;
+  }
+
+  size_t hash() const override {
+    auto hasher = init_hasher();
+    return hasher.get_hash();
+  }
+  std::string to_string(const StringPool& strings) const override {
+    return "nullptr_t";
+  }
+  Kind get_kind() const override { return Kind::NULLPTR; }
+
+  NullptrType() = default;
 };
 
 struct FunctionType final : Type {

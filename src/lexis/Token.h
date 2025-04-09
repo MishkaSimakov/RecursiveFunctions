@@ -12,10 +12,10 @@ ENUM(TokenType,
      KW_BREAK, KW_CONTINUE, KW_ELSE, KW_IF, KW_RETURN, KW_WHILE,
 
      //
-     KW_IMPORT, KW_EXPORT, KW_EXTERN, KW_NAMESPACE, KW_TYPE,
+     KW_IMPORT, KW_EXPORT, KW_EXTERN, KW_NAMESPACE, KW_TYPE, KW_AS,
 
      // literals
-     KW_NULLPTR, KW_FALSE, KW_TRUE,
+     KW_FALSE, KW_TRUE,
 
      // types
      // signed int

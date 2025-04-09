@@ -27,12 +27,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   TypesMapper types_mapper_;
 
   // information about current function
-  struct LocalVariableInfo {
-    bool has_indirection{false};
-    llvm::Type* original_type{nullptr};
-    llvm::Value* pointer{nullptr};
-  };
-  std::unordered_map<const Declaration*, LocalVariableInfo> local_variables_;
+  std::unordered_map<const Declaration*, llvm::Value*> local_variables_;
 
   std::optional<IRFunction> current_function_{std::nullopt};
 

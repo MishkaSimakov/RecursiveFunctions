@@ -144,7 +144,7 @@ expression-statement:
 literal:
     string-literal  [pass<0>]
     integer-literal [pass<0>]
-    bool-literal [pass<0>]
+    bool-literal    [pass<0>]
 
 string-literal:
     STRING [string_literal]
@@ -184,6 +184,7 @@ postfix-expression:
     tuple-expression call-arguments     [call_expression]
     postfix-expression DOT qualified-id [member_expression]
     postfix-expression DOT NUMBER       [tuple_index_expression]
+    postfix-expression KW_AS type-name  [tuple_index_expression]
 
 unary-expression:
     postfix-expression          [pass<0>]

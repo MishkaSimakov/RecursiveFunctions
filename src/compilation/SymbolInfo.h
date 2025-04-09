@@ -31,7 +31,6 @@ struct VariableSymbolInfo;
 // class or function
 struct ScopefulSymbolInfo : BaseSymbolInfo {
   Scope* subscope;
-  std::vector<VariableSymbolInfo*> local_variables;
 
   ScopefulSymbolInfo(Scope* scope, Declaration& declaration, Scope* subscope)
       : BaseSymbolInfo(scope, declaration), subscope(subscope) {}
