@@ -16,6 +16,22 @@ struct IRGeneratorConfig : ASTVisitorConfig {
   static constexpr auto override_all() { return true; }
 };
 
+struct Value {
+  llvm::Value* llvm_value;
+  bool has_indirection;
+
+  Value(llvm::Value* llvm_value)
+      : llvm_value(llvm_value), has_indirection(false) {}
+
+  Value() : llvm_value(nullptr), has_indirection(false) {}
+
+  bool operator==(const Value& other) const {
+    return llvm_value == other.llvm_value;
+  }
+
+  static Value invalid() { return Value(); }
+};
+
 class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   llvm::LLVMContext& llvm_context_;
   std::unique_ptr<llvm::Module> llvm_module_;
@@ -31,8 +47,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
 
   std::optional<IRFunction> current_function_{std::nullopt};
 
-  llvm::Value* slot_{nullptr};
-  llvm::Value* current_expr_value_{nullptr};
+  Value current_expr_value_{Value::invalid()};
 
   // compiler must not pass through some kind of nodes. If it does, then I've
   // made some mistake developing it
@@ -40,9 +55,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
     unreachable("Compiler doesn't pass through this kind of nodes.");
   }
 
-  llvm::Value* compile_expr(const std::unique_ptr<Expression>& expr);
-  void compile_expr_to(llvm::Value* variable,
-                       const std::unique_ptr<Expression>& expr);
+  Value compile_expr(const std::unique_ptr<Expression>& expr);
 
   void create_function_arguments();
   llvm::Value* get_local_variable_value(const VariableDecl& decl);
@@ -52,6 +65,11 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   llvm::Value* get_slot(Type* type);
 
   IRContext get_context();
+
+  void create_store(llvm::Value* destination, Value source, Type* source_type);
+  void create_tuple_copy_constructor(llvm::Value* destination, Value source,
+                                     TupleType* source_type);
+  Value remove_indirection(Value value, Type* type);
 
  public:
   IRGenerator(llvm::LLVMContext& llvm_context, ModuleContext& module);
@@ -80,6 +98,16 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   bool traverse_implicit_tuple_copy_expression(
       const ImplicitTupleCopyExpr& value);
   bool traverse_unary_operator(const UnaryOperator& value);
+
+  Value compile_id_expression(const IdExpr& value);
+  Value compile_call_expression(const CallExpr& value);
+  Value compile_integer_literal(const IntegerLiteral& value);
+  Value compile_bool_literal(const BoolLiteral& value);
+  Value compile_tuple_index_expression(const TupleIndexExpr& value);
+  Value compile_tuple_expression(const TupleExpr& value);
+  Value compile_member_expression(const MemberExpr& value);
+  Value compile_binary_operator(const BinaryOperator& value);
+  Value compile_unary_operator(const UnaryOperator& value);
 
   std::unique_ptr<llvm::Module> compile();
 };
