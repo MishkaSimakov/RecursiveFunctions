@@ -235,6 +235,27 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   return true;
 }
 
+bool IRGenerator::traverse_return_statement(const ReturnStmt& value) {
+  Value result = compile_expr(value.value);
+  create_store(current_function_->get_return_value(), result,
+               value.value->type);
+  llvm_ir_builder_->CreateBr(current_function_->get_return_block());
+
+  // we must stop generating IR for current scope after return statement
+  return false;
+}
+
+bool IRGenerator::traverse_variable_declaration(const VariableDecl& value) {
+  if (value.initializer != nullptr) {
+    llvm::Value* var_ptr = get_local_variable_value(value);
+    Value initializer_value = compile_expr(value.initializer);
+
+    create_store(var_ptr, initializer_value, value.initializer->type);
+  }
+
+  return true;
+}
+
 bool IRGenerator::traverse_assignment_statement(const AssignmentStmt& value) {
   Value right_value = compile_expr(value.right);
   Value left_value = compile_expr(value.left);
