@@ -173,6 +173,13 @@ Value IRGenerator::compile_call_expression(const CallExpr& value) {
       argument_value = remove_indirection(argument_value, arg_ty);
     } else {
       assert(argument_value.has_indirection);
+
+      llvm::Value* copy_slot =
+          get_alloca_builder()->CreateAlloca(types_mapper_(arg_ty));
+      create_store(copy_slot, argument_value, arg_ty);
+
+      argument_value.llvm_value = copy_slot;
+      argument_value.has_indirection = true;
     }
 
     arguments.push_back(argument_value.llvm_value);

@@ -7,3 +7,10 @@ T: type == (i64,)
 
 // CHECK: ptr %disguised
 g: (disguised: T) -> () = {}
+
+h: () -> () = {
+    tuple: (i64, i64) = (1, 2);
+
+    // CHECK-NOT: call void @_Z1fu5tupleIxxE(ptr %tuple)
+    f(tuple);
+}

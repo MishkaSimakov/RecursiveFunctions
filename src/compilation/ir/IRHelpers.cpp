@@ -51,6 +51,7 @@ Value IRGenerator::remove_indirection(Value source, Type* type) {
 
   Value result;
 
+  assert(type->is_passed_by_value());
   result.llvm_value =
       llvm_ir_builder_->CreateLoad(types_mapper_(type), source.llvm_value);
   result.has_indirection = false;
