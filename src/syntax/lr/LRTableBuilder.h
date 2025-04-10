@@ -30,11 +30,11 @@ using Action =
 
 struct Conflict {
   State state;
-  char symbol;
+  Lexis::TokenType token;
   std::vector<Action> actions;
 
-  Conflict(State state, char symbol, std::vector<Action> actions)
-      : state(std::move(state)), symbol(symbol), actions(std::move(actions)) {}
+  Conflict(State state, Lexis::TokenType token, std::vector<Action> actions)
+      : state(std::move(state)), token(token), actions(std::move(actions)) {}
 };
 
 struct ActionsConflictException : std::exception {

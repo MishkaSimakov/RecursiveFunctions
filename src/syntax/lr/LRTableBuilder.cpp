@@ -217,7 +217,7 @@ void LRTableBuilder::build_actions_table() {
       ssize_t index = static_cast<size_t>(token);
 
       if (state_actions[index].size() != 1) {
-        conflicts.emplace_back(state_by_index(state_id)->first, index,
+        conflicts.emplace_back(state_by_index(state_id)->first, token,
                                state_actions[index]);
         continue;
       }

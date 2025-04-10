@@ -8,7 +8,7 @@ NodePtr ASTBuildContext::variable_declaration(SourceRange source_range,
 
   auto type = cast_move<TypeNode>(std::move(nodes[2]));
   auto initializer =
-      nodes.size() == 6 ? cast_move<Expression>(std::move(nodes[4])) : nullptr;
+      nodes.size() == 5 ? cast_move<Expression>(std::move(nodes[4])) : nullptr;
 
   return make_node<VariableDecl>(source_range, name, std::move(type),
                                  std::move(initializer));

@@ -27,8 +27,8 @@ unspecified-declaration:
     variable-declaration        [pass<0>]
 
 variable-declaration:
-    IDENTIFIER COLON type-name SEMICOLON                    [variable_declaration]
-    IDENTIFIER COLON type-name EQUAL expression SEMICOLON   [variable_declaration]
+    IDENTIFIER COLON type-name                  [variable_declaration]
+    IDENTIFIER COLON type-name EQUAL expression [variable_declaration]
 
 namespace-declaration:
     IDENTIFIER COLON KW_NAMESPACE EQUAL namespace-body   [namespace_definition]
@@ -122,7 +122,7 @@ assignment-statement:
     expression EQUAL expression SEMICOLON [assignment_stmt]
 
 declaration-statement:
-    variable-declaration [pass<0>]
+    variable-declaration SEMICOLON [pass<0>]
 
 selection-statement:
     KW_IF OPEN_PAREN expression CLOSE_PAREN compound-statement                            [if_stmt]

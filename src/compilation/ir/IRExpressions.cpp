@@ -33,9 +33,14 @@ Value IRGenerator::compile_member_expression(const MemberExpr& value) {
   Value class_value = compile_expr(value.left);
   assert(class_value.has_indirection);
 
-  return llvm_ir_builder_->CreateGEP(
+  Value result;
+
+  result.llvm_value = llvm_ir_builder_->CreateGEP(
       types_mapper_(value.type), class_value.llvm_value,
       llvm_ir_builder_->getInt32(value.member_index));
+  result.has_indirection = true;
+
+  return result;
 }
 
 Value IRGenerator::compile_binary_operator(const BinaryOperator& value) {

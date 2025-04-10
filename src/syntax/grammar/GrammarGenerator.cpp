@@ -191,8 +191,9 @@ size_t GrammarGenerator::generate_grammar(
 
     for (const Conflict& conflict : exception.conflicts) {
       std::cout << "In state:" << std::endl;
-      std::cout << conflict.state
-                << "following actions are possible:" << std::endl;
+      std::cout << conflict.state;
+      std::cout << "following actions are possible for "
+                << conflict.token.to_string() << ":" << std::endl;
       for (const Action& action : conflict.actions) {
         std::cout << "  " << action << std::endl;
       }

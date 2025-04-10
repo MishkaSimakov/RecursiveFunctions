@@ -1,0 +1,6 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+f: () -> () = {
+    // CHECK: store i64 123, ptr %x
+    x: i64 = 123;
+}
