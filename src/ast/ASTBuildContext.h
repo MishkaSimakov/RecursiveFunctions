@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include "Nodes.h"
 #include "sources/SourceManager.h"
@@ -13,6 +14,8 @@ using NodeSpan = std::span<NodePtr>;
 class ASTBuildContext {
   StringPool& strings_;
   SourceView module_source_;
+
+  std::vector<std::pair<SourceRange, std::string>> errors;
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<ASTNode, T>
@@ -54,7 +57,7 @@ class ASTBuildContext {
     return strings_.add_string(string);
   }
 
-  int64_t get_number_from_token(const TokenNode& token) const;
+  int64_t get_number_from_token(const TokenNode& token);
 
  public:
   ASTBuildContext(StringPool& strings, SourceView module_source)
@@ -231,5 +234,7 @@ class ASTBuildContext {
     auto wrappee = cast_move<T>(std::move(nodes[Index]));
     return make_node<Wrapper>(source_range, std::move(wrappee));
   }
+
+  const auto& get_errors() { return errors; }
 };
 }  // namespace Front

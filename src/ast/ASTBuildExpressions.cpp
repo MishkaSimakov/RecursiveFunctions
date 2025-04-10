@@ -1,9 +1,11 @@
+#include <assert.h>
+
 #include <charconv>
 
 #include "ASTBuildContext.h"
 
 namespace Front {
-int64_t ASTBuildContext::get_number_from_token(const TokenNode& token) const {
+int64_t ASTBuildContext::get_number_from_token(const TokenNode& token) {
   std::string_view string = module_source_.string_view(token.source_range);
 
   int64_t result{};
@@ -12,10 +14,11 @@ int64_t ASTBuildContext::get_number_from_token(const TokenNode& token) const {
 
   if (ec == std::errc()) {
   } else if (ec == std::errc::invalid_argument) {
-    throw std::runtime_error(
-        "Something wrong with lexer: INTEGER_LITERAL is not a number.");
+    assert(false && "Lexer error. NUMBER token contains not a number");
   } else if (ec == std::errc::result_out_of_range) {
-    throw std::runtime_error("Value is too big to be represented by i64 type.");
+    errors.emplace_back(token.source_range,
+                        "Value is too big to be represented by i64 type.");
+    return 0;
   }
 
   return result;
