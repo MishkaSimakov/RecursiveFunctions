@@ -15,6 +15,9 @@ struct QualifiedId {
   bool operator==(const QualifiedId&) const = default;
 
   StringId unqualified_id() const { return parts.back(); }
+  bool is_qualified() const { return parts.size() > 1; }
+
+  auto qualifiers_view() const { return parts | std::views::take(parts.size() - 1); }
 
   size_t hash() const noexcept {
     StreamHasher hasher;

@@ -92,6 +92,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   bool traverse_binary_operator(const BinaryOperator& value);
   bool visit_integer_literal(const IntegerLiteral& value);
   bool visit_bool_literal(const BoolLiteral& value);
+  bool visit_string_literal(const StringLiteral& value);
   bool traverse_member_expression(const MemberExpr& value);
   bool traverse_tuple_expression(const TupleExpr& value);
   bool traverse_tuple_index_expression(const TupleIndexExpr& value);
@@ -103,6 +104,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   Value compile_call_expression(const CallExpr& value);
   Value compile_integer_literal(const IntegerLiteral& value);
   Value compile_bool_literal(const BoolLiteral& value);
+  Value compile_string_literal(const StringLiteral& value);
   Value compile_tuple_index_expression(const TupleIndexExpr& value);
   Value compile_tuple_expression(const TupleExpr& value);
   Value compile_member_expression(const MemberExpr& value);

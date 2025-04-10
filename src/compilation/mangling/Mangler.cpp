@@ -1,10 +1,46 @@
 #include "Mangler.h"
 
+#include <cassert>
+#include <iostream>
+
 #include "compilation/ModuleContext.h"
 
 namespace Front {
 
-MangledMess Mangler::mangle_type(Type* type) const {
+std::string Mangler::get_substitution_name(size_t index) {
+  if (index == 0) {
+    return "S_";
+  }
+
+  return "S" + std::to_string(index - 1) + "_";
+}
+
+void Mangler::add_to_substitutions(std::string_view string) {
+  substitutions_.emplace_back(string);
+}
+
+std::optional<std::string> Mangler::consider_substitution(
+    std::string_view string) {
+  for (size_t i = 0; i < substitutions_.size(); ++i) {
+    if (substitutions_[i] == string) {
+      return get_substitution_name(i);
+    }
+  }
+
+  return std::nullopt;
+}
+
+std::string Mangler::substitutable(std::string string) {
+  auto after_substitution = consider_substitution(string);
+  if (after_substitution.has_value()) {
+    return *after_substitution;
+  }
+
+  add_to_substitutions(string);
+  return string;
+}
+
+std::string Mangler::mangle_type(Type* type) {
   type = type->get_original();
 
   const std::unordered_map<size_t, std::string> signed_int_mapping = {
@@ -25,61 +61,55 @@ MangledMess Mangler::mangle_type(Type* type) const {
       {32, "Di"},
   };
 
+  std::string result;
   switch (type->get_kind()) {
-    case Type::Kind::FUNCTION: {
-      auto* fun_ty = static_cast<FunctionType*>(type);
-
-      MangledMess result;
-      result.append("F", false);
-      result.append(mangle_bare_function_type(fun_ty));
-      return result;
-    }
+    case Type::Kind::FUNCTION:
+      return substitutable(
+          "F" + mangle_bare_function_type(static_cast<FunctionType*>(type)));
     case Type::Kind::BOOL:
-      return {"b", false};
+      return "b";
     case Type::Kind::SIGNED_INT: {
       auto* int_type = static_cast<SignedIntType*>(type);
-      return {signed_int_mapping.at(int_type->width), false};
+      return signed_int_mapping.at(int_type->width);
     }
     case Type::Kind::UNSIGNED_INT: {
       auto* int_type = static_cast<UnsignedIntType*>(type);
-      return {unsigned_int_mapping.at(int_type->width), false};
+      return unsigned_int_mapping.at(int_type->width);
     }
     case Type::Kind::CHAR: {
       auto* char_type = static_cast<CharType*>(type);
-      return {char_mapping.at(char_type->width), false};
+      return char_mapping.at(char_type->width);
     }
     case Type::Kind::TUPLE: {
       auto* tuple_ty = static_cast<TupleType*>(type);
+      if (tuple_ty->elements.empty()) {
+        return "v";
+      }
 
       constexpr auto kTupleTypeName = "tuple";
       // vendor-specific builtin extended type prefix
-      MangledMess result = {"u", false};
-      result.append(mangle_source_name(kTupleTypeName));
+      std::string result = "u";
+      result += mangle_source_name(kTupleTypeName);
 
       // template parameters prefix
-      result.append("I", false);
+      result += "I";
 
       for (Type* element : tuple_ty->elements) {
-        result.append(mangle_type(element));
+        result += mangle_type(element);
       }
 
       // template parameters suffix
-      result.append("E", false);
-      return result;
+      result += "E";
+      return substitutable(result);
     }
     case Type::Kind::CLASS: {
       auto* class_ty = static_cast<ClassType*>(type);
       // TODO: full name mangling
-      return mangle_source_name(class_ty->name.parts.back());
+      return substitutable(mangle_name(class_ty->name));
     }
     case Type::Kind::POINTER: {
       auto* pointer_ty = static_cast<PointerType*>(type);
-
-      MangledMess result;
-      result.append("P", false);
-      result.append(mangle_type(pointer_ty->child));
-
-      return result;
+      return substitutable("P" + mangle_type(pointer_ty->child));
     }
 
     default:
@@ -87,15 +117,15 @@ MangledMess Mangler::mangle_type(Type* type) const {
   }
 }
 
-MangledMess Mangler::mangle_bare_function_type(FunctionType* type) const {
+std::string Mangler::mangle_bare_function_type(FunctionType* type) {
+  std::string result;
+
   if (type->arguments.empty()) {
-    return {"v", false};
-  }
-
-  MangledMess result;
-
-  for (Type* argument : type->arguments) {
-    result.append(mangle_type(argument));
+    result += "v";
+  } else {
+    for (Type* argument : type->arguments) {
+      result += mangle_type(argument);
+    }
   }
 
   // "Non-template function names do not have return types encoded."
@@ -103,35 +133,46 @@ MangledMess Mangler::mangle_bare_function_type(FunctionType* type) const {
   return result;
 }
 
-MangledMess Mangler::mangle_source_name(StringId name) const {
+std::string Mangler::mangle_source_name(StringId name) {
   std::string_view name_view = strings_.get_string(name);
   return mangle_source_name(name_view);
 }
 
-MangledMess Mangler::mangle_source_name(std::string_view name_view) const {
-  return {std::to_string(name_view.size()) + std::string(name_view), true};
+std::string Mangler::mangle_source_name(std::string_view name_view) {
+  return std::to_string(name_view.size()) + std::string(name_view);
 }
 
-MangledMess Mangler::mangle_name(const QualifiedId& name) const {
-  MangledMess result;
-  bool is_nested = name.parts.size() > 1;
-
-  if (is_nested) {
-    result.append("N", false);
+std::string Mangler::mangle_name(const QualifiedId& name) {
+  if (name.parts.size() == 1) {
+    return mangle_unscoped_name(name.parts.front());
+  } else {
+    return mangle_nested_name(name);
   }
-
-  for (StringId part : name.parts) {
-    result.append(mangle_source_name(part));
-  }
-
-  if (is_nested) {
-    result.append("E", false);
-  }
-
-  return result;
 }
 
-std::string Mangler::mangle(const SymbolInfo& symbol) const {
+std::string Mangler::mangle_unscoped_name(StringId name) {
+  return mangle_source_name(name);
+}
+
+std::string Mangler::mangle_nested_name(const QualifiedId& name) {
+  assert(name.is_qualified());
+
+  std::string result;
+
+  // prefix (participate in substitutions)
+  for (StringId part : name.qualifiers_view()) {
+    result += mangle_source_name(part);
+    result = substitutable(result);
+  }
+
+  // unqualified name (don't participate in substitutions)
+  result += mangle_source_name(name.parts.back());
+
+  return "N" + result + "E";
+}
+
+std::string Mangler::mangle(const SymbolInfo& symbol) {
+  substitutions_.clear();
   QualifiedId qualified_name = symbol.get_fully_qualified_name();
 
   if (symbol.is_function()) {
@@ -142,12 +183,10 @@ std::string Mangler::mangle(const SymbolInfo& symbol) const {
     }
 
     FunctionType* function_type = std::get<FunctionSymbolInfo>(symbol).type;
-    MangledMess result;
-    result.append("_Z", false);
-    result.append(mangle_name(qualified_name));
-    result.append(mangle_bare_function_type(function_type));
+    std::string result = "_Z" + mangle_name(qualified_name) +
+                         mangle_bare_function_type(function_type);
 
-    return result.join_all();
+    return result;
   }
 
   not_implemented();

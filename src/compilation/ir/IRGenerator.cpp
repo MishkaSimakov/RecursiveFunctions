@@ -298,6 +298,11 @@ bool IRGenerator::visit_bool_literal(const BoolLiteral& value) {
   return true;
 }
 
+bool IRGenerator::visit_string_literal(const StringLiteral& value) {
+  current_expr_value_ = compile_string_literal(value);
+  return true;
+}
+
 bool IRGenerator::traverse_tuple_index_expression(const TupleIndexExpr& value) {
   current_expr_value_ = compile_tuple_index_expression(value);
   return true;

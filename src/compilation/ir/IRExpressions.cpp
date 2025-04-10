@@ -219,4 +219,14 @@ Value IRGenerator::compile_bool_literal(const BoolLiteral& value) {
   return result;
 }
 
+Value IRGenerator::compile_string_literal(const StringLiteral& value) {
+  Value result;
+
+  result.llvm_value =
+      llvm_ir_builder_->CreateGlobalString(module_.get_string(value.id));
+  result.has_indirection = false;
+
+  return result;
+}
+
 }  // namespace Front
