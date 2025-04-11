@@ -80,6 +80,14 @@ class SourceManager {
   std::vector<SourceAnnotation> annotations_;
 
  public:
+  SourceManager() = default;
+
+  SourceManager(const SourceManager&) = delete;
+  SourceManager& operator=(const SourceManager&) = delete;
+
+  SourceManager(SourceManager&&) = delete;
+  SourceManager& operator=(SourceManager&&) = delete;
+
   SourceView load(const std::filesystem::path& path);
   SourceView load_text(std::string_view text);
 
@@ -95,6 +103,8 @@ class SourceManager {
 
   void add_annotation(SourceRange range, std::string_view text);
   void print_annotations(std::ostream& os);
+
+  size_t loaded_count() const { return loaded_.size(); }
 
   ~SourceManager();
 };
