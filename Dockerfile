@@ -1,18 +1,32 @@
-FROM teeks99/gcc-ubuntu:14
+FROM ubuntu:plucky
 
-# installing cmake
-RUN apt-get update && apt-get install -y cmake
+RUN apt update
 
-# updating std library version
-RUN add-apt-repository ppa:ubuntu-toolchain-r/test && \
-    apt-get update && \
-    apt-get install --only-upgrade -y libstdc++6
+# LLVM
+RUN apt install -y llvm llvm-dev
 
-# installing gtest
-RUN git clone https://github.com/google/googletest.git -b v1.14.0 && \
-    cd googletest && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    cmake --build . && \
-    cmake --install .
+# Clang and co
+RUN apt install -y clang clang-tools libclang-dev libclang1 clang-format python3-clang clangd clang-tidy
+
+# LLVM lit
+RUN apt install -y python3-pip
+RUN apt install -y python3-venv
+RUN python3 -m venv /lit-build
+RUN /lit-build/bin/python3 -m pip install --no-input lit
+ENV PATH="$PATH:/lit-build/bin/"
+
+# git
+RUN apt install -y git
+
+# cmake
+RUN apt install -y cmake
+
+# some libs for llvm
+RUN apt install -y zstd libedit-dev curl libcurl4-openssl-dev
+
+## create symbolic links to required programs
+RUN ln /usr/bin/FileCheck-20 /usr/bin/FileCheck
+
+# use clang as compiler
+ENV CC="clang"
+ENV CXX="clang++"

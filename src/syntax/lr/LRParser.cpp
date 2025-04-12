@@ -205,7 +205,10 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
     }
   }
 
-  errors.append_range(build_context.get_errors());
+  auto builder_errors = build_context.get_errors();
+  for (auto& error : builder_errors) {
+    errors.push_back(std::move(error));
+  }
 
   if (!errors.empty()) {
     throw ParserException(std::move(errors));

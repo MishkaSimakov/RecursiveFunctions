@@ -1,4 +1,4 @@
-name: Test interpreter
+name: Run Tests
 
 on:
   push
@@ -10,24 +10,19 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - uses: Bacondish2023/setup-googletest@v1
-        with:
-          tag: v1.14.0
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - name: configure
-        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug ..
-      - name: make
-        run: cd build && cmake --build . -t Tests
-      - name: Run Test
-        run: cd build/tests && ./Tests --gtest_output="xml:report.xml"
+      - name: Build docker image
+        run: docker build -t tlang-dev .
+      - name: Run tests inside container
+        run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
       - name: Test Report
         uses: dorny/test-reporter@v1
-        if: success() || failure()
         with:
           name: Test Report
-          path: build/tests/report.xml
+          path: build/unit-report.xml
           reporter: jest-junit

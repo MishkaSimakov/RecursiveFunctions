@@ -227,26 +227,6 @@ class ASTBuildContext {
     return make_node<PrimitiveTypeNode>(source_range, kind, width);
   }
 
-  NodePtr variable_assignment(SourceRange source_range,
-                              std::span<NodePtr> nodes) {
-    auto name_node = cast_view<TokenNode>(nodes.front());
-    StringId name_id = context_.add_string(get_token_string(name_node));
-
-    auto value = cast_move<Expression>(std::move(nodes[2]));
-
-    return make_node<AssignmentStmt>(source_range, name_id, std::move(value));
-  }
-
-  NodePtr variable_assignment(SourceRange source_range,
-                              std::span<NodePtr> nodes) {
-    auto name_node = cast_view<TokenNode>(nodes.front());
-    StringId name_id = context_.add_string(get_token_string(name_node));
-
-    auto value = cast_move<Expression>(std::move(nodes[2]));
-
-    return make_node<AssignmentStmt>(source_range, name_id, std::move(value));
-  }
-
   template <typename T, typename Wrapper, size_t Index>
     requires std::is_base_of_v<ASTNode, T> &&
              std::is_base_of_v<ASTNode, Wrapper>
