@@ -41,6 +41,7 @@ ENUM(TokenType,
      STAR,        // *
      PERCENT,     // %
      NOT,         // !
+     QUESTION,    // ?
      AMPERSAND,   // &
      LESS,        // <
      GREATER,     // >

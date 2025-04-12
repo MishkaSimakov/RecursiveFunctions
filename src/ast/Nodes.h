@@ -53,6 +53,7 @@ struct ASTNode {
     IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR,
     TUPLE_INDEX_EXPR,
     IMPLICIT_TUPLE_COPY_EXPR,
+    EXPLITIT_CAST_EXPR,
 
     POINTER_TYPE,
     PRIMITIVE_TYPE,
@@ -249,6 +250,19 @@ struct TupleExpr : Expression {
       : Expression(source_range), elements(std::move(elements)) {}
 
   Kind get_kind() const override { return Kind::TUPLE_EXPR; }
+};
+
+struct ExplicitCastExpr : Expression {
+  std::unique_ptr<Expression> child;
+  std::unique_ptr<TypeNode> type;
+
+  ExplicitCastExpr(SourceRange source_range, std::unique_ptr<Expression> child,
+                   std::unique_ptr<TypeNode> type)
+      : Expression(source_range),
+        child(std::move(child)),
+        type(std::move(type)) {}
+
+  Kind get_kind() const override { return Kind::EXPLITIT_CAST_EXPR; }
 };
 
 struct ImportDecl : Declaration {

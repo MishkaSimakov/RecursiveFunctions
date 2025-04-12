@@ -75,6 +75,15 @@ NodePtr ASTBuildContext::tuple_index_expression(SourceRange source_range,
   return make_node<TupleIndexExpr>(source_range, std::move(left), index);
 }
 
+NodePtr ASTBuildContext::explicit_cast_expression(SourceRange source_range,
+                                                  std::span<NodePtr> nodes) {
+  auto child = cast_move<Expression>(std::move(nodes[0]));
+  auto type = cast_move<TypeNode>(std::move(nodes[2]));
+
+  return make_node<ExplicitCastExpr>(source_range, std::move(child),
+                                     std::move(type));
+}
+
 NodePtr ASTBuildContext::member_expression(SourceRange source_range,
                                            std::span<NodePtr> nodes) {
   auto left = cast_move<Expression>(std::move(nodes[0]));

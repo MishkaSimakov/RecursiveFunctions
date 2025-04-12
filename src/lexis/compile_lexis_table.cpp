@@ -69,6 +69,7 @@ int main() {
   generator[TokenType::STAR] = "\\*";
   generator[TokenType::PERCENT] = "%";
   generator[TokenType::NOT] = "!";
+  generator[TokenType::QUESTION] = "?";
   generator[TokenType::AMPERSAND] = "&";
   generator[TokenType::LESS] = "<";
   generator[TokenType::GREATER] = ">";
