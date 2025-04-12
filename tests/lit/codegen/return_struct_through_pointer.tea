@@ -1,0 +1,13 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+// CHECK: ptr sret({ i64, i64 }) %result
+f: () -> (i64, i64) = {
+    // CHECK: %result
+
+    // CHECK: ret void
+    return (1, 2);
+}
+
+g: () -> () = {
+    tuple: (i64, i64) = f();
+}

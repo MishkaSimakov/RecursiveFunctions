@@ -5,6 +5,7 @@
 #include "LexisTestCase.h"
 
 using enum Lexis::TokenType::InternalEnum;
+const bool Constants::is_installed_build = false;
 
 TEST_F(LexisTestCase, empty_string_test) { test_sequence({{"", WHITESPACE}}); }
 

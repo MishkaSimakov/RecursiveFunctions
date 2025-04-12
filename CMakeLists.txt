@@ -2,63 +2,37 @@ cmake_minimum_required(VERSION 3.22)
 project(TeaLang)
 
 set(CMAKE_CXX_STANDARD 23)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(CMAKE_CXX_FLAGS "-O3")
-else ()
-    set(CMAKE_CXX_FLAGS "-fsanitize=address")
-endif ()
+set(TEALANG_FILES_DIRECTORY "${CMAKE_SOURCE_DIR}/files")
+# This definition is required when we build target for playground and tests
+# When target is built for installation, it calculates this path in a different way
+add_compile_definitions(FILES_DIRECTORY="${TEALANG_FILES_DIRECTORY}")
 
-#find_program(CCACHE_FOUND "ccache")
-#if (CCACHE_FOUND)
-#    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
-#endif ()
+# load libraries
+include(load_libraries)
+include(tablegen)
 
-add_compile_definitions(BASE_PATH=\"${CMAKE_SOURCE_DIR}\")
-
-# libraries
-add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)
-
-# compile fmt as static library
-set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
+add_subdirectory(src/lexis)
+add_subdirectory(src/syntax)
 
 add_subdirectory(src)
-target_link_libraries(TeaLang fmt::fmt)
-target_link_libraries(TeaLang argparse::argparse)
-
-# add executable for compiling grammar and lexis
-add_subdirectory(src/syntax)
-add_subdirectory(src/lexis)
 
 # add executables from cli directory
-file(GLOB_RECURSE CliFiles
+file(GLOB_RECURSE CLI_SOURCES
         "src/cli/*.cpp"
         "src/cli/*.h"
 )
-add_executable(Cli main.cpp)
-target_sources(Cli PUBLIC ${CliFiles})
 
-target_include_directories(Cli PUBLIC src)
-target_link_libraries(Cli TeaLang)
+add_executable(cli ${CLI_SOURCES})
+target_link_libraries(cli PUBLIC TeaLang)
+target_compile_definitions(cli PUBLIC BUILD_FOR_INSTALLATION=false)
+set_target_properties(cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-# copy compiler files into build destination
-add_custom_command(
-        TARGET Cli POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/files
-        ${CMAKE_CURRENT_BINARY_DIR}/files)
+add_executable(cli_installation ${CLI_SOURCES})
+target_link_libraries(cli_installation PUBLIC TeaLang)
+target_compile_definitions(cli_installation PUBLIC BUILD_FOR_INSTALLATION=true)
 
-add_subdirectory(tests EXCLUDE_FROM_ALL)
+add_subdirectory(tests)
 
-set_target_properties(Cli PROPERTIES OUTPUT_NAME "tlang")
-
-if (COMMAND install)
-    install(TARGETS Cli)
-else ()
-    set_target_properties(Cli
-            PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin
-    )
-
-endif ()
+include(install_cli)

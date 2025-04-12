@@ -11,10 +11,9 @@ TEST(TypesTests, test_type_hash) {
   TypesStorage storage;
 
   std::vector<Type*> layer;
-  layer.push_back(storage.make_type<VoidType>());
-  layer.push_back(storage.make_type<IntType>());
-  layer.push_back(storage.make_type<BoolType>());
-  layer.push_back(storage.make_type<CharType>());
+  layer.push_back(storage.make_type<SignedIntType>(64));
+  layer.push_back(storage.make_type<BoolType>(8));
+  layer.push_back(storage.make_type<CharType>(8));
 
   // add three layers of indirection
   for (size_t i = 0; i < 5; ++i) {
@@ -37,10 +36,9 @@ TEST(TypesTests, test_type_hash) {
 
   // some other function types
   storage.make_type<FunctionType>(
-      std::vector<Type*>{storage.make_type<IntType>(),
-                         storage.make_type<BoolType>(),
-                         storage.make_type<VoidType>()},
-      storage.make_type<VoidType>());
+      std::vector<Type*>{storage.make_type<SignedIntType>(64),
+                         storage.make_type<BoolType>(8)},
+      storage.make_type<SignedIntType>(64));
 
   // check that all hashes are different
   size_t types_count = 0;
@@ -52,4 +50,3 @@ TEST(TypesTests, test_type_hash) {
 
   ASSERT_EQ(hash_values.size(), types_count);
 }
-

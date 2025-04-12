@@ -1,0 +1,6 @@
+// RUN: %tlang %s --emit ir
+
+// compilation must fail
+export A: namespace = {
+    export f: () -> () = {}
+}

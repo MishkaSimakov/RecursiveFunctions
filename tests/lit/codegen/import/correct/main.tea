@@ -1,0 +1,19 @@
+// RUN: %tlang main:%S/main.tea module:%S/module.team --emit ir
+
+import "module"
+
+A: namespace = {
+    g: () -> () = {}
+}
+
+main: () -> i64 = {
+    A::f();
+    A::g();
+
+    B::f();
+    g();
+
+    var: Alias;
+
+    return 0;
+}

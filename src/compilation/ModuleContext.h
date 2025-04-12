@@ -1,36 +1,61 @@
 #pragma once
 
-#include <set>
-
 #include "ast/Nodes.h"
 #include "compilation/Scope.h"
-#include "compilation/StringId.h"
 #include "types/TypesStorage.h"
+#include "utils/StringPool.h"
 
 namespace Front {
 struct ModuleContext {
+ private:
+  StringPool strings_;
+
+ public:
+  enum class ModuleState {
+    UNPROCESSED,
+    AFTER_PARSER,
+    AFTER_SEMANTIC_ANALYZER,
+    AFTER_IR_COMPILER
+  };
   std::string name;
 
-  TypesStorage types_storage;
-  std::unique_ptr<ProgramDecl> ast_root;
+  std::unique_ptr<ProgramNode> ast_root;
   std::unique_ptr<Scope> root_scope;
 
-  // I use std::less<void> to compare std::string with std::string_view without
-  // creating new string from string_view
-  std::set<std::string, std::less<>> strings_table;
+  // These things are generated during SemanticAnalysis
+  // TODO: maybe wrap them all in another class to separate ModuleContext from
+  // semantic analysis details
+  TypesStorage types_storage;
+  std::unordered_map<const IdExpr*, std::reference_wrapper<SymbolInfo>>
+      symbols_info;
+  std::unordered_map<const FunctionDecl*,
+                     std::reference_wrapper<FunctionSymbolInfo>>
+      functions_info;
+  std::unordered_map<const UserDefinedTypeNode*,
+                     std::reference_wrapper<SymbolInfo>>
+      user_defined_types;
+
+  // warning: StringIds inside QualifierId are from another module.
+  // To get string_view from it, get_string must be called on correct
+  // module.
+  std::vector<std::reference_wrapper<SymbolInfo>> exported_symbols;
 
   std::vector<std::reference_wrapper<ModuleContext>> dependencies;
   std::vector<std::reference_wrapper<ModuleContext>> dependents;
 
-  bool has_symbols_table{false};
+  ModuleState state{ModuleState::UNPROCESSED};
 
   ModuleContext() = default;
 
   StringId add_string(std::string_view string) {
-    auto [itr, _] = strings_table.emplace(string);
-    return StringId(itr);
+    return strings_.add_string(string);
   }
 
-  std::string_view get_string(StringId index) const { return *index.itr_; }
+  std::string_view get_string(StringId index) const {
+    return strings_.get_string(index);
+  }
+
+  StringPool& get_strings_pool() { return strings_; }
+  const StringPool& get_strings_pool() const { return strings_; }
 };
 }  // namespace Front

@@ -1,20 +1,21 @@
 #pragma once
 
-#include <charconv>
 #include <memory>
+#include <vector>
 
 #include "Nodes.h"
-#include "compilation/GlobalContext.h"
-#include "compilation/types/TypesStorage.h"
 #include "sources/SourceManager.h"
+#include "utils/StringPool.h"
 
 namespace Front {
+using NodePtr = std::unique_ptr<ASTNode>;
+using NodeSpan = std::span<NodePtr>;
+
 class ASTBuildContext {
-  ModuleContext& context_;
+  StringPool& strings_;
   SourceView module_source_;
 
-  TypesStorage& types() { return context_.types_storage; }
-  ModuleContext& module() { return context_; }
+  std::vector<std::pair<SourceRange, std::string>> errors;
 
   template <typename T, typename... Args>
     requires std::is_base_of_v<ASTNode, T>
@@ -39,15 +40,35 @@ class ASTBuildContext {
     return dynamic_cast<const U&>(*ptr);
   }
 
-  std::string_view get_token_string(const TokenNode& node) const {
-    return module_source_.string_view(node.source_range);
+  QualifiedId get_qualified_id(std::unique_ptr<ASTNode> node) const {
+    QualifiedId result;
+
+    auto id_parts = cast_move<NodesList<TokenNode>>(std::move(node));
+    for (const auto& part : id_parts->nodes) {
+      StringId part_string = get_node_string(*part);
+      result.parts.push_back(part_string);
+    }
+
+    return result;
   }
 
- public:
-  using NodePtr = std::unique_ptr<ASTNode>;
+  StringId get_node_string(const ASTNode& node) const {
+    std::string_view string = module_source_.string_view(node.source_range);
+    return strings_.add_string(string);
+  }
 
-  ASTBuildContext(ModuleContext& context, SourceView module_source)
-      : context_(context), module_source_(module_source) {}
+  int64_t get_number_from_token(const TokenNode& token);
+
+ public:
+  ASTBuildContext(StringPool& strings, SourceView module_source)
+      : strings_(strings), module_source_(module_source) {}
+
+  NodePtr add_export_specifier(SourceRange source_range,
+                               std::span<NodePtr> nodes) {
+    auto decl = cast_move<Declaration>(std::move(nodes[1]));
+    decl->specifiers.set_exported(true);
+    return std::move(decl);
+  }
 
   template <typename T>
   NodePtr construct(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -62,7 +83,7 @@ class ASTBuildContext {
 
   NodePtr program_declaration(SourceRange source_range,
                               std::span<NodePtr> nodes) {
-    auto program_node = std::make_unique<ProgramDecl>(source_range);
+    auto program_node = std::make_unique<ProgramNode>(source_range);
     bool has_imports = nodes.size() == 2;
     bool has_declarations = nodes.size() >= 1;
 
@@ -80,104 +101,46 @@ class ASTBuildContext {
     return std::move(program_node);
   }
 
-  NodePtr string_literal(SourceRange source_range, std::span<NodePtr> nodes) {
-    const auto& token_node = cast_view<TokenNode>(nodes.front());
-    std::string_view string = get_token_string(token_node);
+  // expressions
+  NodePtr string_literal(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr integer_literal(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr bool_literal(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr id_expression(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr member_expression(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr tuple_expression(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr tuple_index_expression(SourceRange source_range,
+                                 std::span<NodePtr> nodes);
 
-    // remove quotes
-    string.remove_prefix(1);
-    string.remove_suffix(1);
-
-    auto literal_id = context_.add_string(string);
-    return make_node<StringLiteral>(source_range, literal_id);
-  }
-
-  NodePtr integer_literal(SourceRange source_range, std::span<NodePtr> nodes) {
-    const auto& token_node = cast_view<TokenNode>(nodes.front());
-    auto string = get_token_string(token_node);
-
-    int result{};
-    auto [_, ec] =
-        std::from_chars(string.data(), string.data() + string.size(), result);
-
-    if (ec == std::errc()) {
-    } else if (ec == std::errc::invalid_argument) {
-      throw std::runtime_error(
-          "Something wrong with lexer: INTEGER_LITERAL is not a number.");
-    } else if (ec == std::errc::result_out_of_range) {
-      throw std::runtime_error(
-          "Value is too big to be represented by int type.");
-    }
-
-    return std::make_unique<IntegerLiteral>(source_range, result);
-  }
-
-  // TODO: maybe unite with sequence method
-  NodePtr id_expression(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto& token_node = cast_view<TokenNode>(nodes.back());
-    auto id = context_.add_string(get_token_string(token_node));
-
-    std::unique_ptr root(nodes.size() == 1
-                             ? make_node<IdExpr>(source_range)
-                             : cast_move<IdExpr>(std::move(nodes.front())));
-
-    root->source_range.end = source_range.end;
-    root->add_qualifier(id);
-
-    return std::move(root);
-  }
-
-  NodePtr return_statement(SourceRange source_range, std::span<NodePtr> nodes) {
-    std::unique_ptr<Expression> return_value =
-        nodes.size() == 2 ? nullptr
-                          : cast_move<Expression>(std::move(nodes[1]));
-
-    return make_node<ReturnStmt>(source_range, std::move(return_value));
-  }
+  // statements
+  NodePtr return_stmt(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr compound_stmt(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr assignment_stmt(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr while_stmt(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr if_stmt(SourceRange source_range, std::span<NodePtr> nodes);
 
   NodePtr parameter_declaration(SourceRange source_range,
-                                std::span<NodePtr> nodes) {
-    auto decl_type = cast_move<TypeNode>(std::move(nodes[2]));
+                                std::span<NodePtr> nodes);
+  NodePtr variable_declaration(SourceRange source_range,
+                               std::span<NodePtr> nodes);
+  NodePtr namespace_definition(SourceRange source_range,
+                               std::span<NodePtr> nodes);
 
-    const auto& token_node = cast_view<TokenNode>(nodes.front());
-    auto name_id = context_.add_string(get_token_string(token_node));
+  // functions
+ private:
+  NodePtr base_function_declaration(SourceRange source_range,
+                                    std::span<NodePtr> nodes, bool is_external);
 
-    return make_node<ParameterDecl>(source_range, name_id,
-                                    std::move(decl_type));
+ public:
+  NodePtr function_declaration(SourceRange source_range,
+                               std::span<NodePtr> nodes) {
+    return base_function_declaration(source_range, nodes, false);
   }
 
-  NodePtr compound_statement(SourceRange source_range,
-                             std::span<NodePtr> nodes) {
-    std::unique_ptr<CompoundStmt> statements =
-        nodes.size() == 3 ? cast_move<CompoundStmt>(std::move(nodes[1]))
-                          : make_node<CompoundStmt>(source_range);
-
-    statements->source_range = source_range;
-
-    return std::move(statements);
-  }
-
-  NodePtr function_definition(SourceRange source_range,
-                              std::span<NodePtr> nodes) {
-    bool has_specifier = nodes.size() == 7;
-    size_t shift = has_specifier ? 1 : 0;
-
-    // specifiers
-    auto& spec_token = cast_view<TokenNode>(nodes[0]);
-    bool is_exported = has_specifier;
-
-    // identifier
-    const auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
-    auto name_id = context_.add_string(get_token_string(id_token));
-
-    auto parameters =
-        cast_move<NodesList<ParameterDecl>>(std::move(nodes[shift + 2]));
-    auto return_type = cast_move<TypeNode>(std::move(nodes[shift + 3]));
-    auto body = cast_move<CompoundStmt>(std::move(nodes[shift + 5]));
-
-    return make_node<FunctionDecl>(
-        source_range, name_id, std::move(parameters->nodes),
-        std::move(return_type), std::move(body), is_exported);
+  NodePtr extern_function_declaration(SourceRange source_range,
+                                      std::span<NodePtr> nodes) {
+    nodes = nodes.subspan(1);
+    return base_function_declaration(source_range, nodes, true);
   }
 
   NodePtr module_import(SourceRange source_range, std::span<NodePtr> nodes) {
@@ -185,10 +148,26 @@ class ASTBuildContext {
     return make_node<ImportDecl>(source_range, name_node.id);
   }
 
+  NodePtr type_alias(SourceRange source_range, std::span<NodePtr> nodes) {
+    StringId alias = get_node_string(*nodes[0]);
+    auto type = cast_move<TypeNode>(std::move(nodes[4]));
+
+    return make_node<TypeAliasDecl>(source_range, alias, std::move(type));
+  }
+  NodePtr class_type(SourceRange source_range, std::span<NodePtr> nodes) {
+    StringId name = get_node_string(*nodes[0]);
+    auto body = cast_move<NodesList<Declaration>>(std::move(nodes[4]));
+    return make_node<ClassDecl>(source_range, name, std::move(body->nodes));
+  }
+
   template <typename ListRootT, typename ListItemT>
     requires std::is_base_of_v<ASTNode, ListRootT> &&
              std::is_base_of_v<ASTNode, ListItemT>
   NodePtr sequence(SourceRange source_range, std::span<NodePtr> nodes) {
+    if (nodes.empty()) {
+      return make_node<ListRootT>(source_range);
+    }
+
     std::unique_ptr root(nodes.size() == 1
                              ? make_node<ListRootT>(source_range)
                              : cast_move<ListRootT>(std::move(nodes.front())));
@@ -216,52 +195,36 @@ class ASTBuildContext {
                                            std::move(value));
   }
 
-  NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto id_expr = cast_move<IdExpr>(std::move(nodes[0]));
-    auto arguments_list = cast_move<NodesList<Expression>>(std::move(nodes[1]));
-
-    return std::make_unique<CallExpr>(source_range, std::move(id_expr),
-                                      std::move(arguments_list->nodes));
-  }
-
   NodePtr pointer_type(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto child = cast_move<TypeNode>(std::move(nodes[0]));
-
-    child->value = types().add_pointer(child->value);
-    child->source_range = source_range;
-
-    return std::move(child);
+    auto child = cast_move<TypeNode>(std::move(nodes[1]));
+    return make_node<PointerTypeNode>(source_range, std::move(child));
   }
 
-  template <typename T>
-    requires std::is_base_of_v<Type, T>
-  NodePtr construct_type(SourceRange source_range, std::span<NodePtr> nodes) {
-    Type* type_ptr = types().add_primitive<T>();
-    return make_node<TypeNode>(source_range, type_ptr);
+  NodePtr tuple_type(SourceRange source_range, std::span<NodePtr> nodes) {
+    std::vector<std::unique_ptr<TypeNode>> elements;
+    if (nodes.size() == 4) {
+      elements.push_back(cast_move<TypeNode>(std::move(nodes[1])));
+    } else if (nodes.size() == 5) {
+      elements.push_back(cast_move<TypeNode>(std::move(nodes[1])));
+
+      auto list = cast_move<NodesList<TypeNode>>(std::move(nodes[3]));
+      for (auto& element : list->nodes) {
+        elements.push_back(std::move(element));
+      }
+    }
+
+    return make_node<TupleTypeNode>(source_range, std::move(elements));
   }
 
-  NodePtr variable_declaration(SourceRange source_range,
-                               std::span<NodePtr> nodes) {
-    const TokenNode& name_node = cast_view<TokenNode>(nodes.front());
-    StringId name_id = context_.add_string(get_token_string(name_node));
-
-    auto type = cast_move<TypeNode>(std::move(nodes[2]));
-    auto initializer = nodes.size() == 6
-                           ? cast_move<Expression>(std::move(nodes[4]))
-                           : nullptr;
-
-    return make_node<VariableDecl>(source_range, name_id, std::move(type),
-                                   std::move(initializer));
+  NodePtr user_defined_type(SourceRange source_range,
+                            std::span<NodePtr> nodes) {
+    auto qual_id = get_qualified_id(std::move(nodes[0]));
+    return make_node<UserDefinedTypeNode>(source_range, std::move(qual_id));
   }
 
-  NodePtr variable_assignment(SourceRange source_range,
-                              std::span<NodePtr> nodes) {
-    auto name_node = cast_view<TokenNode>(nodes.front());
-    StringId name_id = context_.add_string(get_token_string(name_node));
-
-    auto value = cast_move<Expression>(std::move(nodes[2]));
-
-    return make_node<AssignmentStmt>(source_range, name_id, std::move(value));
+  template <Type::Kind kind, size_t width>
+  NodePtr primitive_type(SourceRange source_range, std::span<NodePtr> nodes) {
+    return make_node<PrimitiveTypeNode>(source_range, kind, width);
   }
 
   template <typename T, typename Wrapper, size_t Index>
@@ -272,47 +235,6 @@ class ASTBuildContext {
     return make_node<Wrapper>(source_range, std::move(wrappee));
   }
 
-  NodePtr namespace_definition(SourceRange source_range,
-                               std::span<NodePtr> nodes) {
-    bool is_exported = nodes.size() == 6;
-    size_t shift = is_exported ? 1 : 0;
-
-    // identifier
-    const auto& id_token = cast_view<TokenNode>(nodes[shift + 0]);
-    auto name_id = context_.add_string(get_token_string(id_token));
-
-    auto body = cast_move<NodesList<Declaration>>(std::move(nodes[shift + 4]));
-
-    return make_node<NamespaceDecl>(source_range, name_id,
-                                    std::move(body->nodes), is_exported);
-  }
-
-  NodePtr while_statement(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto condition = cast_move<Expression>(std::move(nodes[2]));
-    auto body = cast_move<CompoundStmt>(std::move(nodes[4]));
-
-    return make_node<WhileStmt>(source_range, std::move(condition),
-                                std::move(body));
-  }
-
-  NodePtr if_statement(SourceRange source_range, std::span<NodePtr> nodes) {
-    bool has_else = nodes.size() == 7;
-    auto condition = cast_move<Expression>(std::move(nodes[2]));
-    auto true_branch = cast_move<CompoundStmt>(std::move(nodes[4]));
-
-    auto false_branch =
-        has_else ? cast_move<CompoundStmt>(std::move(nodes[6]))
-                 : make_node<CompoundStmt>(
-                       SourceRange::empty_at(true_branch->source_range.end));
-
-    return make_node<IfStmt>(source_range, std::move(condition),
-                             std::move(true_branch), std::move(false_branch));
-  }
-
-  NodePtr bool_literal(SourceRange source_range, std::span<NodePtr> nodes) {
-    auto token = cast_view<TokenNode>(nodes.front());
-    bool value = token.token_type == Lexis::TokenType::KW_TRUE;
-    return make_node<BoolLiteral>(source_range, value);
-  }
+  const auto& get_errors() { return errors; }
 };
 }  // namespace Front

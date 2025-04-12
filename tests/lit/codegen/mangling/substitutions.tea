@@ -1,0 +1,20 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+// CHECK: @_Z1aPcxPS_
+a: (a: *c8, b: i64, c: **c8) -> () = {}
+
+// CHECK: @_Z1bPcPPS_
+b: (a: *c8, b: ***c8) -> () = {}
+
+// CHECK: @_Z1cPPPcS_S_
+c: (a: ***c8, b: *c8, c: *c8) -> () = {}
+
+// CHECK: @_Z1dPcS_
+d: (a: *c8, b: *c8) -> () = {}
+
+A: namespace = {
+    B: namespace = {
+        // CHECK: @_ZN1A1B1fEPcS1_
+        f: (a: *c8, b: *c8) -> () = {}
+    }
+}

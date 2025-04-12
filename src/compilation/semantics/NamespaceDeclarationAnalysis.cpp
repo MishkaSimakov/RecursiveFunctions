@@ -1,23 +1,33 @@
 #include "SemanticAnalyzer.h"
 
 namespace Front {
-bool SemanticAnalyzer::before_namespace_declaration(NamespaceDecl& node) {
-  auto namespace_parent_scope = current_scope_;
-  auto namespace_subscope = start_nested_scope();
+bool SemanticAnalyzer::traverse_namespace_declaration(NamespaceDecl& node) {
+  Scope* subscope;
 
-  auto [_, was_emplaced] = namespace_parent_scope->symbols.emplace(
-      node.name, SymbolInfo::make_namespace(node, namespace_subscope));
+  if (current_scope_->has_symbol(node.name)) {
+    SymbolInfo& info = current_scope_->symbols.at(node.name);
 
-  if (!was_emplaced) {
-    auto name = context_.get_string(node.name);
-    scold_user(node, fmt::format("Redefinition of namespace {}", name));
+    if (!info.is_namespace()) {
+      auto name = context_.get_string(node.name);
+      scold_user(node,
+                 fmt::format("redefinition of {:?} as different kind of symbol",
+                             name));
+    }
+
+    subscope = std::get<NamespaceSymbolInfo>(info).subscope;
+  } else {
+    subscope = &current_scope_->add_child(node.name);
+    SymbolInfo& info = current_scope_->add_namespace(node.name, node, subscope);
+
+    add_to_exported_if_necessary(info);
   }
 
-  return true;
-}
+  NestedScopeRAII scope_guard(*this, *subscope);
 
-bool SemanticAnalyzer::after_namespace_declaration(NamespaceDecl& node) {
-  end_nested_scope();
+  for (auto& decl : node.body) {
+    traverse(*decl);
+  }
+
   return true;
 }
 }  // namespace Front

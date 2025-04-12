@@ -1,0 +1,8 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+f: () -> () = {
+    a: i32 = 123 as i32;
+    b: u32 = 321 as u32;
+
+    result: i64 = (a + (b as i32)) as i64;
+}

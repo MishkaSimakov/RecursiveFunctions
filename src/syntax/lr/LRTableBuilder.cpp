@@ -54,12 +54,23 @@ void LRTableBuilder::build_first_table() {
           continue;
         }
 
-        auto begin = production.cbegin();
+        auto itr = production.cbegin();
 
-        if (begin.is_terminal()) {
-          nonterm_update.add(begin.access_terminal());
-        } else {
-          nonterm_update.add(first_[begin.access_nonterminal()]);
+        // here we must consider empty productions
+        // for example A -> B C a, where B -> epsilon, C -> epsilon
+        // in this case a \in First(A)
+        for (; itr != production.cend(); ++itr) {
+          if (itr.is_terminal()) {
+            nonterm_update.add(itr.access_terminal());
+            break;
+          } else {
+            auto first = first_[itr.access_nonterminal()];
+            nonterm_update.add(first);
+
+            if (!first.contains(Lexis::TokenType::END)) {
+              break;
+            }
+          }
         }
       }
 
@@ -77,57 +88,6 @@ void LRTableBuilder::build_first_table() {
     // merge into result
     for (auto& [non_terminal, terminals] : curr_added) {
       first_[non_terminal].add(terminals);
-    }
-
-    // find new data
-    curr_added = update_data();
-  }
-}
-
-void LRTableBuilder::build_follow_table() {
-  auto update_data = [this] {
-    std::unordered_map<NonTerminal, TokensBitset> updated;
-
-    for (const auto& [non_terminal, productions] : grammar_.get_productions()) {
-      for (const auto& production : productions | std::views::keys) {
-        const auto& parts = production.get_parts();
-        for (auto itr = parts.begin(); itr != parts.end(); ++itr) {
-          if (std::holds_alternative<Terminal>(*itr)) {
-            continue;
-          }
-
-          auto curr_non_terminal = std::get<NonTerminal>(*itr);
-          auto next = std::next(itr);
-          auto& nonterm_update = updated[curr_non_terminal];
-
-          if (next == parts.end()) {
-            nonterm_update.add(follow_[non_terminal]);
-          } else if (std::holds_alternative<Terminal>(*next)) {
-            nonterm_update.add(std::get<Terminal>(*next).get_token());
-          } else {
-            // next is non-terminal
-            nonterm_update.add(first_[std::get<NonTerminal>(*next)]);
-          }
-        }
-      }
-    }
-
-    for (auto& [nonterm, nonterm_update] : updated) {
-      nonterm_update.remove(follow_[nonterm]);
-    }
-
-    EraseEmpty(updated);
-
-    return updated;
-  };
-
-  std::unordered_map<NonTerminal, TokensBitset> curr_added;
-  curr_added[grammar_.get_start()].add(Lexis::TokenType::END);
-
-  while (!curr_added.empty()) {
-    // merge into result
-    for (const auto& [nonterm, follows] : curr_added) {
-      follow_[nonterm].add(follows);
     }
 
     // find new data
@@ -205,11 +165,6 @@ void LRTableBuilder::build_actions_table() {
 
   const auto& tokens = Lexis::TokenType::values;
 
-  for (size_t i = 0; i < states_.size(); ++i) {
-    const auto& [state, info] = *state_by_index(i);
-    std::cout << "State #" << i << ":\n" << state << std::endl;
-  }
-
   for (const auto& [state, info] : states_) {
     auto& actions = temp_actions[info.index];
     actions.resize(tokens.size());
@@ -262,7 +217,7 @@ void LRTableBuilder::build_actions_table() {
       ssize_t index = static_cast<size_t>(token);
 
       if (state_actions[index].size() != 1) {
-        conflicts.emplace_back(state_by_index(state_id)->first, index,
+        conflicts.emplace_back(state_by_index(state_id)->first, token,
                                state_actions[index]);
         continue;
       }
@@ -287,7 +242,7 @@ State LRTableBuilder::closure(State state) const {
     }
     updated.clear();
 
-    for (const auto& updated_position : prev_updated | std::views::keys) {
+    for (const auto& [updated_position, following] : prev_updated) {
       if (updated_position.iterator == updated_position.end_iterator() ||
           updated_position.iterator.is_terminal()) {
         continue;
@@ -298,7 +253,11 @@ State LRTableBuilder::closure(State state) const {
 
       TokensBitset new_following;
       if (following_itr == updated_position.end_iterator()) {
-        new_following = follow_.at(updated_position.from);
+        // TODO: previous version is commented here
+        // theoretically it is wrong, but in practice it worked and lr-table was
+        // smaller. Should someday think why it worked this way...
+        // new_following = follow_.at(updated_position.from);
+        new_following = following;
       } else if (following_itr.is_terminal()) {
         new_following.add(following_itr.access_terminal());
       } else {
@@ -331,7 +290,6 @@ LRTableBuilder::LRTableBuilder(Grammar grammar) : grammar_(std::move(grammar)) {
   grammar_.set_start(new_start);
 
   build_first_table();
-  build_follow_table();
   build_states_table();
   build_actions_table();
 }

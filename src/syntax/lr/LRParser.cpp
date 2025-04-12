@@ -5,7 +5,7 @@
 
 #include <span>
 
-using enum Front::BinaryOperator::OpType;
+using enum Front::BinaryOperator::OpType::InternalEnum;
 using namespace Front;
 #include "syntax/BuildersRegistry.h"
 
@@ -102,7 +102,7 @@ class RecoveryTree {
 
 void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
                      ModuleContext& context, SourceView source) const {
-  ASTBuildContext build_context(context, source);
+  ASTBuildContext build_context(context.get_strings_pool(), source);
   std::vector<size_t> states_stack;
 
   std::vector<std::pair<SourceRange, std::string>> errors;
@@ -122,8 +122,8 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
 
     if (std::holds_alternative<AcceptAction>(action)) {
       if (errors.empty()) {
-        context.ast_root = std::unique_ptr<ProgramDecl>(
-            dynamic_cast<ProgramDecl*>(nodes_stack.front().release()));
+        context.ast_root = std::unique_ptr<ProgramNode>(
+            dynamic_cast<ProgramNode*>(nodes_stack.front().release()));
       }
 
       break;
@@ -160,7 +160,7 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       recovery_tree.prune_subtree(lexical_analyzer);
 
       // RecoveryTree can brake after skipping some tokens.
-      // Therefore we have to check again.
+      // Therefore, we have to check again.
       if (recovery_tree.is_broken()) {
         break;
       }
@@ -203,6 +203,11 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       states_stack.resize(states_stack.size() - reduce.remove_count);
       states_stack.push_back(goto_[states_stack.back()][reduce.next.get_id()]);
     }
+  }
+
+  auto builder_errors = build_context.get_errors();
+  for (auto& error : builder_errors) {
+    errors.push_back(std::move(error));
   }
 
   if (!errors.empty()) {

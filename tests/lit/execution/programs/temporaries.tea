@@ -1,0 +1,54 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK:       1
+// CHECK-NEXT:  2
+// CHECK-NEXT:  1
+// CHECK-NEXT:  2
+// CHECK-NEXT:  3
+// CHECK-NEXT:  4
+// CHECK-NEXT:  5
+// CHECK-NEXT:  1
+// CHECK-NEXT:  2
+
+extern println: (value: i64) -> ()
+
+get_tuple: () -> (i64, i64) = {
+    return (1, 2);
+}
+
+print_tuple: (tuple: (i64, i64)) -> () = {
+    println(tuple.0);
+    println(tuple.1);
+}
+
+main: () -> i64 = {
+    a: i64 = get_tuple().0;
+    b: i64 = get_tuple().1;
+
+    println(a);
+    println(b);
+
+    println((a, b).0);
+    println((a, b).1);
+
+    print_tuple((3, 4));
+
+    c: i64 = (5, 6).0;
+
+    println(c);
+
+
+    if ((true, false).0) {
+        println(1);
+    } else {
+        println(2);
+    }
+
+    if ((true, false).1) {
+        println(1);
+    } else {
+        println(2);
+    }
+
+    return 0;
+}

@@ -1,0 +1,11 @@
+export A: namespace = {
+    f: () -> () = {}
+}
+
+B: namespace = {
+    export f: () -> () = {}
+}
+
+export g: () -> () = {}
+
+export Alias: type == i64

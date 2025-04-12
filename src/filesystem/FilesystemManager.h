@@ -45,7 +45,6 @@ class FilesystemManager {
   FilesystemManager& operator=(const FilesystemManager&) = delete;
 
   static std::unique_ptr<FilesystemManager> instance_;
-  static std::mutex mutex_;
 
   fs::path temporary_directory_{};
   std::vector<Resource> loaded_resources_{};

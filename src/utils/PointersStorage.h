@@ -7,13 +7,15 @@ template <typename T>
     { ptr->hash() } -> std::same_as<size_t>;
   }
 class PointersStorage {
-  constexpr static auto hasher_fn = [](T* ptr) { return ptr->hash(); };
-
-  constexpr static auto equal_fn = [](T* left, T* right) {
-    return *left == *right;
+  struct PolyPointerHasher {
+    size_t operator()(T* ptr) const { return ptr->hash(); }
   };
 
-  std::unordered_set<T*, decltype(hasher_fn), decltype(equal_fn)> storage_;
+  struct PolyPointerEqual {
+    bool operator()(T* left, T* right) const { return *left == *right; }
+  };
+
+  std::unordered_set<T*, PolyPointerHasher, PolyPointerEqual> storage_;
 
  public:
   template <typename Child, typename... Args>

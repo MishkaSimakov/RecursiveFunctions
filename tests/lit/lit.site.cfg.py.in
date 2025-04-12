@@ -1,0 +1,20 @@
+import os
+
+config.src_root = r'@CMAKE_SOURCE_DIR@'
+config.obj_root = r'@CMAKE_BINARY_DIR@'
+
+# tea compiler
+config.tea_path = r'$<TARGET_FILE:cli>'
+
+# library for execution tests
+config.library = r'$<TARGET_FILE:tests.lit.execution.library>'
+
+# llvm tools
+config.llvm_filecheck = r'@LLVM_FILE_CHECK@'
+config.llvm_llc = r'@LLVM_LLC@'
+config.llvm_clang = r'@LLVM_CLANG@'
+
+lit_config.load_config(
+    config,
+    os.path.join(config.src_root, "tests/lit/lit.cfg.py")
+)

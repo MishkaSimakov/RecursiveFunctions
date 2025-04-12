@@ -9,7 +9,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 
 SourceView SourceManager::load(const std::filesystem::path& path) {
   int fd = open(path.c_str(), O_RDWR);
@@ -48,7 +47,6 @@ SourceView SourceManager::load(const std::filesystem::path& path) {
 }
 
 SourceView SourceManager::load_text(std::string_view text) {
-  std::cout << "loading text" << std::endl;
   char* loaded_text = new char[text.size() + 1];
   std::ranges::copy(text, loaded_text);
 
@@ -138,7 +136,8 @@ void SourceManager::print_annotations(std::ostream& os) {
         fmt::format(fg(fmt::color::orange), "{}", error_view);
     auto after_error_view = line_view.substr(end_offset);
 
-    os << fmt::format("In file {:?} on line {}:\n", path.c_str(), start_index + 1);
+    os << fmt::format("{}:{}:{}:\n", path.c_str(), start_index + 1,
+                      start_offset + 1);
     os << before_error_view << emphasized_error << after_error_view << "\n";
     os << std::string(start_offset, ' ') << "`-" << annotation.value
        << std::endl;
@@ -146,11 +145,8 @@ void SourceManager::print_annotations(std::ostream& os) {
 }
 
 SourceManager::~SourceManager() {
-  std::cout << "~SourceManager" << std::endl;
-
   for (auto& [begin, size, path] : loaded_) {
     if (path.empty()) {
-      std::cout << "deleting text" << std::endl;
       delete[] begin;
     } else {
       munmap(begin, size);

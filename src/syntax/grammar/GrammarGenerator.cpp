@@ -1,12 +1,13 @@
 #include "GrammarGenerator.h"
 
 #include <fmt/format.h>
-#include <syntax/lr/LRTableBuilder.h>
 
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 #include "Grammar.h"
+#include "syntax/lr/LRTableBuilder.h"
 
 namespace Syntax {
 namespace {
@@ -64,6 +65,17 @@ std::vector<Rule> read_grammar(const std::filesystem::path& path) {
       }
 
       line.remove_suffix(1);
+
+      // check if this rule already exists
+      bool already_described = std::ranges::any_of(
+          result, [&line](const Rule& rule) { return rule.name == line; });
+      if (already_described) {
+        throw std::runtime_error(
+            fmt::format("Error in grammar file: line {} - nonterminal {:?} is "
+                        "described more than once.",
+                        line_index, line));
+      }
+
       result.emplace_back();
       result.back().name = line;
       start_new_rule = false;
@@ -115,7 +127,7 @@ Grammar parse_grammar(const std::vector<Rule>& text_grammar) {
       // special syntax for empty production
       if (parts.size() == 1 && parts.front() == "empty") {
         result.add_rule(nonterminals.at(name), std::move(grammar_production));
-        break;
+        continue;
       }
 
       for (const auto& part : parts) {
@@ -161,21 +173,38 @@ void generate_function_file(const std::filesystem::path& path,
 }
 }  // namespace
 
-void GrammarGenerator::generate_grammar(
+size_t GrammarGenerator::generate_grammar(
     const std::filesystem::path& input_path,
     const std::filesystem::path& table_path,
     const std::filesystem::path& builders_path) {
+  size_t states_count;
+
   auto text_grammar = read_grammar(input_path);
   auto grammar = parse_grammar(text_grammar);
 
   try {
     auto builder = LRTableBuilder(std::move(grammar));
+    states_count = builder.get_actions_table().size();
     builder.save_to(table_path);
   } catch (ActionsConflictException exception) {
     std::cout << exception.what() << std::endl;
+
+    for (const Conflict& conflict : exception.conflicts) {
+      std::cout << "In state:" << std::endl;
+      std::cout << conflict.state;
+      std::cout << "following actions are possible for "
+                << conflict.token.to_string() << ":" << std::endl;
+      for (const Action& action : conflict.actions) {
+        std::cout << "  " << action << std::endl;
+      }
+    }
+
+    throw;
   }
 
   // now we generate file with builders list
   generate_function_file(builders_path, text_grammar);
+
+  return states_count;
 }
 }  // namespace Syntax

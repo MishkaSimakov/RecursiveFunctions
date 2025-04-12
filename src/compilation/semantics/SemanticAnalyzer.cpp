@@ -2,7 +2,11 @@
 
 #include <utils/Constants.h>
 
+#include <algorithm>
 #include <iostream>
+
+#include "ast/ASTPrinter.h"
+#include "compilation/ScopePrinter.h"
 
 namespace Front {
 TypesStorage& SemanticAnalyzer::types() { return context_.types_storage; }
@@ -12,170 +16,130 @@ void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
   throw SemanticAnalyzerException(std::move(errors_));
 }
 
-std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::name_lookup(
-    Scope* base_scope, StringId id, bool should_ascend) const {
-  Scope* current_scope = base_scope;
-  // first we do local lookup
-  while (current_scope != nullptr) {
-    auto itr = current_scope->symbols.find(id);
-    if (itr != current_scope->symbols.end()) {
-      return {current_scope, &itr->second};
-    }
-
-    if (!should_ascend) {
-      return {nullptr, nullptr};
-    }
-
-    current_scope = current_scope->parent;
+StringId SemanticAnalyzer::import_external_string(
+    StringId external_string, const StringPool& external_strings) {
+  if (&external_strings == &context_.get_strings_pool()) {
+    return external_string;
   }
 
-  // if hasn't found then start global lookup in imported modules
-  return recursive_global_name_lookup(context_, id);
+  std::string_view string_view = external_strings.get_string(external_string);
+  return context_.add_string(string_view);
 }
 
-std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::qualified_name_lookup(
-    Scope* base_scope, const IdExpr& qualified_id) {
-  auto parts = qualified_id.parts;
-  // process scope qualifiers
-  for (size_t i = 0; i + 1 < parts.size(); ++i) {
-    auto [next_scope, next_symbol] = name_lookup(base_scope, parts[i], i == 0);
+QualifiedId SemanticAnalyzer::import_external_string(
+    const QualifiedId& external_string, const StringPool& external_strings) {
+  QualifiedId result;
+  for (StringId part : external_string.parts) {
+    result.parts.push_back(import_external_string(part, external_strings));
+  }
+  return result;
+}
 
-    // only namespaces can appear as scope qualifiers
-    if (!std::holds_alternative<NamespaceSymbol>(next_symbol->data)) {
-      scold_user(qualified_id,
-                 "Only namespace name can appear as qualifier before id.");
-    }
-
-    base_scope = std::get<NamespaceSymbol>(next_symbol->data).subscope;
+void SemanticAnalyzer::convert_to_rvalue(
+    std::unique_ptr<Expression>& expression) {
+  if (expression->value_category == ValueCategory::RVALUE) {
+    return;
   }
 
-  return name_lookup(base_scope, parts.back(), false);
+  auto cast = std::make_unique<ImplicitLvalueToRvalueConversionExpr>(
+      expression->source_range, std::move(expression));
+
+  cast->type = cast->value->type;
+  cast->value_category = ValueCategory::RVALUE;
+
+  expression = std::move(cast);
 }
 
-std::pair<Scope*, SymbolInfo*> SemanticAnalyzer::recursive_global_name_lookup(
-    const ModuleContext& module, StringId name) const {
-  // // TODO: notify when there are conflicting names
-  // for (const auto& dependency : module.dependencies) {
-  //   const auto& symbols = import_module.root_scope->symbols;
-  //   auto itr = symbols.find(name);
-  //   if (itr != symbols.end() && itr->second.is_exported) {
-  //     return {itr->second.type, import_module.root_scope};
-  //   }
-  //
-  //   auto recursive_search_result =
-  //       recursive_global_name_lookup(import_module, name);
-  //   if (recursive_search_result.first != nullptr) {
-  //     return recursive_search_result;
-  //   }
-  // }
-  //
-  return {nullptr, nullptr};
-}
-
-void SemanticAnalyzer::check_call_arguments(FunctionType* type,
-                                            const CallExpr& call) {
-  if (type->arguments.size() != call.arguments.size()) {
-    scold_user(call,
-               fmt::format("Arguments count mismatch: {} != {}",
-                           type->arguments.size(), call.arguments.size()));
+void SemanticAnalyzer::as_initializer(std::unique_ptr<Expression>& expression) {
+  if (expression->value_category == ValueCategory::RVALUE) {
+    return;
   }
 
-  for (size_t i = 0; i < type->arguments.size(); ++i) {
-    if (type->arguments[i] != call.arguments[i]->type) {
-      scold_user(*call.arguments[i],
-                 fmt::format("Argument type mismatch: {} != {}",
-                             type->arguments[i]->to_string(),
-                             call.arguments[i]->type->to_string()));
-    }
+  if (expression->type->get_original()->get_kind() == Type::Kind::TUPLE) {
+    const Expression& tuple = *expression;
+    expression = std::make_unique<ImplicitTupleCopyExpr>(tuple.source_range,
+                                                         std::move(expression));
+    expression->type = tuple.type;
+    expression->value_category = ValueCategory::RVALUE;
+  } else {
+    convert_to_rvalue(expression);
   }
 }
 
 bool SemanticAnalyzer::after_traverse(ASTNode& node) {
   if constexpr (Constants::debug) {
     Expression* expression = dynamic_cast<Expression*>(&node);
-    if (expression != nullptr && expression->type == nullptr) {
-      scold_user(
-          node,
-          "Program logic error. Type of expression is not calculated after "
-          "traversal.");
+    if (expression != nullptr) {
+      if (expression->type == nullptr) {
+        scold_user(node, "Program logic error. Type is not calculated.");
+      }
+
+      if (expression->value_category == ValueCategory::UNKNOWN) {
+        scold_user(node,
+                   "Program logic error. Value category is not calculated.");
+      }
     }
   }
 
   return true;
 }
 
-//
-// bool SemanticAnalyzer::visit_function_declaration(FunctionDecl& node) {
-// auto arguments_view =
-//     node.parameters |
-//     std::views::transform([](const std::unique_ptr<ParameterDecl>& node) {
-//       return node->type->value;
-//     });
-// std::vector arguments(arguments_view.begin(), arguments_view.end());
-//
-// Type* return_type = node.return_type->value;
-//
-// Type* type = context_.types_storage.make_type<FunctionType>(
-//     std::move(arguments), return_type);
-// node.scope->add_symbol(node.name, type, node.is_exported);
+bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
+  SymbolInfo* info = current_scope_->get_parent_symbol();
+  if (info == nullptr || !info->is_function()) {
+    scold_user(node, "Return statements are allowed only inside function.");
+  }
 
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
-//   Type* type = node.type->value;
-//
-//   if (node.initializer != nullptr && node.initializer->type != type) {
-//     scold_user(
-//         node.initializer->source_range,
-//         fmt::format("Incompatible initializer and variable types: {} != {}",
-//                     type->to_string(), node.initializer->type->to_string()));
-//   }
-//
-//   node.scope->add_symbol(node.name, type, false);
-//   return true;
-// }
-// bool SemanticAnalyzer::visit_parameter_declaration(ParameterDecl& node) {
-//   Type* type = node.type->value;
-//   node.scope->add_symbol(node.id, type, false);
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_integer_literal(IntegerLiteral& node) {
-//   node.type = types().add_primitive<IntType>();
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_string_literal(StringLiteral& node) {
-//   auto char_type = types().add_primitive<CharType>();
-//   node.type = types().add_pointer(char_type);
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
-//   // for now only "int op int" is allowed
-//   if (*node.left->type != IntType()) {
-//     scold_user(
-//         node.left->source_range,
-//         fmt::format(
-//             "Incompatible type for binary operator. Must be int, got: {}",
-//             node.left->type->to_string()));
-//   }
-//   if (*node.right->type != IntType()) {
-//     scold_user(
-//         node.right->source_range,
-//         fmt::format(
-//             "Incompatible type for binary operator. Must be int, got: {}",
-//             node.right->type->to_string()));
-//   }
-//
-//   node.type = types().add_primitive<IntType>();
-//
-//   return true;
-// }
-//
-// bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
-//   // must check that function type and function return are same
-//   return true;
-// }
+  FunctionType* fun_ty = std::get<FunctionSymbolInfo>(*info).type;
+
+  if (node.value->type != fun_ty->return_type) {
+    auto left_type = node.value->type->to_string(context_.get_strings_pool());
+    auto right_type =
+        fun_ty->return_type->to_string(context_.get_strings_pool());
+
+    scold_user(
+        node,
+        fmt::format(
+            "Expression type in return statement must be equal to function "
+            "type. {:?} != {:?}.",
+            left_type, right_type));
+  }
+
+  // right part of assignment must be rvalue
+  // if it is not then lvalue-to-rvalue-conversion is applied
+  convert_to_rvalue(node.value);
+
+  return true;
+}
+
+void SemanticAnalyzer::add_to_exported_if_necessary(SymbolInfo& info) {
+  Declaration& decl = info.get_declaration();
+
+  if (decl.specifiers.is_exported()) {
+    context_.exported_symbols.push_back(info);
+  }
+}
+
+void SemanticAnalyzer::analyze() {
+  OSO_FIRE();
+
+  auto name = context_.add_string(fmt::format("module({})", context_.name));
+  context_.root_scope = std::make_unique<Scope>(name);
+  current_scope_ = context_.root_scope.get();
+
+  for (ModuleContext& exported : context_.dependencies) {
+    for (SymbolInfo& exported_symbol : exported.exported_symbols) {
+      inject_symbol(exported, exported_symbol);
+    }
+  }
+
+  traverse(*context_.ast_root);
+
+  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+  // std::cout);
+  // printer.print();
+
+  // ASTPrinter ast_printer(context_, std::cout);
+  // ast_printer.print();
+}
 }  // namespace Front

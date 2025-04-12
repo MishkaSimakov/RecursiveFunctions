@@ -1,0 +1,44 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// Calculate 100 first prime numbers, then sum them all and print result
+// CHECK: 24133
+
+extern print: (value: i64) -> ()
+
+is_prime: (number: i64) -> b8 = {
+    // 0 and 1 are not primes
+    if (number < 2) {
+        return false;
+    }
+
+    divider: i64 = 2;
+    while (divider * divider <= number) {
+        if (number % divider == 0) {
+            return false;
+        }
+
+        divider = divider + 1;
+    }
+
+    return true;
+}
+
+main: () -> i64 = {
+    sum: i64 = 0;
+    count: i64 = 0;
+    current_number: i64 = 2;
+
+    while (count < 100) {
+        while (!is_prime(current_number)) {
+            current_number = current_number + 1;
+        }
+
+        count = count + 1;
+        sum = sum + current_number;
+        current_number = current_number + 1;
+    }
+
+    print(sum);
+
+    return 0;
+}

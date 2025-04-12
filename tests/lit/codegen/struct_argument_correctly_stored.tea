@@ -1,0 +1,10 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+// CHECK: ptr %tuple
+f: (tuple: (i64, i64)) -> () = {
+    // CHECK: getelementptr
+    // CHECK-SAME: ptr %tuple
+
+    // CHECK: store i64 123
+    tuple.0 = 123;
+}

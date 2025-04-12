@@ -1,12 +1,30 @@
 #pragma once
 
 #include "ast/Nodes.h"
+#include "utils/TupleUtils.h"
 
 namespace Front {
 enum class Order { POSTORDER, PREORDER };
 
-template <typename Child, bool IsConst = false,
-          Order DFSOrder = Order::PREORDER>
+struct ASTVisitorConfig {
+  static constexpr auto order() { return Order::POSTORDER; }
+  static constexpr auto is_const() { return false; }
+  static constexpr auto override_all() { return false; }
+};
+
+template <typename T, int = (T(), 1)>
+constexpr bool is_constexpr_helper(T) {
+  return true;
+}
+constexpr bool is_constexpr_helper(...) { return false; }
+
+template <auto T>
+constexpr bool is_constexpr_v = is_constexpr_helper([] { T(); });
+
+template <typename Child, typename Config = ASTVisitorConfig>
+  requires(std::is_base_of_v<ASTVisitorConfig, Config> &&
+           is_constexpr_v<Config::order> && is_constexpr_v<Config::is_const> &&
+           is_constexpr_v<Config::override_all>)
 class ASTVisitor {
  private:
   Child& child() { return static_cast<Child&>(*this); }
@@ -14,7 +32,7 @@ class ASTVisitor {
 
  protected:
   template <typename T>
-  using wrap_const = std::conditional_t<IsConst, const T, T>;
+  using wrap_const = std::conditional_t<Config::is_const(), const T, T>;
 
  public:
   enum class NodeTraverseType { CONTINUE, STOP, SKIP_NODE };
@@ -33,7 +51,7 @@ class ASTVisitor {
     if (!child().before_##snake_case(static_cast<wrap_const<type>&>(node))) {  \
       return false;                                                            \
     }                                                                          \
-    if constexpr (DFSOrder == Order::PREORDER) {                               \
+    if constexpr (Config::order() == Order::PREORDER) {                        \
       if (!child().visit_##snake_case(static_cast<wrap_const<type>&>(node))) { \
         return false;                                                          \
       }                                                                        \
@@ -42,7 +60,7 @@ class ASTVisitor {
             static_cast<wrap_const<type>&>(node))) {                           \
       return false;                                                            \
     }                                                                          \
-    if constexpr (DFSOrder == Order::POSTORDER) {                              \
+    if constexpr (Config::order() == Order::POSTORDER) {                       \
       if (!child().visit_##snake_case(static_cast<wrap_const<type>&>(node))) { \
         return false;                                                          \
       }                                                                        \
@@ -55,6 +73,8 @@ class ASTVisitor {
 #include "ast/NodesList.h"
 
 #undef NODE
+      default:
+        unreachable("All nodes types are enumerated above.");
     }
 
     if (!child().after_traverse(node)) {
@@ -75,7 +95,10 @@ class ASTVisitor {
     return true;
   }
   bool traverse_assignment_statement(wrap_const<AssignmentStmt>& node) {
-    if (!traverse(*node.value)) {
+    if (!traverse(*node.left)) {
+      return false;
+    }
+    if (!traverse(*node.right)) {
       return false;
     }
 
@@ -93,7 +116,30 @@ class ASTVisitor {
     }
     return true;
   }
-  bool traverse_type_node(wrap_const<TypeNode>& node) { return true; }
+  bool traverse_tuple_index_expression(wrap_const<TupleIndexExpr>& node) {
+    if (!traverse(*node.left)) {
+      return false;
+    }
+    return true;
+  }
+  bool traverse_pointer_type(wrap_const<PointerTypeNode>& node) {
+    return traverse(*node.child);
+  }
+  bool traverse_primitive_type(wrap_const<PrimitiveTypeNode>& node) {
+    return true;
+  }
+  bool traverse_tuple_type(wrap_const<TupleTypeNode>& node) {
+    for (auto& child : node.elements) {
+      if (!traverse(*child)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+  bool traverse_user_defined_type(wrap_const<UserDefinedTypeNode>& node) {
+    return true;
+  }
   bool traverse_compound_statement(wrap_const<CompoundStmt>& node) {
     for (auto& stmt : node.statements) {
       if (!traverse(*stmt)) {
@@ -103,7 +149,7 @@ class ASTVisitor {
 
     return true;
   }
-  bool traverse_program_declaration(wrap_const<ProgramDecl>& node) {
+  bool traverse_program(wrap_const<ProgramNode>& node) {
     for (auto& import_decl : node.imports) {
       if (!traverse(*import_decl)) {
         return false;
@@ -117,10 +163,6 @@ class ASTVisitor {
 
     return true;
   }
-  bool traverse_parameter_declaration(wrap_const<ParameterDecl>& node) {
-    return traverse(*node.type);
-  }
-
   bool traverse_function_declaration(wrap_const<FunctionDecl>& node) {
     for (auto& parameter : node.parameters) {
       if (!traverse(*parameter)) {
@@ -132,7 +174,11 @@ class ASTVisitor {
       return false;
     }
 
-    return traverse(*node.body);
+    if (node.body != nullptr && !traverse(*node.body)) {
+      return false;
+    }
+
+    return true;
   }
   bool traverse_return_statement(wrap_const<ReturnStmt>& node) {
     return traverse(*node.value);
@@ -160,7 +206,7 @@ class ASTVisitor {
     return traverse(*node.value);
   }
   bool traverse_call_expression(wrap_const<CallExpr>& node) {
-    if (!traverse(*node.name)) {
+    if (!traverse(*node.callee)) {
       return false;
     }
 
@@ -205,6 +251,36 @@ class ASTVisitor {
     return true;
   }
   bool traverse_break_statement(wrap_const<BreakStmt>& node) { return true; }
+  bool traverse_implicit_lvalue_to_rvalue_conversion_expression(
+      wrap_const<ImplicitLvalueToRvalueConversionExpr>& node) {
+    return traverse(*node.value);
+  }
+  bool traverse_implicit_tuple_copy_expression(
+      wrap_const<ImplicitTupleCopyExpr>& node) {
+    return traverse(*node.value);
+  }
+  bool traverse_type_alias_declaration(wrap_const<TypeAliasDecl>& node) {
+    return traverse(*node.original);
+  }
+  bool traverse_class_declaration(wrap_const<ClassDecl>& node) {
+    for (auto& decl : node.body) {
+      if (!traverse(*decl)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  bool traverse_member_expression(wrap_const<MemberExpr>& node) {
+    return traverse(*node.left);
+  }
+  bool traverse_tuple_expression(wrap_const<TupleExpr>& node) {
+    for (auto& element : node.elements) {
+      if (!traverse(*element)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   NodeTraverseType before_traverse(wrap_const<ASTNode>& node) {
     return NodeTraverseType::CONTINUE;

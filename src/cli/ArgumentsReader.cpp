@@ -10,7 +10,9 @@
 
 namespace fs = std::filesystem;
 
-Cli::SourcesList Cli::ArgumentsReader::parse_source_paths(
+namespace Cli {
+
+SourcesList ArgumentsReader::parse_source_paths(
     std::vector<std::string> sources) {
   SourcesList result;
   auto add_source = [&result](const std::string& name, const fs::path& path) {
@@ -85,8 +87,7 @@ Cli::SourcesList Cli::ArgumentsReader::parse_source_paths(
   return result;
 }
 
-std::filesystem::path Cli::ArgumentsReader::parse_output(
-    const std::string& output) {
+std::filesystem::path ArgumentsReader::parse_output(const std::string& output) {
   fs::path output_path = output;
 
   // output must be directory or path
@@ -97,10 +98,19 @@ std::filesystem::path Cli::ArgumentsReader::parse_output(
   return output_path;
 }
 
-Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
+Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
+  if (name == "ir") {
+    return Front::EmitType::IR;
+  }
+  if (name == "ast") {
+    return Front::EmitType::AST;
+  }
+  throw std::runtime_error("unknown compiler emit type.");
+}
+
+Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
   argparse::ArgumentParser parser("compiler");
-  parser.add_description(
-      "Compiler for TeaLang ☕️");
+  parser.add_description("Compiler for TeaLang ☕️");
 
   parser.add_argument("sources")
       .nargs(argparse::nargs_pattern::at_least_one)
@@ -110,31 +120,14 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
           "automatically or <directory path> to include all files in "
           "directory recursively.");
 
-  // size_t verbosity = 0;
-  // parser.add_argument("-v")
-  //     .action([&](const auto&) { ++verbosity; })
-  //     .append()
-  //     .default_value(false)
-  //     .implicit_value(true)
-  //     .nargs(0)
-  //     .help(
-  //         "increase program verbosity. -v - show only warnings, -vv - show "
-  //         "info and "
-  //         "warnings, -vvv - show all log messages.");
-  //
-  // parser.add_argument("-o", "--output")
-  //     .default_value(std::filesystem::current_path().string())
-  //     .help("specify output file name");
+  parser.add_argument("-o", "--output")
+      .default_value("")
+      .help("output file (stdout by default)");
 
-  // parser.add_argument("-d", "--debug")
-  //     .default_value(false)
-  //     .implicit_value(true)
-  //     .help("turn on debug mode");
-
-  parser.add_argument("--dump-ast")
-      .default_value(false)
-      .implicit_value(true)
-      .help("dumps AST tree for provided files");
+  parser.add_argument("--emit")
+      .choices("ir", "ast")
+      .default_value("ir")
+      .help("compiler output type: `ir` or `ast`");
 
   try {
     parser.parse_args(argc, argv);
@@ -142,13 +135,13 @@ Cli::CompilerArguments Cli::ArgumentsReader::read(int argc, char* argv[]) {
     throw ArgumentsParseException(err.what());
   }
 
-  CompilerArguments arguments;
-  arguments.sources =
+  Front::TeaFrontendConfiguration result;
+  result.sources =
       parse_source_paths(parser.get<std::vector<std::string>>("sources"));
-  arguments.dump_ast = parser.get<bool>("dump-ast");
-  // arguments.output = parse_output(parser.get("output"));
-  // arguments.verbosity_level = verbosity;
-  // arguments.emit_type = CompilerEmitType::COMPILED;
+  result.emit_type = get_emit_type(parser.get<std::string>("emit"));
+  result.output_file = parse_output(parser.get("output"));
 
-  return arguments;
+  return result;
 }
+
+}  // namespace Cli
