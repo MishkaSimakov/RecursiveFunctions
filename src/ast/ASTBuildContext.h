@@ -111,7 +111,7 @@ class ASTBuildContext {
   NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes);
   NodePtr tuple_index_expression(SourceRange source_range,
                                  std::span<NodePtr> nodes);
-  NodePtr explicit_cast_expression(SourceRange source_range, std::span<NodePtr> nodes);
+  NodePtr explicit_unsafe_cast_expression(SourceRange source_range, std::span<NodePtr> nodes);
 
   // statements
   NodePtr return_stmt(SourceRange source_range, std::span<NodePtr> nodes);

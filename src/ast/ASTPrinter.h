@@ -192,6 +192,11 @@ class ASTPrinter : public ASTVisitor<ASTPrinter, ASTPrinterConfig>,
         fmt::format("TupleIndexExpr {} {}", range_string(value), value.index));
     return true;
   }
+  bool visit_explicit_unsafe_cast_expression(
+      const ExplicitUnsafeCastExpr& value) {
+    add_node(fmt::format("ExplicitUnsafeCastExpr {}", range_string(value)));
+    return true;
+  }
 
   // types
   bool visit_pointer_type(const PointerTypeNode& value) {
