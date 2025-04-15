@@ -5,9 +5,7 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
   Scope& scope = *current_scope_;
   if (scope.has_symbol(node.name)) {
     auto name = context_.get_string(node.name);
-    scold_user(
-        node,
-        fmt::format("Function name conflicts with other declaration.", name));
+    scold_user(node, fmt::format("name '{}' is already declared", name));
   }
 
   Scope& subscope = current_scope_->add_child(node.name);
