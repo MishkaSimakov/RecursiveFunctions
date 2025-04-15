@@ -118,6 +118,7 @@ class SemanticAnalyzer
   bool visit_member_expression(MemberExpr& node);
   bool visit_tuple_expression(TupleExpr& node);
   bool visit_tuple_index_expression(TupleIndexExpr& node);
+  bool visit_explicit_unsafe_cast_expression(ExplicitUnsafeCastExpr& node);
 
   // types
   bool visit_pointer_type(PointerTypeNode& node);
