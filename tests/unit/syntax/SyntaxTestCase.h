@@ -24,7 +24,7 @@ using TypeKind = Front::Type::Kind;
 
 class SyntaxTestCase : public ::testing::Test {
  private:
-  GlobalContext* context_{nullptr};
+  std::unique_ptr<GlobalContext> context_;
 
  protected:
   const ModuleContext& module() { return context_->get_module("main"); }
@@ -54,8 +54,7 @@ class SyntaxTestCase : public ::testing::Test {
 
   const ModuleContext& parse(std::string_view program) {
     // reset global context for each parse
-    delete context_;
-    context_ = new GlobalContext();
+    context_ = std::make_unique<GlobalContext>();
 
     Lexis::LexicalAnalyzer lexical_analyzer(
         Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
@@ -83,8 +82,6 @@ class SyntaxTestCase : public ::testing::Test {
         dynamic_cast<FunctionDecl&>(*context.ast_root->declarations.front());
     return function.body->statements;
   }
-
-  void TearDown() override { delete context_; }
 
   //
   // template <typename... Args>
