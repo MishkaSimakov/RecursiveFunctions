@@ -2,6 +2,7 @@
 .venv
 cmake-build-*
 build
+examples
 **/.DS_Store
 bin
 files/grammar/grammar.lr
