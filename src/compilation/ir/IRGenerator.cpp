@@ -283,6 +283,12 @@ bool IRGenerator::traverse_unary_operator(const UnaryOperator& value) {
   return true;
 }
 
+bool IRGenerator::traverse_explicit_unsafe_cast_expression(
+    const ExplicitUnsafeCastExpr& value) {
+  current_expr_value_ = compile_explicit_unsafe_cast(value);
+  return true;
+}
+
 bool IRGenerator::traverse_tuple_expression(const TupleExpr& value) {
   current_expr_value_ = compile_tuple_expression(value);
   return true;

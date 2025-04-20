@@ -117,6 +117,58 @@ Value IRGenerator::compile_unary_operator(const UnaryOperator& value) {
   return result;
 }
 
+Value IRGenerator::compile_explicit_unsafe_cast(
+    const ExplicitUnsafeCastExpr& value) {
+  Type* from = value.child->type;
+  Type* to = value.type;
+
+  Value child = compile_expr(value.child);
+
+  if (from == to) {
+    return child;
+  }
+
+  // otherwise cast is allowed only for arithmetic types (for now)
+  if (from->get_kind() == Type::Kind::CHAR ||
+      to->get_kind() == Type::Kind::CHAR) {
+    not_implemented("char type casting (P1)");
+  }
+
+  auto decompose_int = [&](Type* type) {
+    if (type->get_kind() == Type::Kind::SIGNED_INT) {
+      return std::pair{true, static_cast<SignedIntType*>(type)->width};
+    } else if (type->get_kind() == Type::Kind::UNSIGNED_INT) {
+      return std::pair{false, static_cast<UnsignedIntType*>(type)->width};
+    } else {
+      unreachable("semantic analyzer should discard all other types.");
+    }
+  };
+
+  std::pair<bool, size_t> from_info = decompose_int(from);
+  std::pair<bool, size_t> to_info = decompose_int(to);
+
+  // LLVM doesn't distinguish between signed and unsigned type,
+  // therefore cast to same width is no-op
+  if (from_info.second == to_info.second) {
+    return child;
+  }
+
+  child = remove_indirection(child, from);
+
+  Value result;
+  result.has_indirection = false;
+
+  if (from_info.first) {
+    result.llvm_value = llvm_ir_builder_->CreateSExtOrTrunc(child.llvm_value,
+                                                            types_mapper_(to));
+  } else {
+    result.llvm_value = llvm_ir_builder_->CreateZExtOrTrunc(child.llvm_value,
+                                                            types_mapper_(to));
+  }
+
+  return result;
+}
+
 Value IRGenerator::compile_id_expression(const IdExpr& value) {
   const SymbolInfo& info = module_.symbols_info.at(&value);
 

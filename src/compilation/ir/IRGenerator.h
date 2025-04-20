@@ -99,6 +99,8 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   bool traverse_implicit_tuple_copy_expression(
       const ImplicitTupleCopyExpr& value);
   bool traverse_unary_operator(const UnaryOperator& value);
+  bool traverse_explicit_unsafe_cast_expression(
+      const ExplicitUnsafeCastExpr& value);
 
   Value compile_id_expression(const IdExpr& value);
   Value compile_call_expression(const CallExpr& value);
@@ -110,6 +112,7 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   Value compile_member_expression(const MemberExpr& value);
   Value compile_binary_operator(const BinaryOperator& value);
   Value compile_unary_operator(const UnaryOperator& value);
+  Value compile_explicit_unsafe_cast(const ExplicitUnsafeCastExpr& value);
 
   std::unique_ptr<llvm::Module> compile();
 };
