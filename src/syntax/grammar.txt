@@ -181,7 +181,7 @@ tuple-expression:
 
 postfix-expression:
     tuple-expression                        [pass<0>]
-    tuple-expression call-arguments         [call_expression]
+    postfix-expression call-arguments       [call_expression]
     postfix-expression DOT qualified-id     [member_expression]
     postfix-expression DOT NUMBER           [tuple_index_expression]
     postfix-expression KW_AS NOT type-name  [explicit_unsafe_cast_expression]

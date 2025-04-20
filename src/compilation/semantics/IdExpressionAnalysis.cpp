@@ -1,5 +1,7 @@
 #include "SemanticAnalyzer.h"
 
+#include <iostream>
+
 namespace Front {
 bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
   SymbolInfo* info = name_lookup(current_scope_, node.id);

@@ -2,14 +2,13 @@
 
 namespace Front {
 bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
-  FunctionType* type = dynamic_cast<FunctionType*>(node.callee->type);
+  auto* type = dynamic_cast<FunctionType*>(node.callee->type);
 
   // check that type is callable
   if (type == nullptr) {
     scold_user(node, "Expression type is not callable.");
   }
 
-  // throws in case of error
   if (type->arguments.size() != node.arguments.size()) {
     scold_user(node,
                fmt::format("Arguments count mismatch: {} != {}",
