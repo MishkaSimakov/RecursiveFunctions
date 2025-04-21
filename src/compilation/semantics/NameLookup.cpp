@@ -15,7 +15,8 @@ struct SymbolInjector {
 
   void operator()(const VariableSymbolInfo& var) {
     Type* var_ty = analyzer.inject_type(var.type, source_strings());
-    scope->add_variable(name, var.declaration, var_ty);
+    SymbolInfo& info = scope->add_variable(name, var.declaration, var_ty);
+    info.as<VariableSymbolInfo>().index = var.index;
   }
 
   void operator()(const NamespaceSymbolInfo& nmsp) {

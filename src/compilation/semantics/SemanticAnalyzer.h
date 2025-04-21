@@ -98,7 +98,7 @@ class SemanticAnalyzer
   // for variables.
   void as_initializer(std::unique_ptr<Expression>& expression);
 
-  std::unique_ptr<Declaration> make_implicit_class_constructor_decl(
+  std::unique_ptr<Declaration> make_implicit_struct_constructor(
       StructSymbolInfo& info);
 
  public:

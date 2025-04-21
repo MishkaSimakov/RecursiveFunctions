@@ -20,7 +20,7 @@ void IRGenerator::create_function_arguments() {
     if (!arg_ty->is_passed_by_value()) {
       ptr = llvm_arg;
     } else {
-      auto name = fmt::format("{}.addr", module_.get_string(decl.name));
+      auto name = fmt::format("{}.addr", module_.get_string(parameter.name));
 
       auto builder = get_alloca_builder();
       ptr = builder->CreateAlloca(types_mapper_(arg_ty), nullptr, name);

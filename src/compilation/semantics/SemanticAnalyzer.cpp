@@ -132,10 +132,10 @@ void SemanticAnalyzer::analyze() {
     }
   }
 
-  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
-  //                    std::cout);
-  // printer.print();
-
   traverse(*context_.ast_root);
+
+  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+  //                      std::cout);
+  // printer.print();
 }
 }  // namespace Front

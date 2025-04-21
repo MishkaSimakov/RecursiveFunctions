@@ -39,9 +39,10 @@ struct ScopefulSymbolInfo : BaseSymbolInfo {
 
 struct VariableSymbolInfo : BaseSymbolInfo {
   Type* type;
+  size_t index;
 
-  VariableSymbolInfo(StringId name, Scope* scope, Declaration& declaration, Type* type)
-      : BaseSymbolInfo(name, scope, declaration), type(type) {}
+  VariableSymbolInfo(StringId name, Scope* scope, Declaration& declaration, Type* type, size_t index)
+      : BaseSymbolInfo(name, scope, declaration), type(type), index(index) {}
 
   VariableDecl& get_decl() const {
     return static_cast<VariableDecl&>(declaration);

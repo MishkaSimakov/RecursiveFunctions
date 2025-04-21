@@ -11,7 +11,6 @@ bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
 
   auto type = node.type->value;
   SymbolInfo& info = current_scope_->add_variable(node.name, node, type);
-  current_scope_->add_local_variable(info.as<VariableSymbolInfo>());
 
   if (node.initializer != nullptr) {
     if (node.initializer->type != node.type->value) {

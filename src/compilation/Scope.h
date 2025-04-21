@@ -54,8 +54,13 @@ struct Scope {
   }
 
   SymbolInfo& add_variable(StringId name, Declaration& decl, Type* type) {
-    auto info = VariableSymbolInfo(name, this, decl, type);
-    return symbols.emplace(name, info).first->second;
+    auto info =
+        VariableSymbolInfo(name, this, decl, type, local_variables_.size());
+    SymbolInfo& result = symbols.emplace(name, info).first->second;
+
+    add_local_variable(result.as<VariableSymbolInfo>());
+
+    return result;
   }
 
   SymbolInfo& add_function(StringId name, Declaration& decl, FunctionType* type,

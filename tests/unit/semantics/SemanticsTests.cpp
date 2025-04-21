@@ -14,6 +14,6 @@ TEST_F(SemanticsTestCase, explicit_unsafe_cast_expression) {
       dynamic_cast<ExplicitUnsafeCastExpr&>(*var_decl.initializer);
 
   auto& type = dynamic_cast<SignedIntType&>(*cast_expr.type);
-  ASSERT_EQ(type.width, 32);
+  ASSERT_EQ(type.get_width(), 32);
   ASSERT_EQ(cast_expr.value_category, ValueCategory::RVALUE);
 }

@@ -22,8 +22,9 @@ void ScopePrinter::traverse_scope_recursively(const Scope& scope) {
                                           fun.type->to_string(strings_)));
                    },
                    [&](const VariableSymbolInfo& var) {
-                     add_node(fmt::format("Var {} {}", qualified_name,
-                                          var.type->to_string(strings_)));
+                     add_node(fmt::format("Var {} {} #{}", qualified_name,
+                                          var.type->to_string(strings_),
+                                          var.index));
                    },
                    [&](const NamespaceSymbolInfo& nmsp) {
                      add_node(fmt::format("Nmsp {}", qualified_name));

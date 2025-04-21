@@ -3,12 +3,11 @@
 #include "ast/Nodes.h"
 #include "compilation/Scope.h"
 #include "types/TypesStorage.h"
-#include "utils/StringPool.h"
 
 namespace Front {
 struct ModuleContext {
  private:
-  StringPool strings_;
+  StringPool& strings_;
 
  public:
   enum class ModuleState {
@@ -34,8 +33,7 @@ struct ModuleContext {
     bool is_transformation;
   };
   std::unordered_map<const CallExpr*, CallInfo> calls_info;
-  std::unordered_map<const Declaration*,
-                     std::reference_wrapper<SymbolInfo>>
+  std::unordered_map<const Declaration*, std::reference_wrapper<SymbolInfo>>
       symbols_info;
   std::unordered_map<const StructType*, std::reference_wrapper<SymbolInfo>>
       structs_info;
@@ -50,7 +48,7 @@ struct ModuleContext {
 
   ModuleState state{ModuleState::UNPROCESSED};
 
-  ModuleContext() = default;
+  explicit ModuleContext(StringPool& strings) : strings_(strings) {}
 
   StringId add_string(std::string_view string) {
     return strings_.add_string(string);

@@ -242,7 +242,6 @@ struct IdExpr : Expression {
 struct MemberExpr : Expression {
   std::unique_ptr<Expression> left;
   QualifiedId member;
-  size_t member_index{0};
 
   MemberExpr(SourceRange source_range, std::unique_ptr<Expression> left,
              QualifiedId member)
