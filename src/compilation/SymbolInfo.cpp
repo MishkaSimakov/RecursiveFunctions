@@ -8,17 +8,9 @@
 namespace Front {
 
 QualifiedId BaseSymbolInfo::get_fully_qualified_name() const {
-  std::vector<StringId> result;
-  result.push_back(declaration.name);
-
-  Scope* current_scope = scope;
-  while (current_scope->parent != nullptr) {
-    result.push_back(current_scope->name);
-    current_scope = current_scope->parent;
-  }
-
-  std::ranges::reverse(result);
-  return QualifiedId{std::move(result)};
+  auto qualifiers = scope->get_fully_qualified_name();
+  qualifiers.parts.push_back(name);
+  return qualifiers;
 }
 
 Type* SymbolInfo::get_type() const {

@@ -7,7 +7,7 @@
 namespace Front {
 
 void ScopePrinter::traverse_scope_recursively(const Scope& scope) {
-  std::string name(strings_.get_string(scope.name));
+  std::string name(strings_.get_string(scope.get_name()));
 
   add_node(name);
   move_cursor_down();

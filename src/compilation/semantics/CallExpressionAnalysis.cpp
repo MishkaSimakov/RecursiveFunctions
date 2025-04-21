@@ -23,6 +23,9 @@ bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
   std::vector<std::reference_wrapper<std::unique_ptr<Expression>>> arguments;
   if (is_transformation(node)) {
     arguments.push_back(node.callee->as<MemberExpr>().left);
+    context_.calls_info.emplace(&node, ModuleContext::CallInfo{true});
+  } else {
+    context_.calls_info.emplace(&node, ModuleContext::CallInfo{false});
   }
   for (auto& argument : node.arguments) {
     arguments.push_back(argument);
@@ -30,15 +33,15 @@ bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
 
   auto& type = node.callee->type->as<FunctionType>();
 
-  if (type.arguments.size() != arguments.size()) {
+  if (type.get_arguments().size() != arguments.size()) {
     scold_user(*node.callee,
                fmt::format("arguments count mismatch: {} != {}",
-                           type.arguments.size(), arguments.size()));
+                           type.get_arguments().size(), arguments.size()));
   }
 
-  for (size_t i = 0; i < type.arguments.size(); ++i) {
+  for (size_t i = 0; i < type.get_arguments().size(); ++i) {
     std::unique_ptr<Expression>& argument = arguments[i];
-    Type* expected_type = type.arguments[i];
+    Type* expected_type = type.get_arguments()[i];
 
     if (expected_type != argument->type) {
       scold_user(*argument, "Argument type mismatch: {} != {}", expected_type,
@@ -48,7 +51,7 @@ bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
     as_initializer(argument);
   }
 
-  node.type = type.return_type;
+  node.type = type.get_return_type();
   node.value_category = ValueCategory::RVALUE;
 
   return true;

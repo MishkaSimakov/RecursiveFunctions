@@ -14,12 +14,12 @@ std::unique_ptr<TypeNode> ASTConstructor::create_type_node(
     case Type::Kind::CHAR: {
       auto* primitive_type = static_cast<PrimitiveType*>(type);
       return std::make_unique<PrimitiveTypeNode>(source_range, kind,
-                                                 primitive_type->width);
+                                                 primitive_type->get_width());
     }
     case Type::Kind::POINTER: {
       auto* pointer_type = static_cast<PointerType*>(type);
       return std::make_unique<PointerTypeNode>(
-          source_range, create_type_node(pointer_type->child, source_range));
+          source_range, create_type_node(pointer_type->get_child(), source_range));
     }
     case Type::Kind::TUPLE: {
       auto* tuple_type = static_cast<TupleType*>(type);
@@ -37,12 +37,12 @@ std::unique_ptr<TypeNode> ASTConstructor::create_type_node(
     case Type::Kind::ALIAS: {
       auto* alias_type = static_cast<AliasType*>(type);
       return std::make_unique<UserDefinedTypeNode>(source_range,
-                                                   alias_type->name);
+                                                   alias_type->get_name());
     }
     case Type::Kind::STRUCT: {
       auto* class_type = static_cast<StructType*>(type);
       return std::make_unique<UserDefinedTypeNode>(source_range,
-                                                   class_type->name);
+                                                   class_type->get_name());
     }
     default:
       unreachable("Unknown Type::Kind encountered.");

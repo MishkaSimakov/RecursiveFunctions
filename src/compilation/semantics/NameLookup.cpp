@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "SemanticAnalyzer.h"
 
 namespace Front {
@@ -26,32 +28,32 @@ struct SymbolInjector {
   }
 
   void operator()(const FunctionSymbolInfo& fun) {
-    Type* fun_ty = analyzer.inject_type(fun.type, source_strings());
-    FunctionSymbolInfo copy = fun;
-    copy.type = &fun_ty->as<FunctionType>();
-    copy.transformation_type =
-        copy.transformation_type != nullptr
-            ? analyzer.inject_type(copy.transformation_type, source_strings())
-            : nullptr;
+    FunctionType* type =
+        &analyzer.inject_type(fun.type, source_strings())->as<FunctionType>();
+    Scope* subscope = &scope->add_child(name);
 
-    scope->symbols.emplace(name, copy);
+    auto& info = scope->add_function(name, fun.declaration, type, subscope);
+    auto& function_info = info.as<FunctionSymbolInfo>();
+    function_info.transformation_type =
+        fun.transformation_type != nullptr
+            ? analyzer.inject_type(fun.transformation_type, source_strings())
+            : nullptr;
   }
 
   void operator()(const TypeAliasSymbolInfo& alias) {
     auto& type =
         analyzer.inject_type(alias.type, source_strings())->as<AliasType>();
-    scope->symbols.emplace(
-        name, TypeAliasSymbolInfo{scope, alias.declaration, &type});
+    scope->add_alias(name, alias.declaration, &type);
   }
 
   void operator()(const StructSymbolInfo& cls) {
     Scope* subscope = &scope->add_child(name);
-    auto info = StructSymbolInfo{scope, subscope, cls.declaration};
-
-    info.type =
+    StructType* type =
         &analyzer.inject_type(cls.type, source_strings())->as<StructType>();
-    analyzer.context_.structs_info.emplace(
-        info.type, scope->symbols.emplace(name, info).first->second);
+
+    SymbolInfo& info = scope->add_struct(name, cls.declaration, subscope, type);
+
+    analyzer.context_.structs_info.emplace(type, info);
 
     for (auto& child : cls.subscope->symbols | std::views::values) {
       analyzer.inject_symbol_to(subscope, source_module, child);
@@ -132,31 +134,32 @@ Type* SemanticAnalyzer::inject_type(Type* external_type,
     case Type::Kind::UNSIGNED_INT:
     case Type::Kind::BOOL:
     case Type::Kind::CHAR: {
-      size_t width = static_cast<PrimitiveType*>(external_type)->width;
+      size_t width = static_cast<PrimitiveType*>(external_type)->get_width();
       return types().add_primitive(external_type->get_kind(), width);
     }
     case Type::Kind::POINTER: {
       auto* pointer = static_cast<PointerType*>(external_type);
-      return types().add_pointer(inject_type(pointer->child, external_strings));
+      return types().add_pointer(
+          inject_type(pointer->get_child(), external_strings));
     }
     case Type::Kind::FUNCTION: {
       auto* function = static_cast<FunctionType*>(external_type);
       auto local_arguments =
-          function->arguments |
+          function->get_arguments() |
           std::views::transform([this, &external_strings](Type* arg_type) {
             return inject_type(arg_type, external_strings);
           });
       Type* local_return_type =
-          inject_type(function->return_type, external_strings);
+          inject_type(function->get_return_type(), external_strings);
       return types().make_type<FunctionType>(
           std::vector(local_arguments.begin(), local_arguments.end()),
           local_return_type);
     }
     case Type::Kind::ALIAS: {
       AliasType* alias = static_cast<AliasType*>(external_type);
-      auto* original = inject_type(alias->original, external_strings);
+      auto* original = inject_type(alias->get_original(), external_strings);
       QualifiedId local_name =
-          import_external_string(alias->name, external_strings);
+          import_external_string(alias->get_name(), external_strings);
 
       return types().make_type<AliasType>(std::move(local_name), original);
     }
@@ -170,15 +173,17 @@ Type* SemanticAnalyzer::inject_type(Type* external_type,
     }
     case Type::Kind::STRUCT: {
       StructType* external_cls = static_cast<StructType*>(external_type);
-      // for now, we make a deep copy of a class
-      StructType* local_cls = types().make_type<StructType>(
-          import_external_string(external_cls->name, external_strings));
 
-      for (auto [name, type] : external_cls->members) {
-        local_cls->members.emplace_back(
+      std::vector<std::pair<StringId, Type*>> local_members;
+      for (auto [name, type] : external_cls->get_members()) {
+        local_members.emplace_back(
             import_external_string(name, external_strings),
             inject_type(type, external_strings));
       }
+
+      StructType* local_cls = types().make_type<StructType>(
+          import_external_string(external_cls->get_name(), external_strings),
+          std::move(local_members));
 
       return local_cls;
     }

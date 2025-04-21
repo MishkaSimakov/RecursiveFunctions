@@ -16,10 +16,11 @@ struct Scope;
 struct SymbolInfo;
 
 struct BaseSymbolInfo {
+  StringId name;
   Scope* scope;
   Declaration& declaration;
 
-  StringId get_unqualified_name() const { return declaration.name; }
+  StringId get_unqualified_name() const { return name; }
   QualifiedId get_fully_qualified_name() const;
   DeclarationSpecifiers get_specifiers() const {
     return declaration.specifiers;
@@ -32,15 +33,15 @@ struct VariableSymbolInfo;
 struct ScopefulSymbolInfo : BaseSymbolInfo {
   Scope* subscope;
 
-  ScopefulSymbolInfo(Scope* scope, Declaration& declaration, Scope* subscope)
-      : BaseSymbolInfo(scope, declaration), subscope(subscope) {}
+  ScopefulSymbolInfo(StringId name, Scope* scope, Declaration& declaration, Scope* subscope)
+      : BaseSymbolInfo(name, scope, declaration), subscope(subscope) {}
 };
 
 struct VariableSymbolInfo : BaseSymbolInfo {
   Type* type;
 
-  VariableSymbolInfo(Scope* scope, Declaration& declaration, Type* type)
-      : BaseSymbolInfo(scope, declaration), type(type) {}
+  VariableSymbolInfo(StringId name, Scope* scope, Declaration& declaration, Type* type)
+      : BaseSymbolInfo(name, scope, declaration), type(type) {}
 
   VariableDecl& get_decl() const {
     return static_cast<VariableDecl&>(declaration);
@@ -49,12 +50,11 @@ struct VariableSymbolInfo : BaseSymbolInfo {
 
 struct FunctionSymbolInfo : ScopefulSymbolInfo {
   FunctionType* type;
-  std::vector<std::reference_wrapper<VariableSymbolInfo>> local_variables;
   Type* transformation_type{nullptr};
 
-  FunctionSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration,
+  FunctionSymbolInfo(StringId name, Scope* scope, Scope* subscope, Declaration& declaration,
                      FunctionType* type)
-      : ScopefulSymbolInfo(scope, declaration, subscope), type(type) {}
+      : ScopefulSymbolInfo(name, scope, declaration, subscope), type(type) {}
 
   FunctionDecl& get_decl() const {
     return static_cast<FunctionDecl&>(declaration);
@@ -62,22 +62,23 @@ struct FunctionSymbolInfo : ScopefulSymbolInfo {
 };
 
 struct NamespaceSymbolInfo : ScopefulSymbolInfo {
-  NamespaceSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
-      : ScopefulSymbolInfo(scope, declaration, subscope) {}
+  NamespaceSymbolInfo(StringId name, Scope* scope, Scope* subscope, Declaration& declaration)
+      : ScopefulSymbolInfo(name, scope, declaration, subscope) {}
 };
 
 struct StructSymbolInfo : ScopefulSymbolInfo {
-  StructType* type{nullptr};
+  StructType* type;
 
-  StructSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
-      : ScopefulSymbolInfo(scope, declaration, subscope) {}
+  StructSymbolInfo(StringId name, Scope* scope, Scope* subscope, Declaration& declaration,
+                   StructType* type)
+      : ScopefulSymbolInfo(name, scope, declaration, subscope), type(type) {}
 };
 
 struct TypeAliasSymbolInfo : BaseSymbolInfo {
   AliasType* type;
 
-  TypeAliasSymbolInfo(Scope* scope, Declaration& declaration, AliasType* type)
-      : BaseSymbolInfo(scope, declaration), type(type) {}
+  TypeAliasSymbolInfo(StringId name, Scope* scope, Declaration& declaration, AliasType* type)
+      : BaseSymbolInfo(name, scope, declaration), type(type) {}
 };
 
 using SymbolInfoVariant =

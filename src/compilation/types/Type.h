@@ -80,7 +80,11 @@ struct Type {
 };
 
 struct PrimitiveType : Type {
+ protected:
   const size_t width;
+
+ public:
+  size_t get_width() const { return width; }
 
   explicit PrimitiveType(size_t width) : width(width) {}
 
@@ -135,7 +139,11 @@ struct CharType final : PrimitiveType {
 };
 
 struct PointerType final : Type {
+ private:
   Type* child;
+
+ public:
+  Type* get_child() const { return child; }
 
   bool operator==(const Type& other) const override {
     const PointerType* other_ptr = dynamic_cast<const PointerType*>(&other);
@@ -160,8 +168,14 @@ struct PointerType final : Type {
 };
 
 struct FunctionType final : Type {
+ private:
   std::vector<Type*> arguments;
   Type* return_type;
+
+ public:
+  const std::vector<Type*>& get_arguments() const { return arguments; }
+
+  Type* get_return_type() const { return return_type; }
 
   bool operator==(const Type& other) const override {
     const FunctionType* other_ptr = dynamic_cast<const FunctionType*>(&other);
@@ -199,8 +213,12 @@ struct FunctionType final : Type {
 };
 
 struct AliasType final : Type {
+ private:
   QualifiedId name;
   Type* original;
+
+ public:
+  const QualifiedId& get_name() const { return name; }
 
   bool operator==(const Type& other) const override {
     const AliasType* other_ptr = dynamic_cast<const AliasType*>(&other);
@@ -238,8 +256,14 @@ struct TupleLikeType : Type {
 };
 
 struct StructType final : TupleLikeType {
+ private:
   QualifiedId name;
   std::vector<std::pair<StringId, Type*>> members;
+
+ public:
+  const QualifiedId& get_name() const { return name; }
+
+  const auto& get_members() const { return members; }
 
   bool operator==(const Type& other) const override {
     const StructType* other_ptr = dynamic_cast<const StructType*>(&other);
@@ -269,7 +293,9 @@ struct StructType final : TupleLikeType {
 
   size_t get_elements_count() const override { return members.size(); }
 
-  explicit StructType(QualifiedId name) : name(std::move(name)) {}
+  explicit StructType(QualifiedId name,
+                      std::vector<std::pair<StringId, Type*>> members)
+      : name(std::move(name)), members(std::move(members)) {}
 };
 
 struct TupleType final : TupleLikeType {

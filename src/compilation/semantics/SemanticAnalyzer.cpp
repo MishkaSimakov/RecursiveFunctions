@@ -91,10 +91,10 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
 
   FunctionType* fun_ty = std::get<FunctionSymbolInfo>(*info).type;
 
-  if (node.value->type != fun_ty->return_type) {
+  if (node.value->type != fun_ty->get_return_type()) {
     auto left_type = node.value->type->to_string(context_.get_strings_pool());
     auto right_type =
-        fun_ty->return_type->to_string(context_.get_strings_pool());
+        fun_ty->get_return_type()->to_string(context_.get_strings_pool());
 
     scold_user(
         node,
@@ -132,10 +132,10 @@ void SemanticAnalyzer::analyze() {
     }
   }
 
-  traverse(*context_.ast_root);
+  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+  //                    std::cout);
+  // printer.print();
 
-  ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
-                       std::cout);
-  printer.print();
+  traverse(*context_.ast_root);
 }
 }  // namespace Front

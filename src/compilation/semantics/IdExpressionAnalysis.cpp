@@ -18,7 +18,7 @@ bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
   }
 
   node.value_category = ValueCategory::LVALUE;
-  context_.symbols_info.emplace(&node, *info);
+  context_.identifiers_info.emplace(&node, *info);
 
   return true;
 }

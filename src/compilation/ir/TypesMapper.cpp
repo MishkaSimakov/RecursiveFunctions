@@ -16,7 +16,7 @@ llvm::Type* Front::TypesMapper::operator()(Type* type) {
     case Type::Kind::UNSIGNED_INT:
     case Type::Kind::CHAR: {
       auto* ptype = static_cast<PrimitiveType*>(type);
-      return llvm::Type::getIntNTy(llvm_context, ptype->width);
+      return llvm::Type::getIntNTy(llvm_context, ptype->get_width());
     }
     case Type::Kind::BOOL:
       return llvm::Type::getInt1Ty(llvm_context);
@@ -30,9 +30,9 @@ llvm::Type* Front::TypesMapper::operator()(Type* type) {
     case Type::Kind::STRUCT: {
       StructType* class_ty = static_cast<StructType*>(type);
       // TODO: mangle!
-      auto name = class_ty->name.to_string(context_.strings);
-      auto mapped_range =
-          class_ty->members | std::views::values | std::views::transform(*this);
+      auto name = class_ty->get_name().to_string(context_.strings);
+      auto mapped_range = class_ty->get_members() | std::views::values |
+                          std::views::transform(*this);
       std::vector mapped(mapped_range.begin(), mapped_range.end());
 
       return llvm::StructType::create(llvm_context, mapped, name);

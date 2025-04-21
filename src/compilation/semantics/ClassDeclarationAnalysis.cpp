@@ -6,30 +6,39 @@ namespace Front {
 
 bool SemanticAnalyzer::traverse_class_declaration(ClassDecl& node) {
   Scope* subscope = &current_scope_->add_child(node.name);
-  auto info = StructSymbolInfo(current_scope_, subscope, node);
 
-  auto qualified_name = info.get_fully_qualified_name();
-  info.type = types().make_type<StructType>(std::move(qualified_name));
+  {
+    NestedScopeRAII scope_guard(*this, *subscope);
 
-  auto [itr, was_emplaced] = current_scope_->symbols.emplace(node.name, info);
-
-  subscope->parent_symbol = &itr->second;
-  if (node.specifiers.is_exported()) {
-    context_.exported_symbols.push_back(itr->second);
+    for (auto& decl : node.body) {
+      traverse(*decl);
+    }
   }
 
-  NestedScopeRAII scope_guard(*this, *subscope);
-
-  for (auto& decl : node.body) {
-    traverse(*decl);
+  std::vector<std::pair<StringId, Type*>> members;
+  for (VariableSymbolInfo& local_variable : subscope->get_local_variables()) {
+    members.emplace_back(local_variable.declaration.name, local_variable.type);
   }
+
+  QualifiedId name = current_scope_->get_fully_qualified_name();
+  name.parts.push_back(node.name);
+
+  StructType* type =
+      types().make_type<StructType>(std::move(name), std::move(members));
+  SymbolInfo& info = current_scope_->add_struct(node.name, node, subscope, type);
+
+  add_to_exported_if_necessary(info);
 
   // add implicit `make` method
-  auto constructor_decl = make_implicit_class_constructor_decl(info);
+  auto constructor_decl =
+      make_implicit_class_constructor_decl(info.as<StructSymbolInfo>());
 
-  traverse(*node.body.emplace_back(std::move(constructor_decl)));
+  {
+    NestedScopeRAII scope_guard(*this, *subscope);
+    traverse(*node.body.emplace_back(std::move(constructor_decl)));
+  }
 
-  context_.structs_info.emplace(info.type, itr->second);
+  context_.structs_info.emplace(type, info);
 
   return true;
 }
@@ -42,7 +51,7 @@ SemanticAnalyzer::make_implicit_class_constructor_decl(StructSymbolInfo& info) {
   auto source_range = SourceRange::empty_at(info.declaration.source_begin());
 
   std::vector<std::unique_ptr<VariableDecl>> arguments;
-  for (auto [member_name, member_type] : type->members) {
+  for (auto [member_name, member_type] : type->get_members()) {
     auto type_node =
         ASTConstructor::create_type_node(member_type, source_range);
     arguments.emplace_back(std::make_unique<VariableDecl>(

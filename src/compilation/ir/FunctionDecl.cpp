@@ -15,14 +15,14 @@ IRFunctionDecl IRFunctionDecl::create(IRContext context,
 
   // create new function
   std::vector<llvm::Type*> arguments;
-  bool return_through_arg = !info.type->return_type->is_passed_by_value();
+  bool return_through_arg = !info.type->get_return_type()->is_passed_by_value();
   size_t arguments_offset = 0;
   if (return_through_arg) {
     arguments_offset = 1;
     arguments.push_back(llvm::PointerType::get(context.get_llvm_context(), 0));
   }
 
-  for (Type* argument_type : info.type->arguments) {
+  for (Type* argument_type : info.type->get_arguments()) {
     if (!argument_type->is_passed_by_value()) {
       argument_type = context.types.add_pointer(argument_type);
     }
@@ -30,7 +30,7 @@ IRFunctionDecl IRFunctionDecl::create(IRContext context,
     arguments.emplace_back(context.types_mapper(argument_type));
   }
 
-  Type* ret_ty = info.type->return_type;
+  Type* ret_ty = info.type->get_return_type();
   llvm::Type* llvm_ret_ty;
 
   if (ret_ty->is_unit() || !ret_ty->is_passed_by_value()) {
@@ -49,7 +49,7 @@ IRFunctionDecl IRFunctionDecl::create(IRContext context,
     fun->addParamAttr(
         0, llvm::Attribute::get(context.get_llvm_context(),
                                 llvm::Attribute::StructRet,
-                                context.types_mapper(info.type->return_type)));
+                                context.types_mapper(info.type->get_return_type())));
     fun->getArg(0)->setName("result");
   }
 
@@ -64,7 +64,7 @@ IRFunctionDecl IRFunctionDecl::create(IRContext context,
 }
 
 bool IRFunctionDecl::return_through_argument() const {
-  return !info_->type->return_type->is_passed_by_value();
+  return !info_->type->get_return_type()->is_passed_by_value();
 }
 
 }  // namespace Front

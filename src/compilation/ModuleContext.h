@@ -27,12 +27,16 @@ struct ModuleContext {
   // semantic analysis details
   TypesStorage types_storage;
   std::unordered_map<const IdExpr*, std::reference_wrapper<SymbolInfo>>
-      symbols_info;
+      identifiers_info;
   std::unordered_map<const MemberExpr*, std::reference_wrapper<SymbolInfo>>
       members_info;
-  std::unordered_map<const FunctionDecl*,
-                     std::reference_wrapper<FunctionSymbolInfo>>
-      functions_info;
+  struct CallInfo {
+    bool is_transformation;
+  };
+  std::unordered_map<const CallExpr*, CallInfo> calls_info;
+  std::unordered_map<const Declaration*,
+                     std::reference_wrapper<SymbolInfo>>
+      symbols_info;
   std::unordered_map<const StructType*, std::reference_wrapper<SymbolInfo>>
       structs_info;
 

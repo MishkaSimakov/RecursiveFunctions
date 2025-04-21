@@ -16,12 +16,12 @@ bool SemanticAnalyzer::visit_binary_operator(BinaryOperator& node) {
     PrimitiveType* left_ptype = static_cast<PrimitiveType*>(left_type);
     PrimitiveType* right_ptype = static_cast<PrimitiveType*>(right_type);
 
-    if (left_ptype->width != right_ptype->width) {
+    if (left_ptype->get_width() != right_ptype->get_width()) {
       scold_user(node,
                  "Artithmetic is allowed only for types with same width.");
     }
 
-    size_t width = left_ptype->width;
+    size_t width = left_ptype->get_width();
 
     if (left_type->get_kind() == Type::Kind::SIGNED_INT &&
         right_type->get_kind() == Type::Kind::SIGNED_INT) {
