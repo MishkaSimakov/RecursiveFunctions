@@ -1,12 +1,12 @@
 #include <argparse/argparse.hpp>
 
 #include "ArgumentsReader.h"
+#include "Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/TeaFrontend.h"
 #include "errors/ExceptionsHandler.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
-#include "utils/Constants.h"
 
 const bool Constants::is_installed_build = BUILD_FOR_INSTALLATION;
 

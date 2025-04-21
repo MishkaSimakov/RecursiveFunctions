@@ -102,8 +102,8 @@ std::string Mangler::mangle_type(Type* type) {
       result += "E";
       return substitutable(result);
     }
-    case Type::Kind::CLASS: {
-      auto* class_ty = static_cast<ClassType*>(type);
+    case Type::Kind::STRUCT: {
+      auto* class_ty = static_cast<StructType*>(type);
       // TODO: full name mangling
       return substitutable(mangle_name(class_ty->name));
     }

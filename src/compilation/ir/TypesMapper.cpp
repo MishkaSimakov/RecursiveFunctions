@@ -27,8 +27,8 @@ llvm::Type* Front::TypesMapper::operator()(Type* type) {
       std::vector mapped(mapped_range.begin(), mapped_range.end());
       return llvm::StructType::get(llvm_context, mapped);
     }
-    case Type::Kind::CLASS: {
-      ClassType* class_ty = static_cast<ClassType*>(type);
+    case Type::Kind::STRUCT: {
+      StructType* class_ty = static_cast<StructType*>(type);
       // TODO: mangle!
       auto name = class_ty->name.to_string(context_.strings);
       auto mapped_range =

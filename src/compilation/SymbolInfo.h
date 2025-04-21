@@ -50,6 +50,7 @@ struct VariableSymbolInfo : BaseSymbolInfo {
 struct FunctionSymbolInfo : ScopefulSymbolInfo {
   FunctionType* type;
   std::vector<std::reference_wrapper<VariableSymbolInfo>> local_variables;
+  Type* transformation_type{nullptr};
 
   FunctionSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration,
                      FunctionType* type)
@@ -65,10 +66,10 @@ struct NamespaceSymbolInfo : ScopefulSymbolInfo {
       : ScopefulSymbolInfo(scope, declaration, subscope) {}
 };
 
-struct ClassSymbolInfo : ScopefulSymbolInfo {
-  ClassType* type{nullptr};
+struct StructSymbolInfo : ScopefulSymbolInfo {
+  StructType* type{nullptr};
 
-  ClassSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
+  StructSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
       : ScopefulSymbolInfo(scope, declaration, subscope) {}
 };
 
@@ -81,7 +82,7 @@ struct TypeAliasSymbolInfo : BaseSymbolInfo {
 
 using SymbolInfoVariant =
     std::variant<VariableSymbolInfo, NamespaceSymbolInfo, FunctionSymbolInfo,
-                 ClassSymbolInfo, TypeAliasSymbolInfo>;
+                 StructSymbolInfo, TypeAliasSymbolInfo>;
 
 struct SymbolInfo : SymbolInfoVariant {
   using SymbolInfoVariant::SymbolInfoVariant;
@@ -104,6 +105,11 @@ struct SymbolInfo : SymbolInfoVariant {
         *this);
   }
 
+  Scope* get_scope() const {
+    return std::visit([](const auto& value) -> Scope* { return value.scope; },
+                      *this);
+  }
+
   bool is_variable() const {
     return std::holds_alternative<VariableSymbolInfo>(*this);
   }
@@ -116,7 +122,37 @@ struct SymbolInfo : SymbolInfoVariant {
     return std::holds_alternative<NamespaceSymbolInfo>(*this);
   }
 
+  bool is_class() const {
+    return std::holds_alternative<StructSymbolInfo>(*this);
+  }
+
   Type* get_type() const;
+
+  bool is_inside(Scope* scope) const;
+
+  template <typename T>
+    requires std::is_base_of_v<BaseSymbolInfo, T>
+  T& as() {
+    if constexpr (Constants::debug) {
+      return std::get<T>(*this);
+    } else {
+      // this can be optimized to basically no-op,
+      // therefore use this access option in production
+      return *std::get_if<T>(this);
+    }
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<BaseSymbolInfo, T>
+  const T& as() const {
+    if constexpr (Constants::debug) {
+      return std::get<T>(*this);
+    } else {
+      // this can be optimized to basically no-op,
+      // therefore use this access option in production
+      return *std::get_if<T>(this);
+    }
+  }
 };
 
 }  // namespace Front

@@ -67,8 +67,8 @@ class IRGenerator : public ASTVisitor<IRGenerator, IRGeneratorConfig> {
   IRContext get_context();
 
   void create_store(llvm::Value* destination, Value source, Type* source_type);
-  void create_tuple_copy_constructor(llvm::Value* destination, Value source,
-                                     TupleType* source_type);
+  void create_tuple_like_copy(llvm::Value* destination, Value source,
+                              TupleLikeType* source_type);
   Value remove_indirection(Value value, Type* type);
 
  public:

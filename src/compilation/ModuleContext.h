@@ -28,12 +28,13 @@ struct ModuleContext {
   TypesStorage types_storage;
   std::unordered_map<const IdExpr*, std::reference_wrapper<SymbolInfo>>
       symbols_info;
+  std::unordered_map<const MemberExpr*, std::reference_wrapper<SymbolInfo>>
+      members_info;
   std::unordered_map<const FunctionDecl*,
                      std::reference_wrapper<FunctionSymbolInfo>>
       functions_info;
-  std::unordered_map<const UserDefinedTypeNode*,
-                     std::reference_wrapper<SymbolInfo>>
-      user_defined_types;
+  std::unordered_map<const StructType*, std::reference_wrapper<SymbolInfo>>
+      structs_info;
 
   // warning: StringIds inside QualifierId are from another module.
   // To get string_view from it, get_string must be called on correct

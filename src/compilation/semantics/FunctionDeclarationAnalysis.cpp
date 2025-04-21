@@ -1,6 +1,36 @@
 #include "SemanticAnalyzer.h"
 
 namespace Front {
+Type* SemanticAnalyzer::add_to_transformations_if_necessary(
+    const FunctionSymbolInfo& function) {
+  // function is a transformation of type T
+  // if it's first argument has type T where T is not a pointer.
+  // If function f is a transformation of T, then expression t.f(args...) is
+  // equivalent to f(t, args...), where t has type T
+
+  FunctionType* type = function.type;
+  if (type->arguments.size() == 0 ||
+      type->arguments[0]->get_kind() == Type::Kind::POINTER) {
+    // not a transformation
+    return nullptr;
+  }
+
+  Type* T = type->arguments[0];
+
+  if (T->get_kind() == Type::Kind::STRUCT) {
+    for (auto name : static_cast<StructType*>(T)->members | std::views::keys) {
+      if (name == function.declaration.name) {
+        scold_user(function.declaration,
+                   "{:?} is a transformation of T={:?}, but it's name "
+                   "conflicts with T's members names.",
+                   function.declaration.name, T);
+      }
+    }
+  }
+
+  return T;
+}
+
 bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
   Scope& scope = *current_scope_;
   if (scope.has_symbol(node.name)) {
@@ -35,6 +65,7 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
   FunctionType* type =
       types().make_type<FunctionType>(std::move(arguments), return_type);
   fun_info.type = type;
+  fun_info.transformation_type = add_to_transformations_if_necessary(fun_info);
 
   context_.functions_info.emplace(&node, fun_info);
 

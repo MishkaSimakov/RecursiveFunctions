@@ -7,6 +7,7 @@
 #include <typeinfo>
 #include <vector>
 
+#include "Constants.h"
 #include "compilation/QualifiedId.h"
 #include "utils/Hashers.h"
 #include "utils/SmartEnum.h"
@@ -25,7 +26,7 @@ struct Type {
 
  public:
   ENUM(Kind, SIGNED_INT, UNSIGNED_INT, BOOL, CHAR, POINTER, TUPLE, FUNCTION,
-       ALIAS, CLASS, NULLPTR);
+       ALIAS, STRUCT);
 
   virtual bool operator==(const Type&) const = 0;
   virtual size_t hash() const = 0;
@@ -47,13 +48,33 @@ struct Type {
   }
 
   bool is_structural() const {
-    return get_original()->get_kind().in<Kind::TUPLE, Kind::CLASS>();
+    return get_original()->get_kind().in<Kind::TUPLE, Kind::STRUCT>();
   }
 
   bool is_unit() const;
 
   virtual Type* get_original() { return this; }
   virtual const Type* get_original() const { return this; }
+
+  template <typename T>
+    requires std::is_base_of_v<Type, T>
+  T& as() {
+    if constexpr (Constants::debug) {
+      return dynamic_cast<T&>(*this);
+    } else {
+      return static_cast<T&>(*this);
+    }
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<Type, T>
+  const T& as() const {
+    if constexpr (Constants::debug) {
+      return dynamic_cast<T&>(*this);
+    } else {
+      return static_cast<T&>(*this);
+    }
+  }
 
   virtual ~Type() = default;
 };
@@ -138,24 +159,6 @@ struct PointerType final : Type {
   explicit PointerType(Type* child) : child(child) {}
 };
 
-struct NullptrType final : Type {
-  bool operator==(const Type& other) const override {
-    const NullptrType* other_ptr = dynamic_cast<const NullptrType*>(&other);
-    return other_ptr != nullptr;
-  }
-
-  size_t hash() const override {
-    auto hasher = init_hasher();
-    return hasher.get_hash();
-  }
-  std::string to_string(const StringPool& strings) const override {
-    return "nullptr_t";
-  }
-  Kind get_kind() const override { return Kind::NULLPTR; }
-
-  NullptrType() = default;
-};
-
 struct FunctionType final : Type {
   std::vector<Type*> arguments;
   Type* return_type;
@@ -229,16 +232,17 @@ struct AliasType final : Type {
       : name(std::move(name)), original(original) {}
 };
 
-struct StructuralType : Type {
-  virtual Type* get_member_type(size_t index) const = 0;
+struct TupleLikeType : Type {
+  virtual size_t get_elements_count() const = 0;
+  virtual Type* get_element_type(size_t index) const = 0;
 };
 
-struct ClassType final : StructuralType {
+struct StructType final : TupleLikeType {
   QualifiedId name;
   std::vector<std::pair<StringId, Type*>> members;
 
   bool operator==(const Type& other) const override {
-    const ClassType* other_ptr = dynamic_cast<const ClassType*>(&other);
+    const StructType* other_ptr = dynamic_cast<const StructType*>(&other);
     if (other_ptr == nullptr) {
       return false;
     }
@@ -257,16 +261,18 @@ struct ClassType final : StructuralType {
     return fmt::format("{}", name_str);
   }
 
-  Kind get_kind() const override { return Kind::CLASS; }
+  Kind get_kind() const override { return Kind::STRUCT; }
 
-  Type* get_member_type(size_t index) const override {
+  Type* get_element_type(size_t index) const override {
     return members[index].second;
   }
 
-  explicit ClassType(QualifiedId name) : name(std::move(name)) {}
+  size_t get_elements_count() const override { return members.size(); }
+
+  explicit StructType(QualifiedId name) : name(std::move(name)) {}
 };
 
-struct TupleType final : StructuralType {
+struct TupleType final : TupleLikeType {
   std::vector<Type*> elements;
 
   bool operator==(const Type& other) const override {
@@ -296,7 +302,11 @@ struct TupleType final : StructuralType {
 
   Kind get_kind() const override { return Kind::TUPLE; }
 
-  Type* get_member_type(size_t index) const override { return elements[index]; }
+  Type* get_element_type(size_t index) const override {
+    return elements[index];
+  }
+
+  size_t get_elements_count() const override { return elements.size(); }
 
   explicit TupleType(std::vector<Type*> elements)
       : elements(std::move(elements)) {}

@@ -18,7 +18,7 @@ bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
   if (parent != nullptr) {
     if (auto* fun = std::get_if<FunctionSymbolInfo>(parent)) {
       fun->local_variables.push_back(var_info);
-    } else if (auto* cls = std::get_if<ClassSymbolInfo>(parent)) {
+    } else if (auto* cls = std::get_if<StructSymbolInfo>(parent)) {
       // TODO: check for members with same name
       cls->type->members.emplace_back(node.name, node.type->value);
     }

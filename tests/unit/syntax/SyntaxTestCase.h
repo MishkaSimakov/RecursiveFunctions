@@ -1,10 +1,10 @@
 #pragma once
 
+#include <../../../src/Constants.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 #include <lexis/LexicalAnalyzer.h>
 #include <syntax/lr/LRParser.h>
-#include <utils/Constants.h>
 
 #include "compilation/GlobalContext.h"
 #include "sources/SourceManager.h"

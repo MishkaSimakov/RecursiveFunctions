@@ -1,10 +1,9 @@
 #include "SemanticAnalyzer.h"
 
-#include <utils/Constants.h>
-
 #include <algorithm>
 #include <iostream>
 
+#include "Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/ScopePrinter.h"
 
@@ -135,11 +134,8 @@ void SemanticAnalyzer::analyze() {
 
   traverse(*context_.ast_root);
 
-  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
-  // std::cout);
-  // printer.print();
-
-  // ASTPrinter ast_printer(context_, std::cout);
-  // ast_printer.print();
+  ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+                       std::cout);
+  printer.print();
 }
 }  // namespace Front

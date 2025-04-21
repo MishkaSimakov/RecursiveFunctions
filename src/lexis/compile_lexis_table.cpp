@@ -1,8 +1,8 @@
 #include <fmt/base.h>
 
+#include "Constants.h"
 #include "lexis/Token.h"
 #include "table/LexicalAutomatonGenerator.h"
-#include "utils/Constants.h"
 
 int main() {
   using namespace Lexis;

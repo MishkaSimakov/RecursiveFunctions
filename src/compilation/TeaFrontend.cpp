@@ -27,12 +27,12 @@
 #include <deque>
 #include <iostream>
 
+#include "../Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
 #include "ir/IRGenerator.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
-#include "utils/Constants.h"
 
 namespace Front {
 enum class DFSState { UNVISITED, VISITING, VISITED };

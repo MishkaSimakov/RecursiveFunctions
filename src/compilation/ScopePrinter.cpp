@@ -28,11 +28,11 @@ void ScopePrinter::traverse_scope_recursively(const Scope& scope) {
                    [&](const NamespaceSymbolInfo& nmsp) {
                      add_node(fmt::format("Nmsp {}", qualified_name));
                    },
-                   [&](const TypeAliasSymbolInfo& tyal) {
-                     add_node(fmt::format("TyAl {}", qualified_name));
+                   [&](const TypeAliasSymbolInfo& alias) {
+                     add_node(fmt::format("Alias {}", qualified_name));
                    },
-                   [&](const ClassSymbolInfo& clss) {
-                     add_node(fmt::format("Clss {}", qualified_name));
+                   [&](const StructSymbolInfo& str) {
+                     add_node(fmt::format("Struct {}", qualified_name));
                    }},
         info);
   }

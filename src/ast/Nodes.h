@@ -4,6 +4,7 @@
 #include <ranges>
 #include <vector>
 
+#include "Constants.h"
 #include "compilation/DeclarationSpecifiers.h"
 #include "compilation/QualifiedId.h"
 #include "compilation/types/Type.h"
@@ -72,6 +73,26 @@ struct ASTNode {
   virtual ~ASTNode() = default;
 
   virtual Kind get_kind() const = 0;
+
+  template <typename T>
+    requires std::is_base_of_v<ASTNode, T>
+  T& as() {
+    if constexpr (Constants::debug) {
+      return dynamic_cast<T&>(*this);
+    } else {
+      return static_cast<T&>(*this);
+    }
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<ASTNode, T>
+  const T& as() const {
+    if constexpr (Constants::debug) {
+      return dynamic_cast<const T&>(*this);
+    } else {
+      return static_cast<const T&>(*this);
+    }
+  }
 };
 
 struct Statement : ASTNode {
