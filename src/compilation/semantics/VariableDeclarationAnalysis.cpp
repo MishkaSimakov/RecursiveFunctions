@@ -15,7 +15,8 @@ bool SemanticAnalyzer::visit_variable_declaration(VariableDecl& node) {
   if (node.initializer != nullptr) {
     if (node.initializer->type != node.type->value) {
       scold_user(node,
-                 "Type of variable initializer must be same as variable type.");
+                 "variable must have same type as initializer: {:?} != {:?}",
+                 node.type->value, node.initializer->type);
     }
 
     as_initializer(node.initializer);
