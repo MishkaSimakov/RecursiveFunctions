@@ -27,11 +27,11 @@ StringId SemanticAnalyzer::import_external_string(
 
 QualifiedId SemanticAnalyzer::import_external_string(
     const QualifiedId& external_string, const StringPool& external_strings) {
-  QualifiedId result;
+  std::vector<StringId> result;
   for (StringId part : external_string.parts) {
-    result.parts.push_back(import_external_string(part, external_strings));
+    result.push_back(import_external_string(part, external_strings));
   }
-  return result;
+  return QualifiedId(std::move(result));
 }
 
 void SemanticAnalyzer::convert_to_rvalue(
@@ -132,10 +132,10 @@ void SemanticAnalyzer::analyze() {
     }
   }
 
-  traverse(*context_.ast_root);
+  ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+                       std::cout);
+  printer.print();
 
-  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
-  //                      std::cout);
-  // printer.print();
+  traverse(*context_.ast_root);
 }
 }  // namespace Front

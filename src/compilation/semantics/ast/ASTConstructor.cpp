@@ -24,7 +24,7 @@ std::unique_ptr<TypeNode> ASTConstructor::create_type_node(
     case Type::Kind::TUPLE: {
       auto* tuple_type = static_cast<TupleType*>(type);
       std::vector<std::unique_ptr<TypeNode>> children;
-      for (auto* element : tuple_type->elements) {
+      for (auto* element : tuple_type->get_elements()) {
         children.push_back(create_type_node(element, source_range));
       }
       return std::make_unique<TupleTypeNode>(source_range, std::move(children));

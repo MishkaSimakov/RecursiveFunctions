@@ -3,6 +3,7 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <initializer_list>
 #include <vector>
 
 #include "utils/Hashers.h"
@@ -12,12 +13,18 @@ namespace Front {
 struct QualifiedId {
   std::vector<StringId> parts;
 
+  explicit QualifiedId(std::vector<StringId> parts) : parts(std::move(parts)) {}
+  QualifiedId(std::initializer_list<StringId> parts)
+      : parts(std::move(parts)) {}
+
   bool operator==(const QualifiedId&) const = default;
 
   StringId unqualified_id() const { return parts.back(); }
   bool is_qualified() const { return parts.size() > 1; }
 
-  auto qualifiers_view() const { return parts | std::views::take(parts.size() - 1); }
+  auto qualifiers_view() const {
+    return parts | std::views::take(parts.size() - 1);
+  }
 
   size_t hash() const noexcept {
     StreamHasher hasher;

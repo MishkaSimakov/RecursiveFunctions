@@ -23,7 +23,8 @@ llvm::Type* Front::TypesMapper::operator()(Type* type) {
     case Type::Kind::TUPLE: {
       TupleType* tuple_ty = static_cast<TupleType*>(type);
 
-      auto mapped_range = tuple_ty->elements | std::views::transform(*this);
+      auto mapped_range =
+          tuple_ty->get_elements() | std::views::transform(*this);
       std::vector mapped(mapped_range.begin(), mapped_range.end());
       return llvm::StructType::get(llvm_context, mapped);
     }

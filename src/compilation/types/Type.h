@@ -299,7 +299,11 @@ struct StructType final : TupleLikeType {
 };
 
 struct TupleType final : TupleLikeType {
+ private:
   std::vector<Type*> elements;
+
+ public:
+  const auto& get_elements() const { return elements; }
 
   bool operator==(const Type& other) const override {
     const TupleType* other_ptr = dynamic_cast<const TupleType*>(&other);

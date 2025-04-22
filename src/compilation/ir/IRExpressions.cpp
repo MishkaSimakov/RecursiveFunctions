@@ -31,10 +31,11 @@ Value IRGenerator::compile_tuple_expression(const TupleExpr& value) {
 
 Value IRGenerator::compile_member_expression(const MemberExpr& value) {
   Value object = compile_expr(value.left);
-  assert(object.has_indirection);
 
   SymbolInfo& info = module_.members_info.at(&value);
   if (info.is_variable()) {
+    assert(object.has_indirection);
+
     Value result;
 
     result.llvm_value = llvm_ir_builder_->CreateGEP(

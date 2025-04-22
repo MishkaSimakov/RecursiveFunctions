@@ -1,14 +1,14 @@
 #pragma once
 
-#include <../../../src/Constants.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
-#include <lexis/LexicalAnalyzer.h>
-#include <syntax/lr/LRParser.h>
 
+#include "Constants.h"
 #include "compilation/GlobalContext.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
+#include "lexis/LexicalAnalyzer.h"
 #include "sources/SourceManager.h"
+#include "syntax/lr/LRParser.h"
 
 using namespace Front;
 

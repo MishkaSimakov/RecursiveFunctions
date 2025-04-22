@@ -82,7 +82,7 @@ std::string Mangler::mangle_type(Type* type) {
     }
     case Type::Kind::TUPLE: {
       auto& tuple_ty = type->as<TupleType>();
-      if (tuple_ty.elements.empty()) {
+      if (tuple_ty.is_unit()) {
         return "v";
       }
 
@@ -94,7 +94,7 @@ std::string Mangler::mangle_type(Type* type) {
       // template parameters prefix
       result += "I";
 
-      for (Type* element : tuple_ty.elements) {
+      for (Type* element : tuple_ty.get_elements()) {
         result += mangle_type(element);
       }
 

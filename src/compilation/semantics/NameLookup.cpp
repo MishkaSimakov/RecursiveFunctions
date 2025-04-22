@@ -167,7 +167,7 @@ Type* SemanticAnalyzer::inject_type(Type* external_type,
     case Type::Kind::TUPLE: {
       TupleType* tuple = static_cast<TupleType*>(external_type);
       std::vector<Type*> imported_elements;
-      for (Type* type : tuple->elements) {
+      for (Type* type : tuple->get_elements()) {
         imported_elements.push_back(inject_type(type, external_strings));
       }
       return types().make_type<TupleType>(std::move(imported_elements));

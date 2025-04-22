@@ -10,13 +10,13 @@ bool SemanticAnalyzer::visit_tuple_index_expression(TupleIndexExpr& node) {
                node.left->type);
   }
 
-  size_t tuple_size = left_ty->elements.size();
+  size_t tuple_size = left_ty->get_elements_count();
   if (node.index < 0 || tuple_size <= node.index) {
     scold_user(node, "tuple index is out of range [0..{})", tuple_size);
   }
 
   node.value_category = node.left->value_category;
-  node.type = left_ty->elements[node.index];
+  node.type = left_ty->get_element_type(node.index);
 
   return true;
 }

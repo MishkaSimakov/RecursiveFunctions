@@ -45,12 +45,20 @@ struct Scope {
   SymbolInfo& add_struct(StringId name, Declaration& decl, Scope* subscope,
                          StructType* type) {
     auto info = StructSymbolInfo(name, this, subscope, decl, type);
-    return symbols.emplace(name, info).first->second;
+    SymbolInfo& result = symbols.emplace(name, info).first->second;
+
+    subscope->parent_symbol = &result;
+
+    return result;
   }
 
   SymbolInfo& add_namespace(StringId name, Declaration& decl, Scope* subscope) {
     auto info = NamespaceSymbolInfo(name, this, subscope, decl);
-    return symbols.emplace(name, info).first->second;
+    SymbolInfo& result = symbols.emplace(name, info).first->second;
+
+    subscope->parent_symbol = &result;
+
+    return result;
   }
 
   SymbolInfo& add_variable(StringId name, Declaration& decl, Type* type) {
@@ -66,7 +74,11 @@ struct Scope {
   SymbolInfo& add_function(StringId name, Declaration& decl, FunctionType* type,
                            Scope* subscope) {
     auto info = FunctionSymbolInfo(name, this, subscope, decl, type);
-    return symbols.emplace(name, info).first->second;
+    SymbolInfo& result = symbols.emplace(name, info).first->second;
+
+    subscope->parent_symbol = &result;
+
+    return result;
   }
 
   SymbolInfo& add_alias(StringId name, Declaration& decl, AliasType* type) {

@@ -42,7 +42,6 @@ bool SemanticAnalyzer::traverse_function_declaration(FunctionDecl& node) {
 
   SymbolInfo& info = scope.add_function(node.name, node, nullptr, &subscope);
   FunctionSymbolInfo& fun_info = info.as<FunctionSymbolInfo>();
-  subscope.parent_symbol = &info;
 
   NestedScopeRAII scope_guard(*this, subscope);
 
