@@ -1,0 +1,9 @@
+// RUN: not %tlang %s 2>&1 | %FileCheck %s
+
+// CHECK: unknown identifier
+
+main: () -> i64 = {
+    x: i64 = x;
+
+    return 0;
+}

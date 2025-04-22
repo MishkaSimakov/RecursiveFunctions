@@ -16,4 +16,5 @@ files/lexis/lexis.lx
 src/syntax/BuildersRegistry.h
 
 # folder for experiments
-examples
+examples/build
+examples/exe

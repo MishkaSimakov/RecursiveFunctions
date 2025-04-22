@@ -1,0 +1,1 @@
+export extern print: (value: i64) -> ()
