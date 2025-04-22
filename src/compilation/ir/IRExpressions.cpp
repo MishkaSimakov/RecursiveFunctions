@@ -231,19 +231,27 @@ Value IRGenerator::compile_call_expression(const CallExpr& value) {
   }
 
   // add implicit transformation argument
-  Value callee_value = compile_expr(value.callee);
+  std::vector<std::reference_wrapper<const std::unique_ptr<Expression>>>
+      argument_expressions;
+
   if (module_.calls_info.at(&value).is_transformation) {
-    arguments.push_back(callee_value.llvm_value);
-    auto& fun_info = module_.members_info.at(&value.callee->as<MemberExpr>())
-                         .get()
-                         .as<FunctionSymbolInfo>();
+    auto& member_expr = value.callee->as<MemberExpr>();
+    argument_expressions.push_back(member_expr.left);
+    auto& fun_info =
+        module_.members_info.at(&member_expr).get().as<FunctionSymbolInfo>();
     llvm_callee = get_or_insert_function(fun_info).get_llvm_function();
   } else {
+    Value callee_value = compile_expr(value.callee);
+
     assert(callee_value.has_indirection);
     llvm_callee = llvm::dyn_cast<llvm::Function>(callee_value.llvm_value);
   }
 
   for (auto& argument : value.arguments) {
+    argument_expressions.emplace_back(argument);
+  }
+
+  for (const std::unique_ptr<Expression>& argument : argument_expressions) {
     Type* arg_ty = argument->type->get_original();
     Value argument_value = compile_expr(argument);
 
