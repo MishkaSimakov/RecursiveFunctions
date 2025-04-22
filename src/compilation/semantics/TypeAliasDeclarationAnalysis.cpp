@@ -10,8 +10,8 @@ bool SemanticAnalyzer::visit_type_alias_declaration(TypeAliasDecl& node) {
 
   // aliases are strong in TeaLang
   // therefore separate type is created for alias
-  QualifiedId name = current_scope_->get_fully_qualified_name();
-  name.parts.push_back(node.name);
+  auto name =
+      QualifiedId::merge(current_scope_->get_fully_qualified_name(), node.name);
 
   AliasType* type = types().add_alias(name, original);
   SymbolInfo& info = current_scope_->add_alias(node.name, node, type);

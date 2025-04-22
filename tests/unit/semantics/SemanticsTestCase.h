@@ -29,12 +29,12 @@ class SemanticsTestCase : public ::testing::Test {
   bool is_identifier_equal(const IdExpr& identifier, const Args&... parts) {
     std::vector<std::string_view> expected_parts{parts...};
 
-    if (expected_parts.size() != identifier.id.parts.size()) {
+    if (expected_parts.size() != identifier.id.get_parts().size()) {
       return false;
     }
 
     for (size_t i = 0; i < expected_parts.size(); ++i) {
-      if (module().get_string(identifier.id.parts[i]) != expected_parts[i]) {
+      if (module().get_string(identifier.id.get_parts()[i]) != expected_parts[i]) {
         return false;
       }
     }

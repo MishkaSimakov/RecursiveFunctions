@@ -15,25 +15,6 @@ void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
   throw SemanticAnalyzerException(std::move(errors_));
 }
 
-StringId SemanticAnalyzer::import_external_string(
-    StringId external_string, const StringPool& external_strings) {
-  if (&external_strings == &context_.get_strings_pool()) {
-    return external_string;
-  }
-
-  std::string_view string_view = external_strings.get_string(external_string);
-  return context_.add_string(string_view);
-}
-
-QualifiedId SemanticAnalyzer::import_external_string(
-    const QualifiedId& external_string, const StringPool& external_strings) {
-  std::vector<StringId> result;
-  for (StringId part : external_string.parts) {
-    result.push_back(import_external_string(part, external_strings));
-  }
-  return QualifiedId(std::move(result));
-}
-
 void SemanticAnalyzer::convert_to_rvalue(
     std::unique_ptr<Expression>& expression) {
   if (expression->value_category == ValueCategory::RVALUE) {

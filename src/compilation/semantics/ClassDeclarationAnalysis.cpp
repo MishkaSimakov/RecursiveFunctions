@@ -20,8 +20,8 @@ bool SemanticAnalyzer::traverse_class_declaration(ClassDecl& node) {
     members.emplace_back(local_variable.declaration.name, local_variable.type);
   }
 
-  QualifiedId name = current_scope_->get_fully_qualified_name();
-  name.parts.push_back(node.name);
+  auto name =
+      QualifiedId::merge(current_scope_->get_fully_qualified_name(), node.name);
 
   StructType* type =
       types().make_type<StructType>(std::move(name), std::move(members));

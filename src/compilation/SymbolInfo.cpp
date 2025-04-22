@@ -9,8 +9,7 @@ namespace Front {
 
 QualifiedId BaseSymbolInfo::get_fully_qualified_name() const {
   auto qualifiers = scope->get_fully_qualified_name();
-  qualifiers.parts.push_back(name);
-  return qualifiers;
+  return QualifiedId::merge(std::move(qualifiers), name);
 }
 
 Type* SymbolInfo::get_type() const {

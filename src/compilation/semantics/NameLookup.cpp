@@ -69,15 +69,14 @@ Scope* SemanticAnalyzer::inject_nested_scope(const ModuleContext& source_module,
   QualifiedId external_qualified_path = source_namespaces;
   Scope* external_scope = source_module.root_scope.get();
 
-  auto local_qualified_path =
-      import_external_string(external_qualified_path, external_strings);
+  auto local_qualified_path = external_qualified_path;
   Scope* local_scope = context_.root_scope.get();
 
-  size_t path_size = external_qualified_path.parts.size();
+  size_t path_size = external_qualified_path.get_parts().size();
 
   for (size_t i = 0; i < path_size; ++i) {
-    StringId external_part = external_qualified_path.parts[i];
-    StringId local_part = local_qualified_path.parts[i];
+    StringId external_part = external_qualified_path.get_parts()[i];
+    StringId local_part = local_qualified_path.get_parts()[i];
 
     NamespaceSymbolInfo& external_namespace = std::get<NamespaceSymbolInfo>(
         external_scope->symbols.at(external_part));
@@ -104,8 +103,8 @@ Scope* SemanticAnalyzer::inject_nested_scope(const ModuleContext& source_module,
 
 void SemanticAnalyzer::inject_symbol(ModuleContext& source_module,
                                      SymbolInfo& source_symbol) {
-  QualifiedId qualifiers = source_symbol.get_fully_qualified_name();
-  qualifiers.pop_name();
+  QualifiedId qualifiers =
+      source_symbol.get_scope()->get_fully_qualified_name();
 
   Scope* scope = inject_nested_scope(source_module, std::move(qualifiers));
   inject_symbol_to(scope, source_module, source_symbol);
@@ -114,8 +113,7 @@ void SemanticAnalyzer::inject_symbol(ModuleContext& source_module,
 void SemanticAnalyzer::inject_symbol_to(Scope* scope,
                                         ModuleContext& source_module,
                                         SymbolInfo& source_symbol) {
-  StringId name = import_external_string(source_symbol.get_unqualified_name(),
-                                         source_module.get_strings_pool());
+  StringId name = source_symbol.get_unqualified_name();
 
   auto itr = scope->symbols.find(name);
   if (itr != scope->symbols.end()) {
@@ -159,8 +157,7 @@ Type* SemanticAnalyzer::inject_type(Type* external_type,
     case Type::Kind::ALIAS: {
       AliasType* alias = static_cast<AliasType*>(external_type);
       auto* original = inject_type(alias->get_original(), external_strings);
-      QualifiedId local_name =
-          import_external_string(alias->get_name(), external_strings);
+      QualifiedId local_name = alias->get_name();
 
       return types().make_type<AliasType>(std::move(local_name), original);
     }
@@ -177,14 +174,11 @@ Type* SemanticAnalyzer::inject_type(Type* external_type,
 
       std::vector<std::pair<StringId, Type*>> local_members;
       for (auto [name, type] : external_cls->get_members()) {
-        local_members.emplace_back(
-            import_external_string(name, external_strings),
-            inject_type(type, external_strings));
+        local_members.emplace_back(name, inject_type(type, external_strings));
       }
 
       StructType* local_cls = types().make_type<StructType>(
-          import_external_string(external_cls->get_name(), external_strings),
-          std::move(local_members));
+          external_cls->get_name(), std::move(local_members));
 
       return local_cls;
     }
@@ -197,7 +191,7 @@ SymbolInfo* SemanticAnalyzer::name_lookup(Scope* scope, const QualifiedId& id) {
   Scope* current_scope = scope;
 
   while (current_scope != nullptr &&
-         !current_scope->has_symbol(id.parts.front())) {
+         !current_scope->has_symbol(id.get_parts().front())) {
     current_scope = current_scope->parent;
   }
 

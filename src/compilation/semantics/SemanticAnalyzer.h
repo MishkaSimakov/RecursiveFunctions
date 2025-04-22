@@ -65,11 +65,6 @@ class SemanticAnalyzer
     scold_user(node, fmt::format(fmt::runtime(format), format_type(args)...));
   }
 
-  StringId import_external_string(StringId external_string,
-                                  const StringPool& external_strings);
-  QualifiedId import_external_string(const QualifiedId& external_string,
-                                     const StringPool& external_strings);
-
   Type* add_to_transformations_if_necessary(const FunctionSymbolInfo& function);
   bool is_transformation(CallExpr& node);
 
@@ -97,9 +92,6 @@ class SemanticAnalyzer
   // this function is called for function arguments and initializer expressions
   // for variables.
   void as_initializer(std::unique_ptr<Expression>& expression);
-
-  std::unique_ptr<Declaration> make_implicit_struct_constructor(
-      StructSymbolInfo& info);
 
  public:
   bool after_traverse(ASTNode& node);

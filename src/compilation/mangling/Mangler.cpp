@@ -143,8 +143,8 @@ std::string Mangler::mangle_source_name(std::string_view name_view) {
 }
 
 std::string Mangler::mangle_name(const QualifiedId& name) {
-  if (name.parts.size() == 1) {
-    return mangle_unscoped_name(name.parts.front());
+  if (!name.is_qualified()) {
+    return mangle_unscoped_name(name.unqualified_id());
   } else {
     return mangle_nested_name(name);
   }
@@ -166,7 +166,7 @@ std::string Mangler::mangle_nested_name(const QualifiedId& name) {
   }
 
   // unqualified name (don't participate in substitutions)
-  result += mangle_source_name(name.parts.back());
+  result += mangle_source_name(name.unqualified_id());
 
   return "N" + result + "E";
 }
@@ -177,8 +177,7 @@ std::string Mangler::mangle(const SymbolInfo& symbol) {
 
   if (symbol.is_function()) {
     // we mangle main function according to C mangling rules (just don't mangle)
-    if (qualified_name.parts.size() == 1 &&
-        strings_.get_string(qualified_name.parts.front()) == "main") {
+    if (qualified_name.to_string(strings_) == "main") {
       return "main";
     }
 
