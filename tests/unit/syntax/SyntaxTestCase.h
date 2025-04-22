@@ -1,10 +1,10 @@
 #pragma once
 
+#include <../../../src/Constants.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 #include <lexis/LexicalAnalyzer.h>
 #include <syntax/lr/LRParser.h>
-#include <utils/Constants.h>
 
 #include "compilation/GlobalContext.h"
 #include "sources/SourceManager.h"
@@ -24,7 +24,7 @@ using TypeKind = Front::Type::Kind;
 
 class SyntaxTestCase : public ::testing::Test {
  private:
-  GlobalContext* context_{nullptr};
+  std::unique_ptr<GlobalContext> context_;
 
  protected:
   const ModuleContext& module() { return context_->get_module("main"); }
@@ -39,12 +39,12 @@ class SyntaxTestCase : public ::testing::Test {
   bool is_identifier_equal(const IdExpr& identifier, const Args&... parts) {
     std::vector<std::string_view> expected_parts{parts...};
 
-    if (expected_parts.size() != identifier.id.parts.size()) {
+    if (expected_parts.size() != identifier.id.get_parts().size()) {
       return false;
     }
 
     for (size_t i = 0; i < expected_parts.size(); ++i) {
-      if (module().get_string(identifier.id.parts[i]) != expected_parts[i]) {
+      if (module().get_string(identifier.id.get_parts()[i]) != expected_parts[i]) {
         return false;
       }
     }
@@ -54,8 +54,7 @@ class SyntaxTestCase : public ::testing::Test {
 
   const ModuleContext& parse(std::string_view program) {
     // reset global context for each parse
-    delete context_;
-    context_ = new GlobalContext();
+    context_ = std::make_unique<GlobalContext>();
 
     Lexis::LexicalAnalyzer lexical_analyzer(
         Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
@@ -83,8 +82,6 @@ class SyntaxTestCase : public ::testing::Test {
         dynamic_cast<FunctionDecl&>(*context.ast_root->declarations.front());
     return function.body->statements;
   }
-
-  void TearDown() override { delete context_; }
 
   //
   // template <typename... Args>

@@ -1,8 +1,8 @@
 #include <fmt/base.h>
 
+#include "Constants.h"
 #include "lexis/Token.h"
 #include "table/LexicalAutomatonGenerator.h"
-#include "utils/Constants.h"
 
 int main() {
   using namespace Lexis;
@@ -69,6 +69,7 @@ int main() {
   generator[TokenType::STAR] = "\\*";
   generator[TokenType::PERCENT] = "%";
   generator[TokenType::NOT] = "!";
+  generator[TokenType::QUESTION] = "?";
   generator[TokenType::AMPERSAND] = "&";
   generator[TokenType::LESS] = "<";
   generator[TokenType::GREATER] = ">";

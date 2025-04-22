@@ -1,11 +1,15 @@
-Rectangle: type = {
-    x: i64
-    y: i64
-    width: i64
-    height: i64
-}
+import "rectangle"
+import "io"
+import "math"
 
-Rectangle: () -> Rectangle = {
-    return Rectangle
-}
+main: () -> i64 = {
+    print(math::factorial(6));
 
+    rect: geometry::Rectangle = geometry::make_rectangle(1 as! u64, 2 as! u64, 3, 4);
+
+    rect
+        .geometry::move(1, 2)
+        .geometry::print_rect();
+
+    return 0;
+}

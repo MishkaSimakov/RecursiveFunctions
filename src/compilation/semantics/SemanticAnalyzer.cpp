@@ -1,10 +1,9 @@
 #include "SemanticAnalyzer.h"
 
-#include <utils/Constants.h>
-
 #include <algorithm>
 #include <iostream>
 
+#include "Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/ScopePrinter.h"
 
@@ -14,25 +13,6 @@ TypesStorage& SemanticAnalyzer::types() { return context_.types_storage; }
 void SemanticAnalyzer::scold_user(const ASTNode& node, std::string message) {
   errors_.emplace_back(node.source_range, std::move(message));
   throw SemanticAnalyzerException(std::move(errors_));
-}
-
-StringId SemanticAnalyzer::import_external_string(
-    StringId external_string, const StringPool& external_strings) {
-  if (&external_strings == &context_.get_strings_pool()) {
-    return external_string;
-  }
-
-  std::string_view string_view = external_strings.get_string(external_string);
-  return context_.add_string(string_view);
-}
-
-QualifiedId SemanticAnalyzer::import_external_string(
-    const QualifiedId& external_string, const StringPool& external_strings) {
-  QualifiedId result;
-  for (StringId part : external_string.parts) {
-    result.parts.push_back(import_external_string(part, external_strings));
-  }
-  return result;
 }
 
 void SemanticAnalyzer::convert_to_rvalue(
@@ -92,10 +72,10 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
 
   FunctionType* fun_ty = std::get<FunctionSymbolInfo>(*info).type;
 
-  if (node.value->type != fun_ty->return_type) {
+  if (node.value->type != fun_ty->get_return_type()) {
     auto left_type = node.value->type->to_string(context_.get_strings_pool());
     auto right_type =
-        fun_ty->return_type->to_string(context_.get_strings_pool());
+        fun_ty->get_return_type()->to_string(context_.get_strings_pool());
 
     scold_user(
         node,
@@ -133,13 +113,10 @@ void SemanticAnalyzer::analyze() {
     }
   }
 
+  ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
+                       std::cout);
+  printer.print();
+
   traverse(*context_.ast_root);
-
-  // ScopePrinter printer(context_.get_strings_pool(), *context_.root_scope,
-  // std::cout);
-  // printer.print();
-
-  // ASTPrinter ast_printer(context_, std::cout);
-  // ast_printer.print();
 }
 }  // namespace Front

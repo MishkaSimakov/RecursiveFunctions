@@ -41,15 +41,15 @@ class ASTBuildContext {
   }
 
   QualifiedId get_qualified_id(std::unique_ptr<ASTNode> node) const {
-    QualifiedId result;
+    std::vector<StringId> result;
 
     auto id_parts = cast_move<NodesList<TokenNode>>(std::move(node));
     for (const auto& part : id_parts->nodes) {
       StringId part_string = get_node_string(*part);
-      result.parts.push_back(part_string);
+      result.push_back(part_string);
     }
 
-    return result;
+    return QualifiedId(std::move(result));
   }
 
   StringId get_node_string(const ASTNode& node) const {
@@ -111,6 +111,8 @@ class ASTBuildContext {
   NodePtr call_expression(SourceRange source_range, std::span<NodePtr> nodes);
   NodePtr tuple_index_expression(SourceRange source_range,
                                  std::span<NodePtr> nodes);
+  NodePtr explicit_unsafe_cast_expression(SourceRange source_range,
+                                          std::span<NodePtr> nodes);
 
   // statements
   NodePtr return_stmt(SourceRange source_range, std::span<NodePtr> nodes);

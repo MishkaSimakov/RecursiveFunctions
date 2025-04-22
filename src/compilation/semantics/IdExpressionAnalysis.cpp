@@ -4,7 +4,7 @@ namespace Front {
 bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
   SymbolInfo* info = name_lookup(current_scope_, node.id);
   if (info == nullptr) {
-    scold_user(node, "Unknown identifier.");
+    scold_user(node, "unknown identifier");
   }
 
   if (info->is_variable()) {
@@ -18,7 +18,7 @@ bool SemanticAnalyzer::visit_id_expression(IdExpr& node) {
   }
 
   node.value_category = ValueCategory::LVALUE;
-  context_.symbols_info.emplace(&node, *info);
+  context_.identifiers_info.emplace(&node, *info);
 
   return true;
 }

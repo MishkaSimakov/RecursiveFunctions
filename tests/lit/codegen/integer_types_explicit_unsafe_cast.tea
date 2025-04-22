@@ -1,0 +1,33 @@
+// RUN: %tlang %s --emit ir | %FileCheck %s
+
+extern get_i64: () -> i64
+extern get_i32: () -> i32
+
+extern get_u64: () -> u64
+extern get_u32: () -> u32
+
+f: () -> () = {
+    // CHECK: trunc i64
+    // CHECK-SAME: i32
+    a: i32 = get_i64() as! i32;
+
+    // CHECK: trunc i64
+    // CHECK-SAME: i32
+    b: u32 = get_i64() as! u32;
+
+    // CHECK: sext i32
+    // CHECK-SAME: i64
+    c: i64 = get_i32() as! i64;
+
+    // CHECK: sext i32
+    // CHECK-SAME: i64
+    d: u64 = get_i32() as! u64;
+
+    // CHECK: zext i32
+    // CHECK-SAME: i64
+    e: u64 = get_u32() as! u64;
+
+    // CHECK: sext i32
+    // CHECK-SAME: i64
+    f: u64 = get_i32() as! u64;
+}

@@ -1,0 +1,50 @@
+$schema: 'https://raw.githubusercontent.com/context-hub/generator/refs/heads/main/json-schema.json'
+documents:
+  - description: 'Project structure overview'
+    outputPath: project-structure.md
+    overwrite: true
+    sources:
+      - type: tree
+        sourcePaths:
+          - src
+        filePattern: '*'
+        renderFormat: ascii
+        enabled: true
+        showCharCount: true
+
+  - description: 'Lit-Tests'
+    outputPath: testing/lit.md
+    sources:
+      - type: file
+        sourcePaths:
+          - tests/lit
+        filePattern: [ "*.tea", "*.team" ]
+
+  # sample programs are obtained from tests by removing comments
+  - description: 'Tea Programs Examples'
+    outputPath: tea-programs.md
+    sources:
+      - type: file
+        sourcePaths:
+          - tests/lit
+        filePattern: [ "*.tea", "*.team" ]
+        modifiers:
+          - name: sanitizer
+            options:
+              rules:
+                - type: regex
+                  patterns:
+                    "~\/\/(.*)\n~": "" # remove cpp single-line comments
+
+  - description: 'Changes in Current Commit'
+    outputPath: changes.md
+    sources:
+      - type: git_diff
+        description: Recent Git Changes
+        commit: staged
+        path: [ "src", "tests" ]
+        render:
+          strategy: llm
+          showStats: true
+          showLineNumbers: true
+          contextLines: 5

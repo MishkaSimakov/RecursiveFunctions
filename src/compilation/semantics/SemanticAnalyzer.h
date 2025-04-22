@@ -39,7 +39,11 @@ class SemanticAnalyzer
 
   void add_to_exported_if_necessary(SymbolInfo& info);
 
-  void inject_symbol(ModuleContext& module, SymbolInfo& symbol);
+  Scope* inject_nested_scope(const ModuleContext& source_module,
+                             QualifiedId source_namespaces);
+  void inject_symbol(ModuleContext& source_module, SymbolInfo& source_symbol);
+  void inject_symbol_to(Scope* scope, ModuleContext& source_module,
+                        SymbolInfo& source_symbol);
   Type* inject_type(Type* external_type, const StringPool& external_strings);
 
   [[noreturn]] void scold_user(const ASTNode& node, std::string message);
@@ -51,6 +55,8 @@ class SemanticAnalyzer
     auto format_type = [this]<typename T>(T&& value) {
       if constexpr (is_type_ptr<std::decay_t<T>>::value) {
         return value->to_string(context_.get_strings_pool());
+      } else if constexpr (std::is_same_v<std::decay_t<T>, StringId>) {
+        return context_.get_string(value);
       } else {
         return std::forward<T>(value);
       }
@@ -59,10 +65,8 @@ class SemanticAnalyzer
     scold_user(node, fmt::format(fmt::runtime(format), format_type(args)...));
   }
 
-  StringId import_external_string(StringId external_string,
-                                  const StringPool& external_strings);
-  QualifiedId import_external_string(const QualifiedId& external_string,
-                                     const StringPool& external_strings);
+  Type* add_to_transformations_if_necessary(const FunctionSymbolInfo& function);
+  bool is_transformation(CallExpr& node);
 
   class NestedScopeRAII {
     Scope*& current_scope_;
@@ -118,6 +122,7 @@ class SemanticAnalyzer
   bool visit_member_expression(MemberExpr& node);
   bool visit_tuple_expression(TupleExpr& node);
   bool visit_tuple_index_expression(TupleIndexExpr& node);
+  bool visit_explicit_unsafe_cast_expression(ExplicitUnsafeCastExpr& node);
 
   // types
   bool visit_pointer_type(PointerTypeNode& node);
@@ -126,5 +131,7 @@ class SemanticAnalyzer
   bool visit_user_defined_type(UserDefinedTypeNode& node);
 
   void analyze();
+
+  friend struct SymbolInjector;
 };
 }  // namespace Front

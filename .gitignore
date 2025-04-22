@@ -1,9 +1,20 @@
 .idea
 .venv
+.context
+
+# build directories
 cmake-build-*
 build
-**/.DS_Store
 bin
+
+# macos info
+**/.DS_Store
+
+# generated files
 files/grammar/grammar.lr
 files/lexis/lexis.lx
 src/syntax/BuildersRegistry.h
+
+# folder for experiments
+examples/build
+examples/exe

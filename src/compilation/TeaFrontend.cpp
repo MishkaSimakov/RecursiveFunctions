@@ -27,12 +27,12 @@
 #include <deque>
 #include <iostream>
 
+#include "../Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
 #include "ir/IRGenerator.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
-#include "utils/Constants.h"
 
 namespace Front {
 enum class DFSState { UNVISITED, VISITING, VISITED };
@@ -163,6 +163,12 @@ void TeaFrontend::build_symbols_table_and_compile() {
 
     // check that all dependencies are already processed
     ModuleContext& current_module = context_.get_module(current_name);
+    if (current_module.state ==
+            ModuleContext::ModuleState::AFTER_SEMANTIC_ANALYZER ||
+        current_module.state == ModuleContext::ModuleState::AFTER_IR_COMPILER) {
+      continue;
+    }
+
     bool has_unprocessed_dependencies = false;
     for (const ModuleContext& dependency : current_module.dependencies) {
       if (dependency.state != ModuleContext::ModuleState::AFTER_IR_COMPILER) {

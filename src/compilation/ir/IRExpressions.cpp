@@ -30,17 +30,27 @@ Value IRGenerator::compile_tuple_expression(const TupleExpr& value) {
 }
 
 Value IRGenerator::compile_member_expression(const MemberExpr& value) {
-  Value class_value = compile_expr(value.left);
-  assert(class_value.has_indirection);
+  Value object = compile_expr(value.left);
 
-  Value result;
+  SymbolInfo& info = module_.members_info.at(&value);
+  if (info.is_variable()) {
+    assert(object.has_indirection);
 
-  result.llvm_value = llvm_ir_builder_->CreateGEP(
-      types_mapper_(value.type), class_value.llvm_value,
-      llvm_ir_builder_->getInt32(value.member_index));
-  result.has_indirection = true;
+    Value result;
 
-  return result;
+    result.llvm_value = llvm_ir_builder_->CreateGEP(
+        types_mapper_(value.type), object.llvm_value,
+        llvm_ir_builder_->getInt32(info.as<VariableSymbolInfo>().index));
+    result.has_indirection = true;
+
+    return result;
+  } else if (info.is_function()) {
+    // return just object, compile_call_expression will substitute it as a
+    // first argument for transformation
+    return object;
+  } else {
+    unreachable("semantic analyzer must prohibit other options.");
+  }
 }
 
 Value IRGenerator::compile_binary_operator(const BinaryOperator& value) {
@@ -117,16 +127,68 @@ Value IRGenerator::compile_unary_operator(const UnaryOperator& value) {
   return result;
 }
 
+Value IRGenerator::compile_explicit_unsafe_cast(
+    const ExplicitUnsafeCastExpr& value) {
+  Type* from = value.child->type;
+  Type* to = value.type;
+
+  Value child = compile_expr(value.child);
+
+  if (from == to) {
+    return child;
+  }
+
+  // otherwise cast is allowed only for arithmetic types (for now)
+  if (from->get_kind() == Type::Kind::CHAR ||
+      to->get_kind() == Type::Kind::CHAR) {
+    not_implemented("char type casting (P1)");
+  }
+
+  auto decompose_int = [&](Type* type) {
+    if (type->get_kind() == Type::Kind::SIGNED_INT) {
+      return std::pair{true, type->as<SignedIntType>().get_width()};
+    } else if (type->get_kind() == Type::Kind::UNSIGNED_INT) {
+      return std::pair{false, type->as<UnsignedIntType>().get_width()};
+    } else {
+      unreachable("semantic analyzer should discard all other types.");
+    }
+  };
+
+  std::pair<bool, size_t> from_info = decompose_int(from);
+  std::pair<bool, size_t> to_info = decompose_int(to);
+
+  // LLVM doesn't distinguish between signed and unsigned type,
+  // therefore cast to same width is no-op
+  if (from_info.second == to_info.second) {
+    return child;
+  }
+
+  child = remove_indirection(child, from);
+
+  Value result;
+  result.has_indirection = false;
+
+  if (from_info.first) {
+    result.llvm_value = llvm_ir_builder_->CreateSExtOrTrunc(child.llvm_value,
+                                                            types_mapper_(to));
+  } else {
+    result.llvm_value = llvm_ir_builder_->CreateZExtOrTrunc(child.llvm_value,
+                                                            types_mapper_(to));
+  }
+
+  return result;
+}
+
 Value IRGenerator::compile_id_expression(const IdExpr& value) {
-  const SymbolInfo& info = module_.symbols_info.at(&value);
+  const SymbolInfo& info = module_.identifiers_info.at(&value);
 
   Value result;
 
   if (info.is_function()) {
-    const FunctionSymbolInfo& fun = std::get<FunctionSymbolInfo>(info);
+    auto& fun = info.as<FunctionSymbolInfo>();
     result.llvm_value = get_or_insert_function(fun).get_llvm_function();
   } else if (info.is_variable()) {
-    const VariableSymbolInfo& var = std::get<VariableSymbolInfo>(info);
+    auto& var = info.as<VariableSymbolInfo>();
     result.llvm_value = get_local_variable_value(var.get_decl());
   } else {
     unreachable("SemanticAnalyzer must throw if any other type appears here");
@@ -156,21 +218,40 @@ Value IRGenerator::compile_tuple_index_expression(const TupleIndexExpr& value) {
 }
 
 Value IRGenerator::compile_call_expression(const CallExpr& value) {
-  FunctionType* fun_ty = static_cast<FunctionType*>(value.callee->type);
+  auto& fun_ty = value.callee->type->as<FunctionType>();
 
-  Value callee_value = compile_expr(value.callee);
-  assert(callee_value.has_indirection);
-
-  llvm::Function* llvm_callee =
-      llvm::dyn_cast<llvm::Function>(callee_value.llvm_value);
+  llvm::Function* llvm_callee;
   std::vector<llvm::Value*> arguments;
-  bool return_through_arg = !fun_ty->return_type->is_passed_by_value();
+
+  // add implicit return argument
+  bool return_through_arg = !fun_ty.get_return_type()->is_passed_by_value();
 
   if (return_through_arg) {
-    arguments.push_back(get_slot(fun_ty->return_type));
+    arguments.push_back(get_slot(fun_ty.get_return_type()));
+  }
+
+  // add implicit transformation argument
+  std::vector<std::reference_wrapper<const std::unique_ptr<Expression>>>
+      argument_expressions;
+
+  if (module_.calls_info.at(&value).is_transformation) {
+    auto& member_expr = value.callee->as<MemberExpr>();
+    argument_expressions.push_back(member_expr.left);
+    auto& fun_info =
+        module_.members_info.at(&member_expr).get().as<FunctionSymbolInfo>();
+    llvm_callee = get_or_insert_function(fun_info).get_llvm_function();
+  } else {
+    Value callee_value = compile_expr(value.callee);
+
+    assert(callee_value.has_indirection);
+    llvm_callee = llvm::dyn_cast<llvm::Function>(callee_value.llvm_value);
   }
 
   for (auto& argument : value.arguments) {
+    argument_expressions.emplace_back(argument);
+  }
+
+  for (const std::unique_ptr<Expression>& argument : argument_expressions) {
     Type* arg_ty = argument->type->get_original();
     Value argument_value = compile_expr(argument);
 

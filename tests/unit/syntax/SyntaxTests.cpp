@@ -209,3 +209,16 @@ TEST_F(SyntaxTestCase, test_nodes_range) {
     ASSERT_SOURCE_RANGE(if_stmt.false_branch->source_range, 54, 54);
   }
 }
+
+TEST_F(SyntaxTestCase, unsafe_explicit_cast) {
+  auto& statements = parse_function_body("variable as! i64;");
+
+  auto& expr_stmt = dynamic_cast<ExpressionStmt&>(*statements.front());
+  auto& cast_expr = dynamic_cast<ExplicitUnsafeCastExpr&>(*expr_stmt.value);
+
+  ASSERT_ID_EQ(dynamic_cast<IdExpr&>(*cast_expr.child), "variable");
+
+  auto& type = dynamic_cast<PrimitiveTypeNode&>(*cast_expr.type_node);
+  ASSERT_EQ(type.kind, Type::Kind::SIGNED_INT);
+  ASSERT_EQ(type.width, 64);
+}

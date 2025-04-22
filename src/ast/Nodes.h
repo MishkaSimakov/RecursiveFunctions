@@ -4,6 +4,7 @@
 #include <ranges>
 #include <vector>
 
+#include "Constants.h"
 #include "compilation/DeclarationSpecifiers.h"
 #include "compilation/QualifiedId.h"
 #include "compilation/types/Type.h"
@@ -53,6 +54,7 @@ struct ASTNode {
     IMPLICIT_LVALUE_TO_RVALUE_CONVERSION_EXPR,
     TUPLE_INDEX_EXPR,
     IMPLICIT_TUPLE_COPY_EXPR,
+    EXPLITIT_UNSAFE_CAST_EXPR,
 
     POINTER_TYPE,
     PRIMITIVE_TYPE,
@@ -71,6 +73,26 @@ struct ASTNode {
   virtual ~ASTNode() = default;
 
   virtual Kind get_kind() const = 0;
+
+  template <typename T>
+    requires std::is_base_of_v<ASTNode, T>
+  T& as() {
+    if constexpr (Constants::debug) {
+      return dynamic_cast<T&>(*this);
+    } else {
+      return static_cast<T&>(*this);
+    }
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<ASTNode, T>
+  const T& as() const {
+    if constexpr (Constants::debug) {
+      return dynamic_cast<const T&>(*this);
+    } else {
+      return static_cast<const T&>(*this);
+    }
+  }
 };
 
 struct Statement : ASTNode {
@@ -220,7 +242,6 @@ struct IdExpr : Expression {
 struct MemberExpr : Expression {
   std::unique_ptr<Expression> left;
   QualifiedId member;
-  size_t member_index{0};
 
   MemberExpr(SourceRange source_range, std::unique_ptr<Expression> left,
              QualifiedId member)
@@ -249,6 +270,20 @@ struct TupleExpr : Expression {
       : Expression(source_range), elements(std::move(elements)) {}
 
   Kind get_kind() const override { return Kind::TUPLE_EXPR; }
+};
+
+struct ExplicitUnsafeCastExpr : Expression {
+  std::unique_ptr<Expression> child;
+  std::unique_ptr<TypeNode> type_node;
+
+  ExplicitUnsafeCastExpr(SourceRange source_range,
+                         std::unique_ptr<Expression> child,
+                         std::unique_ptr<TypeNode> type_node)
+      : Expression(source_range),
+        child(std::move(child)),
+        type_node(std::move(type_node)) {}
+
+  Kind get_kind() const override { return Kind::EXPLITIT_UNSAFE_CAST_EXPR; }
 };
 
 struct ImportDecl : Declaration {

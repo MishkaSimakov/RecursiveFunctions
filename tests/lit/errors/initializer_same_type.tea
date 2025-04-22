@@ -1,0 +1,10 @@
+// RUN: not %tlang %s 2>&1 | %FileCheck %s
+
+// CHECK: x: i64 = 321 as! i8;
+// CHECK-NEXT: variable must have same type as initializer: "i64" != "i8"
+
+main: () -> i64 = {
+    x: i64 = 321 as! i8;
+
+    return 0;
+}

@@ -7,13 +7,14 @@
 namespace Front {
 struct GlobalContext {
  private:
+  StringPool strings_;
   std::map<std::string, ModuleContext, std::less<>> modules_;
 
  public:
   SourceManager source_manager;
 
   ModuleContext& add_module(std::string name) {
-    auto [itr, was_emplaced] = modules_.emplace(name, ModuleContext{});
+    auto [itr, _] = modules_.emplace(name, strings_);
     itr->second.name = name;
     return itr->second;
   }

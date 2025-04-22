@@ -180,11 +180,11 @@ tuple-expression:
     OPEN_PAREN expression COMMA expression-list CLOSE_PAREN [tuple_expression]
 
 postfix-expression:
-    tuple-expression                    [pass<0>]
-    tuple-expression call-arguments     [call_expression]
-    postfix-expression DOT qualified-id [member_expression]
-    postfix-expression DOT NUMBER       [tuple_index_expression]
-    postfix-expression KW_AS type-name  [tuple_index_expression]
+    tuple-expression                        [pass<0>]
+    postfix-expression call-arguments       [call_expression]
+    postfix-expression DOT qualified-id     [member_expression]
+    postfix-expression DOT NUMBER           [tuple_index_expression]
+    postfix-expression KW_AS NOT type-name  [explicit_unsafe_cast_expression]
 
 unary-expression:
     postfix-expression          [pass<0>]

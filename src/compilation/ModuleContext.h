@@ -3,12 +3,11 @@
 #include "ast/Nodes.h"
 #include "compilation/Scope.h"
 #include "types/TypesStorage.h"
-#include "utils/StringPool.h"
 
 namespace Front {
 struct ModuleContext {
  private:
-  StringPool strings_;
+  StringPool& strings_;
 
  public:
   enum class ModuleState {
@@ -27,13 +26,17 @@ struct ModuleContext {
   // semantic analysis details
   TypesStorage types_storage;
   std::unordered_map<const IdExpr*, std::reference_wrapper<SymbolInfo>>
+      identifiers_info;
+  std::unordered_map<const MemberExpr*, std::reference_wrapper<SymbolInfo>>
+      members_info;
+  struct CallInfo {
+    bool is_transformation;
+  };
+  std::unordered_map<const CallExpr*, CallInfo> calls_info;
+  std::unordered_map<const Declaration*, std::reference_wrapper<SymbolInfo>>
       symbols_info;
-  std::unordered_map<const FunctionDecl*,
-                     std::reference_wrapper<FunctionSymbolInfo>>
-      functions_info;
-  std::unordered_map<const UserDefinedTypeNode*,
-                     std::reference_wrapper<SymbolInfo>>
-      user_defined_types;
+  std::unordered_map<const StructType*, std::reference_wrapper<SymbolInfo>>
+      structs_info;
 
   // warning: StringIds inside QualifierId are from another module.
   // To get string_view from it, get_string must be called on correct
@@ -45,7 +48,7 @@ struct ModuleContext {
 
   ModuleState state{ModuleState::UNPROCESSED};
 
-  ModuleContext() = default;
+  explicit ModuleContext(StringPool& strings) : strings_(strings) {}
 
   StringId add_string(std::string_view string) {
     return strings_.add_string(string);
