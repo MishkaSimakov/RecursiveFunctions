@@ -71,8 +71,9 @@ class Main {
     module->setDataLayout(target_machine->createDataLayout());
 
     std::error_code error_code;
-    llvm::raw_fd_ostream dest(config.output_file.c_str(), error_code,
-                              llvm::sys::fs::OF_None);
+    llvm::raw_fd_ostream dest(
+        config.output_file.empty() ? "-" : config.output_file.c_str(),
+        error_code, llvm::sys::fs::OF_None);
 
     if (error_code) {
       throw std::runtime_error(
