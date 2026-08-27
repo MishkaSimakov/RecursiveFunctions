@@ -1,0 +1,8 @@
+// RUN: not %tlang %s 2>&1 | %FileCheck %s
+
+// CHECK: name conflicts with previous declaration
+
+f: () -> () = {
+    x: i64;
+    x: b8;
+}

@@ -45,11 +45,11 @@ SourcesList ArgumentsReader::parse_source_paths(
       add_source(name, path);
     } else {
       // unnamed include
-      // for this type of include name is stem part of path
+      // for this type of include name is a stem part of path
       // directory can be passed as parameter to this type of include
       // if so all files will be included recursively
       // for example file with relative path from given directory root
-      // foo/baz/prog.rec will be available with #include "foo.baz.prog"
+      // foo/baz/prog.tea will be available with `import "foo.baz.prog"`
 
       fs::path path = include;
 
@@ -72,14 +72,20 @@ SourcesList ArgumentsReader::parse_source_paths(
       }
 
       for (auto subfile : fs::recursive_directory_iterator(path)) {
-        if (subfile.is_regular_file()) {
-          std::string relative_path =
-              relative(subfile, path).replace_extension();
-          auto include_name =
-              std::regex_replace(relative_path, std::regex(separator), ".");
-
-          add_source(include_name, subfile.path());
+        if (!subfile.is_regular_file()) {
+          continue;
         }
+
+        if (subfile.path().extension() != ".tea" &&
+            subfile.path().extension() != ".team") {
+          continue;
+        }
+
+        std::string relative_path = relative(subfile, path).replace_extension();
+        auto include_name =
+            std::regex_replace(relative_path, std::regex(separator), ".");
+
+        add_source(include_name, subfile.path());
       }
     }
   }
@@ -105,6 +111,9 @@ Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
   if (name == "ast") {
     return Front::EmitType::AST;
   }
+  if (name == "binary") {
+    return Front::EmitType::BINARY;
+  }
   throw std::runtime_error("unknown compiler emit type.");
 }
 
@@ -125,7 +134,7 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
       .help("output file (stdout by default)");
 
   parser.add_argument("--emit")
-      .choices("ir", "ast")
+      .choices("ir", "ast", "binary")
       .default_value("ir")
       .help("compiler output type: `ir` or `ast`");
 

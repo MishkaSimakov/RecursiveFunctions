@@ -68,6 +68,8 @@ class SemanticAnalyzer
   Type* add_to_transformations_if_necessary(const FunctionSymbolInfo& function);
   bool is_transformation(CallExpr& node);
 
+  void check_for_name_conflicts(VariableDecl& decl);
+
   class NestedScopeRAII {
     Scope*& current_scope_;
 

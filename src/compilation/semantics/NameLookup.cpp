@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "SemanticAnalyzer.h"
 
 namespace Front {

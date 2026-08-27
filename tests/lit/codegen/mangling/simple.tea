@@ -4,19 +4,19 @@
 a: () -> () = {}
 
 // CHECK: @_Z1bx
-b: (a: i64) -> () = {}
+b: (A: i64) -> () = {}
 
 // CHECK: @_Z1cxx
-c: (a: i64, b: i64) -> () = {}
+c: (A: i64, B: i64) -> () = {}
 
 // CHECK: @_Z1dPc
-d: (a: *c8) -> () = {}
+d: (A: *c8) -> () = {}
 
 // CHECK: @_Z1ePPc
-e: (a: **c8) -> () = {}
+e: (A: **c8) -> () = {}
 
 // CHECK: @_Z4funcb
-func: (a: b8) -> i64 = {
+func: (A: b8) -> i64 = {
     return 0;
 }
 
@@ -26,7 +26,7 @@ nmsp: namespace = {
     f: () -> () = {}
 
     // CHECK: @_ZN4nmsp1gEyc
-    g: (a: u64, b: c8) -> () = {}
+    g: (A: u64, B: c8) -> () = {}
 
     nested: namespace = {
 

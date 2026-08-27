@@ -2,7 +2,7 @@
 
 # -- llvm --
 list(APPEND CMAKE_PREFIX_PATH
-        /opt/homebrew/Cellar/llvm/19.1.7_1/
+        /opt/homebrew/Cellar/llvm/22.1.7_1
 )
 
 find_package(LLVM REQUIRED CONFIG)
@@ -10,7 +10,19 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-llvm_map_components_to_libnames(llvm_libs support core linker)
+llvm_map_components_to_libnames(llvm_libs support core irreader linker
+        AArch64AsmParser
+        AArch64CodeGen
+        AArch64Desc
+        AArch64Disassembler
+        AArch64Info
+        AArch64Utils
+        CodeGen
+        AsmParser
+        AsmPrinter
+        Target
+        TargetParser
+)
 # -- llvm end --
 
 # -- fmt --

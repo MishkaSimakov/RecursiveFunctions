@@ -30,11 +30,10 @@ class TeaFrontend : OneShotObject {
   void build_symbols_table_and_compile();
 
   void emit_ast() const;
-  void emit_ir(const llvm::Module& main_module) const;
 
  public:
   explicit TeaFrontend(TeaFrontendConfiguration config);
 
-  int compile();
+  std::unique_ptr<llvm::Module> compile();
 };
 }  // namespace Front

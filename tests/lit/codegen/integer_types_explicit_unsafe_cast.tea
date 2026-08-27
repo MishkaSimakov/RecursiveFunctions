@@ -6,7 +6,7 @@ extern get_i32: () -> i32
 extern get_u64: () -> u64
 extern get_u32: () -> u32
 
-f: () -> () = {
+func: () -> () = {
     // CHECK: trunc i64
     // CHECK-SAME: i32
     a: i32 = get_i64() as! i32;
