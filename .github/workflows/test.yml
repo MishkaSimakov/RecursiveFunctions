@@ -9,7 +9,7 @@ permissions:
   checks: write
 
 jobs:
-  test:
+  linux:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
@@ -24,13 +24,42 @@ jobs:
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Unit Test Report
+          name: Unit Test Report (linux)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Lit Test Report
+          name: Lit Test Report (linux)
+          path: build/lit-report.xml
+          reporter: java-junit
+
+  macos:
+    runs-on: macos-26
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Install LLVM and lit
+        run: brew install llvm@23 lit
+      - name: Run tests
+        run: |
+          export LLVM_DIR="$(brew --prefix llvm@23)/lib/cmake/llvm"
+          export PATH="$(brew --prefix llvm@23)/bin:$PATH"
+          ./testing.sh
+      - name: Unit Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Unit Test Report (macos)
+          path: build/unit-report.xml
+          reporter: jest-junit
+      - name: Lit Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Lit Test Report (macos)
           path: build/lit-report.xml
           reporter: java-junit
