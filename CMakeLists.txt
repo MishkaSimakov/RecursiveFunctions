@@ -25,12 +25,12 @@ file(GLOB_RECURSE CLI_SOURCES
 )
 
 add_executable(cli ${CLI_SOURCES})
-target_link_libraries(cli PUBLIC TeaLang ${llvm_libs})
+target_link_libraries(cli PUBLIC TeaLang)
 target_compile_definitions(cli PUBLIC BUILD_FOR_INSTALLATION=false)
 set_target_properties(cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(cli_installation ${CLI_SOURCES})
-target_link_libraries(cli_installation PUBLIC TeaLang ${llvm_libs})
+target_link_libraries(cli_installation PUBLIC TeaLang)
 target_compile_definitions(cli_installation PUBLIC BUILD_FOR_INSTALLATION=true)
 
 add_subdirectory(tests)

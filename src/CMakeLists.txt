@@ -29,7 +29,7 @@ target_include_directories(TeaLang PUBLIC .)
 target_link_libraries(TeaLang
         PUBLIC fmt::fmt
         PUBLIC argparse::argparse
-        PRIVATE ${llvm_libs}
+        PUBLIC ${llvm_libs}
 )
 target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
 

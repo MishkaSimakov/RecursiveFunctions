@@ -13,7 +13,7 @@ struct Rectangle {
     height(height) {}
 };
 
-void print(int64_t value) {
+void print(long long value) {
   std::cout << value << std::endl;
 }
 

@@ -1,6 +1,7 @@
 find_program(LLVM_LIT NAMES "lit" REQUIRED)
-find_program(LLVM_FILE_CHECK NAMES "FileCheck" REQUIRED)
-find_program(LLVM_LLC NAMES "llc" REQUIRED)
+# FileCheck and llc are installed only in LLVM's own bin, which is not always on PATH
+find_program(LLVM_FILE_CHECK NAMES "FileCheck" HINTS "${LLVM_TOOLS_BINARY_DIR}" REQUIRED)
+find_program(LLVM_LLC NAMES "llc" HINTS "${LLVM_TOOLS_BINARY_DIR}" REQUIRED)
 find_program(LLVM_CLANG NAMES "clang++" REQUIRED)
 
 add_subdirectory(execution)
@@ -23,6 +24,6 @@ file(GENERATE
 
 add_custom_target(
         tests.lit
-        COMMAND ${LLVM_LIT} "${CMAKE_CURRENT_BINARY_DIR}" -v --max-time=10
+        COMMAND ${LLVM_LIT} "${CMAKE_CURRENT_BINARY_DIR}" -v --timeout=10
         DEPENDS cli tests.lit.execution.library
 )

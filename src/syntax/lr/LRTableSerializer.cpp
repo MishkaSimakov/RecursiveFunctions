@@ -1,5 +1,8 @@
 #include "LRTableSerializer.h"
 
+#include <iostream>
+#include <vector>
+
 #include "utils/TupleUtils.h"
 
 namespace Syntax {

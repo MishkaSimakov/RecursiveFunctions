@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "LRTableBuilder.h"
 
 namespace Syntax {

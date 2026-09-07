@@ -1,9 +1,9 @@
 #include <iostream>
 
-void print(int64_t value) {
+void print(long long value) {
   std::cout << value;
 }
 
-void println(int64_t value) {
+void println(long long value) {
   std::cout << value << "\n";
 }
