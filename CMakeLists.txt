@@ -17,6 +17,7 @@ add_subdirectory(src/lexis)
 add_subdirectory(src/syntax)
 
 add_subdirectory(src)
+add_subdirectory(std)
 
 # add executables from cli directory
 file(GLOB_RECURSE CLI_SOURCES
