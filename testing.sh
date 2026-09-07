@@ -2,7 +2,7 @@
 # You can run this script using docker image described in Dockerfile
 
 mkdir build
-cd build
+cd build || exit 1
 cmake -DCMAKE_BUILD_TYPE=Debug .. || exit 1
 cmake --build . -t tests.unit cli tests.lit.execution.library || exit 1
 
