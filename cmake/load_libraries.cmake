@@ -6,6 +6,10 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
+if (NOT ${LLVM_VERSION_MAJOR} EQUAL 23)
+    message(WARNING "Support for LLVM ${LLVM_VERSION_MAJOR} is not guaranteed. Use LLVM 23.")
+endif ()
+
 llvm_map_components_to_libnames(llvm_libs support core irreader linker
         AArch64AsmParser
         AArch64CodeGen
