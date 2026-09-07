@@ -281,6 +281,16 @@ class ASTVisitor {
     }
     return true;
   }
+  bool traverse_explicit_unsafe_cast_expression(
+      wrap_const<ExplicitUnsafeCastExpr>& node) {
+    if (!traverse(*node.child)) {
+      return false;
+    }
+    if (!traverse(*node.type_node)) {
+      return false;
+    }
+    return true;
+  }
 
   NodeTraverseType before_traverse(wrap_const<ASTNode>& node) {
     return NodeTraverseType::CONTINUE;

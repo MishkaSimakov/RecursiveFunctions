@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <iostream>
 
 SourceView SourceManager::load(const std::filesystem::path& path) {
   int fd = open(path.c_str(), O_RDWR);
@@ -126,7 +127,10 @@ void SourceManager::print_annotations(std::ostream& os) {
 
     if (start_index != end_index) {
       // TODO: implement multi-line annotations
-      throw std::runtime_error("Annotations must be on one line.");
+      std::cerr << "warning: multi-line annotations are not implemented, only "
+                   "the first line is printed."
+                << std::endl;
+      end_index = start_index;
     }
 
     // split line view to emphasize wrong part with red

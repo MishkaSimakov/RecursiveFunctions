@@ -20,7 +20,7 @@ void IRGenerator::create_function_arguments() {
     if (!arg_ty->is_passed_by_value()) {
       ptr = llvm_arg;
     } else {
-      auto name = fmt::format("{}.addr", module_.get_string(decl.name));
+      auto name = fmt::format("{}.addr", module_.get_string(parameter.name));
 
       auto builder = get_alloca_builder();
       ptr = builder->CreateAlloca(types_mapper_(arg_ty), nullptr, name);
@@ -163,7 +163,7 @@ bool IRGenerator::traverse_binary_operator(const BinaryOperator& value) {
 }
 
 bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
-  FunctionSymbolInfo& info = module_.functions_info.at(&value);
+  auto& info = module_.symbols_info.at(&value).get().as<FunctionSymbolInfo>();
   IRFunctionDecl decl = get_or_insert_function(info);
 
   // external function doesn't have a body
@@ -182,7 +182,7 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   llvm::Value* result_ptr;
   bool return_through_arg = decl.return_through_argument();
 
-  if (info.type->return_type->is_unit()) {
+  if (info.type->get_return_type()->is_unit()) {
     result_ptr = nullptr;
   } else if (return_through_arg) {
     result_ptr = decl.get_llvm_function()->getArg(0);
@@ -216,7 +216,7 @@ bool IRGenerator::traverse_function_declaration(const FunctionDecl& value) {
   llvm_ir_builder_->CreateBr(entry_bb);
 
   llvm_ir_builder_->SetInsertPoint(return_bb);
-  if (return_through_arg || info.type->return_type->is_unit()) {
+  if (return_through_arg || info.type->get_return_type()->is_unit()) {
     llvm_ir_builder_->CreateRetVoid();
   } else {
     auto result =
@@ -280,6 +280,12 @@ bool IRGenerator::traverse_implicit_tuple_copy_expression(
 
 bool IRGenerator::traverse_unary_operator(const UnaryOperator& value) {
   current_expr_value_ = compile_unary_operator(value);
+  return true;
+}
+
+bool IRGenerator::traverse_explicit_unsafe_cast_expression(
+    const ExplicitUnsafeCastExpr& value) {
+  current_expr_value_ = compile_explicit_unsafe_cast(value);
   return true;
 }
 

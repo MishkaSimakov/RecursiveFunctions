@@ -1,0 +1,7 @@
+// RUN: not %tlang %s 2>&1 | %FileCheck %s
+
+// CHECK: unknown type name
+
+X: type = {
+    self: X
+}

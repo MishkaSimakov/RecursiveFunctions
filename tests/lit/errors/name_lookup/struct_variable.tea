@@ -1,0 +1,9 @@
+// RUN: not %tlang %s 2>&1 | %FileCheck %s
+
+// CHECK: redefinition as different kind of symbol
+
+T: type = {}
+
+f: () -> () = {
+    T: i64 = 123;
+}

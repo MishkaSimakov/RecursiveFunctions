@@ -1,0 +1,44 @@
+import "io"
+
+export geometry: namespace = {
+
+Rectangle: type = {
+    width: u64
+    height: u64
+    x: i64
+    y: i64
+}
+
+make_rectangle: (width: u64, height: u64, x: i64, y: i64) -> Rectangle = {
+    result: Rectangle;
+
+    result.width = width;
+    result.height = height;
+    result.x = x;
+    result.y = y;
+
+    return result;
+}
+
+print_rect: (self: Rectangle) -> () = {
+    print(self.width as! i64);
+    print(self.height as! i64);
+    print(self.x);
+    print(self.y);
+}
+
+move: (self: Rectangle, dx: i64, dy: i64) -> Rectangle = {
+    self.x = self.x + dx;
+    self.y = self.y + dy;
+    return self;
+}
+
+get_size: (self: Rectangle) -> (u64, u64) = {
+    return (self.width, self.height);
+}
+
+}
+
+export Rectangle: type = {
+    val: i64
+}

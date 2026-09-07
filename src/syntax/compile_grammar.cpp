@@ -1,7 +1,7 @@
 #include <fmt/core.h>
 
+#include "Constants.h"
 #include "grammar/GrammarGenerator.h"
-#include "utils/Constants.h"
 
 int main() {
   auto grammar_filepath = Constants::GetBuildFilePath("grammar/grammar.lr");

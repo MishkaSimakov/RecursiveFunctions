@@ -13,8 +13,13 @@ class StringPool {
 public:
   StringId add_string(std::string_view string) {
     auto [itr, _] = strings_table_.emplace(string);
-    return StringId(itr);
+    return StringId(itr, this);
   }
 
-  std::string_view get_string(StringId index) const { return *index.itr_; }
+  std::string_view get_string(StringId index) const {
+    if constexpr (Constants::debug) {
+      assert(index.pool_identifier_ == detail::StringPoolIdentifier<true>(this));
+    }
+    return *index.itr_;
+  }
 };

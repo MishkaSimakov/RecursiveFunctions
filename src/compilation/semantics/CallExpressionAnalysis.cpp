@@ -1,31 +1,57 @@
 #include "SemanticAnalyzer.h"
 
 namespace Front {
+bool SemanticAnalyzer::is_transformation(CallExpr& node) {
+  if (node.callee->get_kind() == ASTNode::Kind::MEMBER_EXPR) {
+    auto& member_expr = node.callee->as<MemberExpr>();
+    SymbolInfo& info = context_.members_info.at(&member_expr);
+
+    if (info.is_function()) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool SemanticAnalyzer::visit_call_expression(CallExpr& node) {
-  FunctionType* type = dynamic_cast<FunctionType*>(node.callee->type);
-
   // check that type is callable
-  if (type == nullptr) {
-    scold_user(node, "Expression type is not callable.");
+  if (node.callee->type->get_kind() != Type::Kind::FUNCTION) {
+    scold_user(*node.callee, "callee type is not callable.");
   }
 
-  // throws in case of error
-  if (type->arguments.size() != node.arguments.size()) {
-    scold_user(node,
-               fmt::format("Arguments count mismatch: {} != {}",
-                           type->arguments.size(), node.arguments.size()));
+  std::vector<std::reference_wrapper<std::unique_ptr<Expression>>> arguments;
+  if (is_transformation(node)) {
+    arguments.push_back(node.callee->as<MemberExpr>().left);
+    context_.calls_info.emplace(&node, ModuleContext::CallInfo{true});
+  } else {
+    context_.calls_info.emplace(&node, ModuleContext::CallInfo{false});
+  }
+  for (auto& argument : node.arguments) {
+    arguments.push_back(argument);
   }
 
-  for (size_t i = 0; i < type->arguments.size(); ++i) {
-    if (type->arguments[i] != node.arguments[i]->type) {
-      scold_user(*node.arguments[i], "Argument type mismatch: {} != {}",
-                 type->arguments[i], node.arguments[i]->type);
+  auto& type = node.callee->type->as<FunctionType>();
+
+  if (type.get_arguments().size() != arguments.size()) {
+    scold_user(*node.callee,
+               fmt::format("arguments count mismatch: {} != {}",
+                           type.get_arguments().size(), arguments.size()));
+  }
+
+  for (size_t i = 0; i < type.get_arguments().size(); ++i) {
+    std::unique_ptr<Expression>& argument = arguments[i];
+    Type* expected_type = type.get_arguments()[i];
+
+    if (expected_type != argument->type) {
+      scold_user(*argument, "Argument type mismatch: {} != {}", expected_type,
+                 argument->type);
     }
 
-    as_initializer(node.arguments[i]);
+    as_initializer(argument);
   }
 
-  node.type = type->return_type;
+  node.type = type.get_return_type();
   node.value_category = ValueCategory::RVALUE;
 
   return true;

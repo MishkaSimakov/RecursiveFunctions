@@ -1,20 +1,20 @@
 // RUN: %tlang %s --emit ir | %FileCheck %s
 
 // CHECK: @_Z1aPcxPS_
-a: (a: *c8, b: i64, c: **c8) -> () = {}
+a: (A: *c8, B: i64, C: **c8) -> () = {}
 
 // CHECK: @_Z1bPcPPS_
-b: (a: *c8, b: ***c8) -> () = {}
+b: (A: *c8, B: ***c8) -> () = {}
 
 // CHECK: @_Z1cPPPcS_S_
-c: (a: ***c8, b: *c8, c: *c8) -> () = {}
+c: (A: ***c8, B: *c8, C: *c8) -> () = {}
 
 // CHECK: @_Z1dPcS_
-d: (a: *c8, b: *c8) -> () = {}
+d: (A: *c8, B: *c8) -> () = {}
 
-A: namespace = {
-    B: namespace = {
-        // CHECK: @_ZN1A1B1fEPcS1_
-        f: (a: *c8, b: *c8) -> () = {}
+X: namespace = {
+    Y: namespace = {
+        // CHECK: @_ZN1X1Y1fEPcS1_
+        f: (A: *c8, B: *c8) -> () = {}
     }
 }

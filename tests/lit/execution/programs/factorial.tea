@@ -1,0 +1,31 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK:       1
+// CHECK:       1
+// CHECK-NEXT:  2
+// CHECK-NEXT:  6
+// CHECK-NEXT:  24
+// CHECK-NEXT:  120
+// CHECK-NEXT:  720
+
+extern println: (value: i64) -> ()
+
+factorial: (n: i64) -> i64 = {
+    if (n == 0) {
+        return 1;
+    }
+
+    return factorial(n - 1) * n;
+}
+
+main: () -> i64 = {
+    println(factorial(0));
+    println(factorial(1));
+    println(factorial(2));
+    println(factorial(3));
+    println(factorial(4));
+    println(factorial(5));
+    println(factorial(6));
+
+    return 0;
+}

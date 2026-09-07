@@ -9,39 +9,40 @@ void IRGenerator::create_store(llvm::Value* destination, Value source,
   }
 
   if (source_type->get_kind() == Type::Kind::TUPLE) {
-    TupleType* tuple_ty = static_cast<TupleType*>(source_type);
-    create_tuple_copy_constructor(destination, source, tuple_ty);
+    auto* tuple_ty = static_cast<TupleType*>(source_type);
+    create_tuple_like_copy(destination, source, tuple_ty);
+  } else if (source_type->get_kind() == Type::Kind::STRUCT) {
+    auto* class_ty = static_cast<StructType*>(source_type);
+    create_tuple_like_copy(destination, source, class_ty);
   } else if (source_type->is_passed_by_value()) {
     source = remove_indirection(source, source_type);
 
     assert(!source.has_indirection);
     llvm_ir_builder_->CreateStore(source.llvm_value, destination);
-  } else {
-    not_implemented("copy constructor for classes");
   }
 }
 
-void IRGenerator::create_tuple_copy_constructor(llvm::Value* destination,
-                                                Value source,
-                                                TupleType* source_type) {
+void IRGenerator::create_tuple_like_copy(llvm::Value* destination, Value source,
+                                         TupleLikeType* source_type) {
   assert(source.has_indirection);
 
-  std::vector<llvm::Type*> types{
-      llvm_ir_builder_->getPtrTy(),
-      llvm_ir_builder_->getPtrTy(),
-      llvm_ir_builder_->getInt64Ty(),
-  };
+  size_t elements_count = source_type->get_elements_count();
+  for (size_t i = 0; i < elements_count; ++i) {
+    llvm::Value* zero = llvm_ir_builder_->getInt32(0);
+    llvm::Value* index = llvm_ir_builder_->getInt32(i);
+    llvm::Type* llvm_type = types_mapper_(source_type);
 
-  auto size =
-      llvm_ir_builder_->getInt64(llvm_module_->getDataLayout().getTypeAllocSize(
-          types_mapper_(source_type)));
+    llvm::Value* destination_element =
+        llvm_ir_builder_->CreateGEP(llvm_type, destination, {zero, index});
 
-  llvm::Function* memcpy_fun = llvm::Intrinsic::getDeclaration(
-      llvm_module_.get(), llvm::Intrinsic::memcpy, std::move(types));
+    Value source_element;
+    source_element.llvm_value = llvm_ir_builder_->CreateGEP(
+        llvm_type, source.llvm_value, {zero, index});
+    source_element.has_indirection = true;
 
-  llvm_ir_builder_->CreateCall(
-      memcpy_fun,
-      {destination, source.llvm_value, size, llvm_ir_builder_->getInt1(false)});
+    create_store(destination_element, source_element,
+                 source_type->get_element_type(i));
+  }
 }
 
 Value IRGenerator::remove_indirection(Value source, Type* type) {

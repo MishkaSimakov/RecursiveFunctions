@@ -1,7 +1,7 @@
 // RUN: %tlang %s --emit ir | %FileCheck %s
 
 f: () -> i64 = {
-    // CHECK: store
+    // CHECK: store i64
     // CHECK-SAME: 123
     // CHECK-SAME: %result
     return 123;

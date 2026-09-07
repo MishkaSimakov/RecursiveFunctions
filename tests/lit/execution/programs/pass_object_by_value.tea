@@ -1,0 +1,30 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK:       123
+// CHECK-NEXT:  123
+// CHECK-NEXT:  321
+
+extern println: (value: i64) -> ()
+
+A: type = {
+    value: i64
+}
+
+set_value: (self: A, new_value: i64) -> A = {
+    self.value = new_value;
+    return self;
+}
+
+main: () -> i64 = {
+    object: A;
+    object.value = 123;
+
+    println(object.value);
+
+    new_object: A = object.set_value(321);
+
+    println(object.value);
+    println(new_object.value);
+
+    return 0;
+}

@@ -57,3 +57,11 @@ TEST_F(LexisTestCase, test_lexer_is_greedy) {
                  {"++", PLUSPLUS},
                  {"x", IDENTIFIER}});
 }
+
+TEST_F(LexisTestCase, explicit_unsafe_cast_parsing) {
+  test_sequence({{"variable", IDENTIFIER},
+                 {" ", WHITESPACE},
+                 {"as", KW_AS},
+                 {"!", NOT},
+                 {"i64", KW_I64}});
+}

@@ -65,24 +65,24 @@ std::string Mangler::mangle_type(Type* type) {
   switch (type->get_kind()) {
     case Type::Kind::FUNCTION:
       return substitutable(
-          "F" + mangle_bare_function_type(static_cast<FunctionType*>(type)));
+          "F" + mangle_bare_function_type(&type->as<FunctionType>()));
     case Type::Kind::BOOL:
       return "b";
     case Type::Kind::SIGNED_INT: {
       auto* int_type = static_cast<SignedIntType*>(type);
-      return signed_int_mapping.at(int_type->width);
+      return signed_int_mapping.at(int_type->get_width());
     }
     case Type::Kind::UNSIGNED_INT: {
       auto* int_type = static_cast<UnsignedIntType*>(type);
-      return unsigned_int_mapping.at(int_type->width);
+      return unsigned_int_mapping.at(int_type->get_width());
     }
     case Type::Kind::CHAR: {
       auto* char_type = static_cast<CharType*>(type);
-      return char_mapping.at(char_type->width);
+      return char_mapping.at(char_type->get_width());
     }
     case Type::Kind::TUPLE: {
-      auto* tuple_ty = static_cast<TupleType*>(type);
-      if (tuple_ty->elements.empty()) {
+      auto& tuple_ty = type->as<TupleType>();
+      if (tuple_ty.is_unit()) {
         return "v";
       }
 
@@ -94,7 +94,7 @@ std::string Mangler::mangle_type(Type* type) {
       // template parameters prefix
       result += "I";
 
-      for (Type* element : tuple_ty->elements) {
+      for (Type* element : tuple_ty.get_elements()) {
         result += mangle_type(element);
       }
 
@@ -102,14 +102,14 @@ std::string Mangler::mangle_type(Type* type) {
       result += "E";
       return substitutable(result);
     }
-    case Type::Kind::CLASS: {
-      auto* class_ty = static_cast<ClassType*>(type);
+    case Type::Kind::STRUCT: {
+      auto& struct_ty = type->as<StructType>();
       // TODO: full name mangling
-      return substitutable(mangle_name(class_ty->name));
+      return substitutable(mangle_name(struct_ty.get_name()));
     }
     case Type::Kind::POINTER: {
-      auto* pointer_ty = static_cast<PointerType*>(type);
-      return substitutable("P" + mangle_type(pointer_ty->child));
+      auto& pointer_ty = type->as<PointerType>();
+      return substitutable("P" + mangle_type(pointer_ty.get_child()));
     }
 
     default:
@@ -120,10 +120,10 @@ std::string Mangler::mangle_type(Type* type) {
 std::string Mangler::mangle_bare_function_type(FunctionType* type) {
   std::string result;
 
-  if (type->arguments.empty()) {
+  if (type->get_arguments().empty()) {
     result += "v";
   } else {
-    for (Type* argument : type->arguments) {
+    for (Type* argument : type->get_arguments()) {
       result += mangle_type(argument);
     }
   }
@@ -143,8 +143,8 @@ std::string Mangler::mangle_source_name(std::string_view name_view) {
 }
 
 std::string Mangler::mangle_name(const QualifiedId& name) {
-  if (name.parts.size() == 1) {
-    return mangle_unscoped_name(name.parts.front());
+  if (!name.is_qualified()) {
+    return mangle_unscoped_name(name.unqualified_id());
   } else {
     return mangle_nested_name(name);
   }
@@ -166,7 +166,7 @@ std::string Mangler::mangle_nested_name(const QualifiedId& name) {
   }
 
   // unqualified name (don't participate in substitutions)
-  result += mangle_source_name(name.parts.back());
+  result += mangle_source_name(name.unqualified_id());
 
   return "N" + result + "E";
 }
@@ -177,12 +177,11 @@ std::string Mangler::mangle(const SymbolInfo& symbol) {
 
   if (symbol.is_function()) {
     // we mangle main function according to C mangling rules (just don't mangle)
-    if (qualified_name.parts.size() == 1 &&
-        strings_.get_string(qualified_name.parts.front()) == "main") {
+    if (qualified_name.to_string(strings_) == "main") {
       return "main";
     }
 
-    FunctionType* function_type = std::get<FunctionSymbolInfo>(symbol).type;
+    FunctionType* function_type = symbol.as<FunctionSymbolInfo>().type;
     std::string result = "_Z" + mangle_name(qualified_name) +
                          mangle_bare_function_type(function_type);
 

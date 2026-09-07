@@ -16,10 +16,11 @@ struct Scope;
 struct SymbolInfo;
 
 struct BaseSymbolInfo {
+  StringId name;
   Scope* scope;
   Declaration& declaration;
 
-  StringId get_unqualified_name() const { return declaration.name; }
+  StringId get_unqualified_name() const { return name; }
   QualifiedId get_fully_qualified_name() const;
   DeclarationSpecifiers get_specifiers() const {
     return declaration.specifiers;
@@ -32,15 +33,16 @@ struct VariableSymbolInfo;
 struct ScopefulSymbolInfo : BaseSymbolInfo {
   Scope* subscope;
 
-  ScopefulSymbolInfo(Scope* scope, Declaration& declaration, Scope* subscope)
-      : BaseSymbolInfo(scope, declaration), subscope(subscope) {}
+  ScopefulSymbolInfo(StringId name, Scope* scope, Declaration& declaration, Scope* subscope)
+      : BaseSymbolInfo(name, scope, declaration), subscope(subscope) {}
 };
 
 struct VariableSymbolInfo : BaseSymbolInfo {
   Type* type;
+  size_t index;
 
-  VariableSymbolInfo(Scope* scope, Declaration& declaration, Type* type)
-      : BaseSymbolInfo(scope, declaration), type(type) {}
+  VariableSymbolInfo(StringId name, Scope* scope, Declaration& declaration, Type* type, size_t index)
+      : BaseSymbolInfo(name, scope, declaration), type(type), index(index) {}
 
   VariableDecl& get_decl() const {
     return static_cast<VariableDecl&>(declaration);
@@ -49,11 +51,11 @@ struct VariableSymbolInfo : BaseSymbolInfo {
 
 struct FunctionSymbolInfo : ScopefulSymbolInfo {
   FunctionType* type;
-  std::vector<std::reference_wrapper<VariableSymbolInfo>> local_variables;
+  Type* transformation_type{nullptr};
 
-  FunctionSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration,
+  FunctionSymbolInfo(StringId name, Scope* scope, Scope* subscope, Declaration& declaration,
                      FunctionType* type)
-      : ScopefulSymbolInfo(scope, declaration, subscope), type(type) {}
+      : ScopefulSymbolInfo(name, scope, declaration, subscope), type(type) {}
 
   FunctionDecl& get_decl() const {
     return static_cast<FunctionDecl&>(declaration);
@@ -61,27 +63,28 @@ struct FunctionSymbolInfo : ScopefulSymbolInfo {
 };
 
 struct NamespaceSymbolInfo : ScopefulSymbolInfo {
-  NamespaceSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
-      : ScopefulSymbolInfo(scope, declaration, subscope) {}
+  NamespaceSymbolInfo(StringId name, Scope* scope, Scope* subscope, Declaration& declaration)
+      : ScopefulSymbolInfo(name, scope, declaration, subscope) {}
 };
 
-struct ClassSymbolInfo : ScopefulSymbolInfo {
-  ClassType* type{nullptr};
+struct StructSymbolInfo : ScopefulSymbolInfo {
+  StructType* type;
 
-  ClassSymbolInfo(Scope* scope, Scope* subscope, Declaration& declaration)
-      : ScopefulSymbolInfo(scope, declaration, subscope) {}
+  StructSymbolInfo(StringId name, Scope* scope, Scope* subscope, Declaration& declaration,
+                   StructType* type)
+      : ScopefulSymbolInfo(name, scope, declaration, subscope), type(type) {}
 };
 
 struct TypeAliasSymbolInfo : BaseSymbolInfo {
   AliasType* type;
 
-  TypeAliasSymbolInfo(Scope* scope, Declaration& declaration, AliasType* type)
-      : BaseSymbolInfo(scope, declaration), type(type) {}
+  TypeAliasSymbolInfo(StringId name, Scope* scope, Declaration& declaration, AliasType* type)
+      : BaseSymbolInfo(name, scope, declaration), type(type) {}
 };
 
 using SymbolInfoVariant =
     std::variant<VariableSymbolInfo, NamespaceSymbolInfo, FunctionSymbolInfo,
-                 ClassSymbolInfo, TypeAliasSymbolInfo>;
+                 StructSymbolInfo, TypeAliasSymbolInfo>;
 
 struct SymbolInfo : SymbolInfoVariant {
   using SymbolInfoVariant::SymbolInfoVariant;
@@ -104,6 +107,11 @@ struct SymbolInfo : SymbolInfoVariant {
         *this);
   }
 
+  Scope* get_scope() const {
+    return std::visit([](const auto& value) -> Scope* { return value.scope; },
+                      *this);
+  }
+
   bool is_variable() const {
     return std::holds_alternative<VariableSymbolInfo>(*this);
   }
@@ -116,7 +124,37 @@ struct SymbolInfo : SymbolInfoVariant {
     return std::holds_alternative<NamespaceSymbolInfo>(*this);
   }
 
+  bool is_class() const {
+    return std::holds_alternative<StructSymbolInfo>(*this);
+  }
+
   Type* get_type() const;
+
+  bool is_inside(Scope* scope) const;
+
+  template <typename T>
+    requires std::is_base_of_v<BaseSymbolInfo, T>
+  T& as() {
+    if constexpr (Constants::debug) {
+      return std::get<T>(*this);
+    } else {
+      // this can be optimized to basically no-op,
+      // therefore use this access option in production
+      return *std::get_if<T>(this);
+    }
+  }
+
+  template <typename T>
+    requires std::is_base_of_v<BaseSymbolInfo, T>
+  const T& as() const {
+    if constexpr (Constants::debug) {
+      return std::get<T>(*this);
+    } else {
+      // this can be optimized to basically no-op,
+      // therefore use this access option in production
+      return *std::get_if<T>(this);
+    }
+  }
 };
 
 }  // namespace Front

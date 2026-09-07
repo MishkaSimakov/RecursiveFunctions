@@ -6,7 +6,7 @@
 
 namespace Front {
 
-enum class EmitType { AST, IR };
+enum class EmitType { AST, IR, BINARY };
 
 struct TeaFrontendConfiguration {
   std::unordered_map<std::string, std::filesystem::path> sources;

@@ -9,6 +9,8 @@ namespace Constants {
 // // isn't seven the most powerfully magical number
 // constexpr inline size_t max_arguments = 7;
 
+constexpr inline auto constructor_name = "make";
+
 constexpr inline auto entrypoint = "main";
 extern const bool is_installed_build;
 

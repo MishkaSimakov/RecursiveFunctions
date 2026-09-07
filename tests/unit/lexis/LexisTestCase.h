@@ -5,8 +5,8 @@
 
 #include <ranges>
 
+#include "../../../src/Constants.h"
 #include "lexis/LexicalAnalyzer.h"
-#include "utils/Constants.h"
 
 class LexisTestCase : public ::testing::Test {
  protected:

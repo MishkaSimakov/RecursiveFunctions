@@ -1,0 +1,8 @@
+// RUN: not %tlang main:%S/main.tea utils:%S/utils.team 2>&1 | %FileCheck %s
+
+// CHECK: f: () -> ()
+// CHECK-NEXT: name 'f' is already declared
+
+import "utils"
+
+f: () -> () = {}

@@ -1,0 +1,12 @@
+// RUN: not %tlang %s 2>&1 | %FileCheck %s
+
+// CHECK: x = 321 as! i8;
+// CHECK-NEXT: assignment must have same type on both sides: "i64" != "i8"
+
+main: () -> i64 = {
+    x: i64;
+
+    x = 321 as! i8;
+
+    return 0;
+}

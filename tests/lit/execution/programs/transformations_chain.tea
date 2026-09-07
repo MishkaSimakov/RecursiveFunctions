@@ -1,0 +1,36 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK:       -352
+// CHECK-NEXT:  1
+
+extern println: (value: i64) -> ()
+
+T: namespace = {
+    add: (self: i64, value: i64) -> i64 = {
+        return self + value;
+    }
+
+    sub: (self: i64, value: i64) -> i64 = {
+        return self - value;
+    }
+
+    mul: (self: i64, value: i64) -> i64 = {
+        return self * value;
+    }
+}
+
+main: () -> i64 = {
+    value: i64 = 1;
+
+    println(
+        value
+            .T::add(123) // -> 124
+            .T::sub(321) // -> -197
+            .T::mul(2)   // -> -394
+            .T::add(42)  // -> -352
+    );
+
+    println(value);
+
+    return 0;
+}

@@ -2,9 +2,9 @@
 
 #include <unordered_set>
 
+#include "../../Constants.h"
 #include "intermediate_representation/Function.h"
 #include "passes/PassManager.h"
-#include "utils/Constants.h"
 
 bool Passes::UnusedFunctionsEliminationPass::apply(IR::Program& program) {
   auto& entrypoint = *program.get_function(Constants::entrypoint);

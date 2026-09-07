@@ -1,25 +1,15 @@
 #include "TeaFrontend.h"
 
 #include <llvm/ADT/APFloat.h>
-#include <llvm/ADT/STLExtras.h>
-#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/PassManager.h>
-#include <llvm/IR/Type.h>
-#include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Passes/StandardInstrumentations.h>
 #include <llvm/Support/FileSystem.h>
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_os_ostream.h>
-#include <llvm/Support/raw_ostream.h>
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Transforms/InstCombine/InstCombine.h>
-#include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Scalar/GVN.h>
 #include <llvm/Transforms/Scalar/Reassociate.h>
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
@@ -27,12 +17,12 @@
 #include <deque>
 #include <iostream>
 
+#include "../Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
 #include "ir/IRGenerator.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/lr/LRParser.h"
-#include "utils/Constants.h"
 
 namespace Front {
 enum class DFSState { UNVISITED, VISITING, VISITED };
@@ -163,6 +153,12 @@ void TeaFrontend::build_symbols_table_and_compile() {
 
     // check that all dependencies are already processed
     ModuleContext& current_module = context_.get_module(current_name);
+    if (current_module.state ==
+            ModuleContext::ModuleState::AFTER_SEMANTIC_ANALYZER ||
+        current_module.state == ModuleContext::ModuleState::AFTER_IR_COMPILER) {
+      continue;
+    }
+
     bool has_unprocessed_dependencies = false;
     for (const ModuleContext& dependency : current_module.dependencies) {
       if (dependency.state != ModuleContext::ModuleState::AFTER_IR_COMPILER) {
@@ -219,29 +215,13 @@ void TeaFrontend::emit_ast() const {
   }
 }
 
-void TeaFrontend::emit_ir(const llvm::Module& main_module) const {
-  std::ofstream ofs;
-
-  std::ostream& out = [&]() -> std::ostream& {
-    if (output_file_.empty()) {
-      return std::cout;
-    }
-
-    ofs.open(output_file_);
-    return ofs;
-  }();
-
-  llvm::raw_os_ostream llvm_out(out);
-  main_module.print(llvm_out, nullptr);
-}
-
 TeaFrontend::TeaFrontend(TeaFrontendConfiguration config)
     : llvm_context_(std::make_unique<llvm::LLVMContext>()),
       files_(std::move(config.sources)),
       output_file_(std::move(config.output_file)),
       emit_type_(config.emit_type) {}
 
-int TeaFrontend::compile() {
+std::unique_ptr<llvm::Module> TeaFrontend::compile() {
   OSO_FIRE();
 
   // Creating context for each module before building ast
@@ -255,24 +235,21 @@ int TeaFrontend::compile() {
 
   if (emit_type_ == EmitType::AST) {
     emit_ast();
-    return 0;
+    return nullptr;
   }
 
   // For each module build symbol table and compile it into llvm IR
   build_symbols_table_and_compile();
 
   // Link all llvm modules together
-  auto main_module = llvm::Module("main", *llvm_context_);
-  llvm::Linker linker(main_module);
+  auto main_module = std::make_unique<llvm::Module>("main", *llvm_context_);
+  llvm::Linker linker(*main_module);
 
   for (auto& module : llvm_modules_) {
     linker.linkInModule(std::move(module));
   }
   llvm_modules_.clear();
 
-  // Write linked module into output
-  emit_ir(main_module);
-
-  return 0;
+  return std::move(main_module);
 }
 }  // namespace Front
