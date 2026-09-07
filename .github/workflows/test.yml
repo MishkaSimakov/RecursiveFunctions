@@ -20,9 +20,17 @@ jobs:
         run: docker build -t tlang-dev .
       - name: Run tests inside container
         run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
-      - name: Test Report
+      - name: Unit Test Report
         uses: dorny/test-reporter@v1
+        if: always()
         with:
-          name: Test Report
+          name: Unit Test Report
           path: build/unit-report.xml
           reporter: jest-junit
+      - name: Lit Test Report
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: Lit Test Report
+          path: build/lit-report.xml
+          reporter: java-junit

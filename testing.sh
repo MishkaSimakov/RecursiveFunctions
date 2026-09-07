@@ -3,6 +3,13 @@
 
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
-cmake --build . -t tests.unit
+cmake -DCMAKE_BUILD_TYPE=Debug .. || exit 1
+cmake --build . -t tests.unit cli tests.lit.execution.library || exit 1
+
 ./tests/unit/tests.unit --gtest_output="xml:unit-report.xml"
+unit_status=$?
+
+lit tests/lit -v --max-time=10 --xunit-xml-output=lit-report.xml
+lit_status=$?
+
+[ "$unit_status" -eq 0 ] && [ "$lit_status" -eq 0 ]
