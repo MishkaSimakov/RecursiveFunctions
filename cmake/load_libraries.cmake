@@ -11,12 +11,7 @@ if (NOT ${LLVM_VERSION_MAJOR} EQUAL 23)
 endif ()
 
 llvm_map_components_to_libnames(llvm_libs support core irreader linker
-        AArch64AsmParser
-        AArch64CodeGen
-        AArch64Desc
-        AArch64Disassembler
-        AArch64Info
-        AArch64Utils
+        native
         CodeGen
         AsmParser
         AsmPrinter
