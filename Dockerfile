@@ -1,4 +1,4 @@
-FROM ubuntu:plucky
+FROM ubuntu:26.04
 
 RUN apt update
 
@@ -6,6 +6,8 @@ RUN apt update
 RUN apt install -y lsb-release wget software-properties-common gnupg
 
 # LLVM 23
+# llvm.sh can break if ubuntu version becomes outdated.
+# Information about this behaviour can be found on https://apt.llvm.org.
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
     ./llvm.sh 23
