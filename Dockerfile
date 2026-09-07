@@ -22,6 +22,9 @@ RUN python3 -m venv /lit-build
 RUN /lit-build/bin/python3 -m pip install --no-input lit
 ENV PATH="$PATH:/lit-build/bin/"
 
+# psutil for lit
+RUN apt install -y python3-psutil
+
 # git
 RUN apt install -y git
 

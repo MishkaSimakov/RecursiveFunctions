@@ -45,7 +45,10 @@ jobs:
       - name: Install LLVM and lit
         run: |
           brew update
-          brew install llvm@23 lit
+          brew install llvm@23
+          python3 -m venv ~/lit-venv
+          ~/lit-venv/bin/pip install --no-input lit psutil
+          echo "$HOME/lit-venv/bin" >> "$GITHUB_PATH"
       - name: Run tests
         run: |
           export LLVM_DIR="$(brew --prefix llvm@23)/lib/cmake/llvm"
