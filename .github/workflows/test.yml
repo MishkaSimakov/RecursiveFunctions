@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: 'recursive'
       - name: Build docker image
@@ -21,14 +21,14 @@ jobs:
       - name: Run tests inside container
         run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
       - name: Unit Test Report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Unit Test Report (linux)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Lit Test Report (linux)
@@ -39,7 +39,7 @@ jobs:
     runs-on: macos-26
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: 'recursive'
       - name: Install LLVM and lit
@@ -50,14 +50,14 @@ jobs:
           export PATH="$(brew --prefix llvm@23)/bin:$PATH"
           ./testing.sh
       - name: Unit Test Report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Unit Test Report (macos)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Lit Test Report (macos)
