@@ -1,10 +1,6 @@
 # This cmake file builds and finds all external libraries that are used in this project.
 
 # -- llvm --
-list(APPEND CMAKE_PREFIX_PATH
-        /opt/homebrew/Cellar/llvm/22.1.7_1
-)
-
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
