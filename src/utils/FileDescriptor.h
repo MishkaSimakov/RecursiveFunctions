@@ -24,6 +24,8 @@ class FileDescriptor {
           fmt::format("Could not open file: {}.", strerror(errno)));
     }
 
+    unlink(filename);
+
     return FileDescriptor(tmp_fd);
   }
 
