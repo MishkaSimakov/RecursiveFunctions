@@ -5,6 +5,8 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/TargetParser/Host.h>
+#include <sys/fcntl.h>
+#include <unistd.h>
 
 #include <argparse/argparse.hpp>
 #include <fstream>
@@ -15,6 +17,8 @@
 #include "errors/ExceptionsHandler.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/FileSystem.h"
+#include "utils/Defer.h"
+#include "utils/FileDescriptor.h"
 
 const bool Constants::is_installed_build = BUILD_FOR_INSTALLATION;
 
@@ -22,6 +26,42 @@ namespace Cli {
 namespace fs = std::filesystem;
 
 class Main {
+  static FileDescriptor get_output_fd(const std::filesystem::path& output_path,
+                                      Front::EmitType emit_type) {
+    const bool prohibit_stdout =
+        emit_type != Front::EmitType::AST && emit_type != Front::EmitType::IR;
+    const bool is_executable = emit_type == Front::EmitType::EXECUTABLE;
+
+    if (output_path.empty()) {
+      if (prohibit_stdout) {
+        throw std::runtime_error(
+            fmt::format("Can't emit {} to stdout. Specify output file path.",
+                        to_string(emit_type)));
+      }
+
+      int stdout_fd = fileno(stdout);
+      if (stdout_fd == -1) {
+        throw std::runtime_error("Failed to open stdout.");
+      }
+
+      int fd = dup(stdout_fd);
+      if (fd == -1) {
+        throw std::runtime_error("Failed to duplicate stdout fd.");
+      }
+
+      return FileDescriptor(fd);
+    }
+
+    mode_t mode = S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR;
+    if (is_executable) {
+      mode |= S_IXGRP | S_IXUSR;
+    }
+
+    int fd = open(output_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
+
+    return FileDescriptor(fd);
+  }
+
   static void add_std_includes(Front::TeaFrontendConfiguration& config) {
     const char* std_filenames[] = {"io"};
 
@@ -39,24 +79,13 @@ class Main {
   }
 
   static void emit_ir(std::unique_ptr<llvm::Module> module,
-                      const Front::TeaFrontendConfiguration& config) {
-    std::ofstream ofs;
-
-    std::ostream& out = [&]() -> std::ostream& {
-      if (config.output_file.empty()) {
-        return std::cout;
-      }
-
-      ofs.open(config.output_file);
-      return ofs;
-    }();
-
-    llvm::raw_os_ostream llvm_out(out);
+                      const FileDescriptor& fd) {
+    llvm::raw_fd_ostream llvm_out(fd.get(), false);
     module->print(llvm_out, nullptr);
   }
 
   static void emit_object(std::unique_ptr<llvm::Module> module,
-                          const Front::TeaFrontendConfiguration& config) {
+                          const FileDescriptor& fd) {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
@@ -86,16 +115,7 @@ class Main {
 
     module->setDataLayout(target_machine->createDataLayout());
 
-    std::error_code error_code;
-    llvm::raw_fd_ostream dest(
-        config.output_file.empty() ? "-" : config.output_file.c_str(),
-        error_code, llvm::sys::fs::OF_None);
-
-    if (error_code) {
-      throw std::runtime_error(
-          fmt::format("Could not open file: {}.", error_code.message()));
-    }
-
+    llvm::raw_fd_ostream dest(fd.get(), false);
     llvm::legacy::PassManager pass;
 
     if (target_machine->addPassesToEmitFile(
@@ -106,6 +126,26 @@ class Main {
 
     pass.run(*module);
     dest.flush();
+  }
+
+  static void emit_executable(std::unique_ptr<llvm::Module> module,
+                              const FileDescriptor& fd) {
+    const auto tmp_fd = FileDescriptor::make_temp();
+
+    // write object file
+    emit_object(std::move(module), tmp_fd);
+
+    // link with std
+    const auto std_path =
+        Constants::GetRuntimeFilePath(Constants::std_library_relative_filepath);
+    const auto link_command =
+        fmt::format("clang++ {} /dev/fd/{} -o /dev/fd/{}", std_path.string(),
+                    tmp_fd.get(), fd.get());
+
+    int link_status = system(link_command.c_str());
+    if (link_status == -1) {
+      throw std::runtime_error("Error during linking.");
+    }
   }
 
  public:
@@ -125,15 +165,17 @@ class Main {
 
       assert(llvm_module != nullptr);
 
+      const auto fd = get_output_fd(config.output_file, config.emit_type);
+
       switch (config.emit_type) {
         case Front::EmitType::IR:
-          emit_ir(std::move(llvm_module), config);
+          emit_ir(std::move(llvm_module), fd);
           break;
         case Front::EmitType::OBJECT:
-          emit_object(std::move(llvm_module), config);
+          emit_object(std::move(llvm_module), fd);
           break;
         case Front::EmitType::EXECUTABLE:
-          // TODO:
+          emit_executable(std::move(llvm_module), fd);
           break;
       }
     });

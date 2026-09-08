@@ -84,6 +84,11 @@ void ArgumentsReader::parse_source_paths(
 }
 
 std::filesystem::path ArgumentsReader::parse_output(const std::string& output) {
+  // empty output means that result is written to stdout
+  if (output.empty()) {
+    return {};
+  }
+
   fs::path output_path = output;
 
   // output must be directory or path
@@ -91,7 +96,7 @@ std::filesystem::path ArgumentsReader::parse_output(const std::string& output) {
     output_path /= kDefaultOutputName;
   }
 
-  return output_path;
+  return fs::absolute(output_path).lexically_normal();
 }
 
 Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
@@ -127,9 +132,9 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
       .help("output file (stdout by default)");
 
   parser.add_argument("--emit")
-      .choices("ir", "ast", "binary")
+      .choices("ir", "ast", "obj", "exe")
       .default_value("ir")
-      .help("compiler output type: `ir` or `ast`");
+      .help("compiler output type: ir, ast, obj, exe");
 
   try {
     parser.parse_args(argc, argv);
