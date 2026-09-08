@@ -1,6 +1,12 @@
 #pragma once
 
+#include <fmt/format.h>
 #include <unistd.h>
+
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+#include <stdexcept>
 
 class FileDescriptor {
   int fd_;

@@ -1,7 +1,6 @@
 #include <fmt/base.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/TargetParser/Host.h>
@@ -9,7 +8,6 @@
 #include <unistd.h>
 
 #include <argparse/argparse.hpp>
-#include <fstream>
 
 #include "ArgumentsReader.h"
 #include "Constants.h"
@@ -17,7 +15,6 @@
 #include "errors/ExceptionsHandler.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/FileSystem.h"
-#include "utils/Defer.h"
 #include "utils/FileDescriptor.h"
 
 const bool Constants::is_installed_build = BUILD_FOR_INSTALLATION;
@@ -175,6 +172,7 @@ class Main {
       switch (config.emit_type) {
         case Front::EmitType::AST:
           assert(false && "Should've been handled above");
+          break;
         case Front::EmitType::IR:
           emit_ir(std::move(llvm_module), fd);
           break;
