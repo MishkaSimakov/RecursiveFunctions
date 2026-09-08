@@ -59,6 +59,11 @@ class Main {
 
     int fd = open(output_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
 
+    if (fd == -1) {
+      throw std::runtime_error(
+          fmt::format("Failed to open output file: {}.", strerror(errno)));
+    }
+
     return FileDescriptor(fd);
   }
 
