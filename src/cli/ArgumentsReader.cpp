@@ -12,6 +12,20 @@ namespace fs = std::filesystem;
 
 namespace Cli {
 
+std::string ArgumentsReader::get_default_output_name(Front::EmitType type) {
+  switch (type) {
+    case Front::EmitType::AST:
+    case Front::EmitType::IR:
+      return "out.txt";
+    case Front::EmitType::OBJECT:
+      return "out.o";
+    case Front::EmitType::EXECUTABLE:
+      return "out";
+  }
+
+  unreachable("All output types should be enumerated above.");
+}
+
 void ArgumentsReader::parse_source_paths(
     const std::vector<std::string>& sources,
     Front::TeaFrontendConfiguration& config) {
@@ -83,17 +97,27 @@ void ArgumentsReader::parse_source_paths(
   }
 }
 
-std::filesystem::path ArgumentsReader::parse_output(const std::string& output) {
-  // empty output means that result is written to stdout
+std::filesystem::path ArgumentsReader::parse_output(std::string output,
+                                                    Front::EmitType emit_type) {
+  // empty output means that default value is used
   if (output.empty()) {
-    return {};
+    switch (emit_type) {
+      case Front::EmitType::AST:
+      case Front::EmitType::IR:
+        // write to stdout
+        return {};
+      case Front::EmitType::OBJECT:
+      case Front::EmitType::EXECUTABLE:
+        output = get_default_output_name(emit_type);
+        break;
+    }
   }
 
   fs::path output_path = output;
 
   // output must be directory or path
   if (fs::is_directory(output)) {
-    output_path /= kDefaultOutputName;
+    output_path /= get_default_output_name(emit_type);
   }
 
   return fs::absolute(output_path).lexically_normal();
@@ -127,13 +151,11 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
           "automatically or <directory path> to include all files in "
           "directory recursively.");
 
-  parser.add_argument("-o", "--output")
-      .default_value("")
-      .help("output file (stdout by default)");
+  parser.add_argument("-o", "--output").default_value("").help("output file");
 
   parser.add_argument("--emit")
       .choices("ir", "ast", "obj", "exe")
-      .default_value("ir")
+      .default_value("exe")
       .help("compiler output type: ir, ast, obj, exe");
 
   try {
@@ -146,7 +168,7 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
 
   parse_source_paths(parser.get<std::vector<std::string>>("sources"), result);
   result.emit_type = get_emit_type(parser.get<std::string>("emit"));
-  result.output_file = parse_output(parser.get("output"));
+  result.output_file = parse_output(parser.get("output"), result.emit_type);
 
   return result;
 }

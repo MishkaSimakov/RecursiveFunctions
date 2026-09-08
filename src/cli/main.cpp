@@ -168,6 +168,8 @@ class Main {
       const auto fd = get_output_fd(config.output_file, config.emit_type);
 
       switch (config.emit_type) {
+        case Front::EmitType::AST:
+          assert(false && "Should've been handled above");
         case Front::EmitType::IR:
           emit_ir(std::move(llvm_module), fd);
           break;
