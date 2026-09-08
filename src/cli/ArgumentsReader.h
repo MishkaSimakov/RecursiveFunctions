@@ -9,14 +9,13 @@
 #include "compilation/FrontendConfiguration.h"
 
 namespace Cli {
-// import name / filepath
-using SourcesList = std::unordered_map<std::string, std::filesystem::path>;
 
 class ArgumentsReader {
   constexpr static auto kDefaultOutputName = "out";
   constexpr static auto kSourceNamePathDelimiter = ":";
 
-  static SourcesList parse_source_paths(std::vector<std::string> sources);
+  static void parse_source_paths(const std::vector<std::string>& sources,
+                                 Front::TeaFrontendConfiguration& config);
 
   static std::filesystem::path parse_output(const std::string& output);
 
@@ -25,4 +24,5 @@ class ArgumentsReader {
  public:
   static Front::TeaFrontendConfiguration read(int argc, char* argv[]);
 };
+
 }  // namespace Cli

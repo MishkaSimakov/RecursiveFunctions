@@ -1,6 +1,7 @@
 #include "SourceManager.h"
 
 #include <fcntl.h>
+#include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
 #include <sys/errno.h>
@@ -15,7 +16,8 @@ SourceView SourceManager::load(const std::filesystem::path& path) {
   int fd = open(path.c_str(), O_RDWR);
 
   if (fd == -1) {
-    throw std::runtime_error("Failed to open source file.");
+    throw std::runtime_error(
+        fmt::format("Failed to open source file at {:?}.", path.string()));
   }
 
   struct stat statbuf;

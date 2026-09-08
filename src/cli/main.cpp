@@ -22,6 +22,22 @@ namespace Cli {
 namespace fs = std::filesystem;
 
 class Main {
+  static void add_std_includes(Front::TeaFrontendConfiguration& config) {
+    const char* std_filenames[] = {"io"};
+
+    for (const char* name : std_filenames) {
+      auto path = Constants::GetRuntimeFilePath(
+          fs::path(Constants::std_include_relative_path) / name);
+      path.replace_extension(".tea");
+
+      auto [_, inserted] = config.sources.emplace(name, path);
+
+      if (!inserted) {
+        throw std::runtime_error("Duplicate module name.");
+      }
+    }
+  }
+
   static void emit_ir(std::unique_ptr<llvm::Module> module,
                       const Front::TeaFrontendConfiguration& config) {
     std::ofstream ofs;
@@ -39,7 +55,7 @@ class Main {
     module->print(llvm_out, nullptr);
   }
 
-  static void emit_binary(std::unique_ptr<llvm::Module> module,
+  static void emit_object(std::unique_ptr<llvm::Module> module,
                           const Front::TeaFrontendConfiguration& config) {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser();
@@ -81,11 +97,11 @@ class Main {
     }
 
     llvm::legacy::PassManager pass;
-    auto file_type = llvm::CodeGenFileType::ObjectFile;
 
-    if (target_machine->addPassesToEmitFile(pass, dest, nullptr, file_type)) {
+    if (target_machine->addPassesToEmitFile(
+            pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
       throw std::runtime_error(
-          "Target machine doesn't support binary output format.");
+          "Target machine doesn't support object output format.");
     }
 
     pass.run(*module);
@@ -97,7 +113,10 @@ class Main {
     return ExceptionsHandler::execute([argc, argv] {
       auto config = ArgumentsReader::read(argc, argv);
 
+      add_std_includes(config);
+
       auto front = Front::TeaFrontend(config);
+
       auto llvm_module = front.compile();
 
       if (config.emit_type == Front::EmitType::AST) {
@@ -106,10 +125,16 @@ class Main {
 
       assert(llvm_module != nullptr);
 
-      if (config.emit_type == Front::EmitType::IR) {
-        emit_ir(std::move(llvm_module), config);
-      } else if (config.emit_type == Front::EmitType::BINARY) {
-        emit_binary(std::move(llvm_module), config);
+      switch (config.emit_type) {
+        case Front::EmitType::IR:
+          emit_ir(std::move(llvm_module), config);
+          break;
+        case Front::EmitType::OBJECT:
+          emit_object(std::move(llvm_module), config);
+          break;
+        case Front::EmitType::EXECUTABLE:
+          // TODO:
+          break;
       }
     });
   }

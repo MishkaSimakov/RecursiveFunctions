@@ -12,17 +12,9 @@ namespace fs = std::filesystem;
 
 namespace Cli {
 
-SourcesList ArgumentsReader::parse_source_paths(
-    std::vector<std::string> sources) {
-  SourcesList result;
-  auto add_source = [&result](const std::string& name, const fs::path& path) {
-    auto [_, was_emplaced] = result.emplace(name, path);
-    if (!was_emplaced) {
-      throw std::runtime_error(fmt::format(
-          "File {} was already included with different name.", path.c_str()));
-    }
-  };
-
+void ArgumentsReader::parse_source_paths(
+    const std::vector<std::string>& sources,
+    Front::TeaFrontendConfiguration& config) {
   std::string separator{fs::path::preferred_separator};
 
   for (auto& include : sources) {
@@ -42,7 +34,7 @@ SourcesList ArgumentsReader::parse_source_paths(
             "Named include \"{}\" must refer to regular file.", name));
       }
 
-      add_source(name, path);
+      config.add_source(name, path);
     } else {
       // unnamed include
       // for this type of include name is a stem part of path
@@ -60,7 +52,7 @@ SourcesList ArgumentsReader::parse_source_paths(
         auto include_name = std::regex_replace(std::string{path_copy},
                                                std::regex(separator), ".");
 
-        add_source(include_name, path);
+        config.add_source(include_name, path);
 
         continue;
       }
@@ -85,12 +77,10 @@ SourcesList ArgumentsReader::parse_source_paths(
         auto include_name =
             std::regex_replace(relative_path, std::regex(separator), ".");
 
-        add_source(include_name, subfile.path());
+        config.add_source(include_name, subfile.path());
       }
     }
   }
-
-  return result;
 }
 
 std::filesystem::path ArgumentsReader::parse_output(const std::string& output) {
@@ -111,8 +101,11 @@ Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
   if (name == "ast") {
     return Front::EmitType::AST;
   }
-  if (name == "binary") {
-    return Front::EmitType::BINARY;
+  if (name == "obj") {
+    return Front::EmitType::OBJECT;
+  }
+  if (name == "exe") {
+    return Front::EmitType::EXECUTABLE;
   }
   throw std::runtime_error("unknown compiler emit type.");
 }
@@ -145,8 +138,8 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
   }
 
   Front::TeaFrontendConfiguration result;
-  result.sources =
-      parse_source_paths(parser.get<std::vector<std::string>>("sources"));
+
+  parse_source_paths(parser.get<std::vector<std::string>>("sources"), result);
   result.emit_type = get_emit_type(parser.get<std::string>("emit"));
   result.output_file = parse_output(parser.get("output"));
 
