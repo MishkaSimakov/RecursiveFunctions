@@ -148,8 +148,8 @@ class Main {
                     tmp_fd.get(), fd.get());
 
     int link_status = system(link_command.c_str());
-    if (link_status == -1) {
-      throw std::runtime_error("Error during linking.");
+    if (link_status != 0) {
+      throw std::runtime_error("Failed to link with clang++.");
     }
   }
 
