@@ -1,0 +1,9 @@
+// RUN: not %tlang main:%S/main.tea io:%S/culprit.team 2>&1 | %FileCheck %s
+
+// CHECK: standard library
+
+import "io"
+
+main: () -> i64 = {
+    return 0;
+}

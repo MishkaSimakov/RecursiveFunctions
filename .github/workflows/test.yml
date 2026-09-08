@@ -19,7 +19,8 @@ jobs:
       - name: Build docker image
         run: docker build -t tlang-dev .
       - name: Run tests inside container
-        run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
+        # tests must not run as root, look at tests/unit/sources/SourceManagerTests.cpp to learn more
+        run: docker run --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
         if: always()
