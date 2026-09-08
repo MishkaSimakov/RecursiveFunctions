@@ -246,7 +246,15 @@ std::unique_ptr<llvm::Module> TeaFrontend::compile() {
   llvm::Linker linker(*main_module);
 
   for (auto& module : llvm_modules_) {
-    linker.linkInModule(std::move(module));
+    // remember module's name for error message
+    const std::string name = module->getName().str();
+
+    const bool has_error = linker.linkInModule(std::move(module));
+
+    if (has_error) {
+      throw std::runtime_error(
+          fmt::format("Error during linking of module {:?}.", name));
+    }
   }
   llvm_modules_.clear();
 

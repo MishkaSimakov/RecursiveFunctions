@@ -1,0 +1,7 @@
+// RUN: not %tlang main:%S/main.tea second:%S/second.team --emit ir 2>&1 | %FileCheck %s
+
+// CHECK-NOT: ModuleID
+
+main: () -> i64 = {
+    return 0;
+}
