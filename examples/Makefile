@@ -1,19 +1,9 @@
-build/print.s : sources/print.cpp
+build/main : sources/main.tea sources/rectangle.team sources/math.team
 	mkdir -p build
-	clang++ sources/print.cpp -S -o build/print.s
+	tlang main:sources/main.tea rectangle:sources/rectangle.team math:sources/math.team -o build/main
 
-build/main.s : sources/main.tea sources/io.team sources/rectangle.team sources/math.team
-	mkdir -p build
-	tlang main:sources/main.tea io:sources/io.team rectangle:sources/rectangle.team math:sources/math.team -o build/main.ll
-	/opt/homebrew/Cellar/llvm/22.1.7_1/bin/llc build/main.ll -o build/main.s
-
-exe/main: build/main.s build/print.s
-	mkdir -p exe
-	clang++ build/main.s build/print.s -o exe/main
-
-run_code: exe/main
-	./exe/main
+run_code: build/main
+	./build/main
 
 clean:
-	rm -rf exe
 	rm -rf build
