@@ -7,18 +7,23 @@
 #include <sys/errno.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 
+#include "utils/Defer.h"
+
 SourceView SourceManager::load(const std::filesystem::path& path) {
-  int fd = open(path.c_str(), O_RDWR);
+  const int fd = open(path.c_str(), O_RDONLY);
 
   if (fd == -1) {
     throw std::runtime_error(
         fmt::format("Failed to open source file at {:?}.", path.string()));
   }
+
+  const auto defer = Defer([&fd] { close(fd); });
 
   struct stat statbuf;
   if (fstat(fd, &statbuf) == -1) {
