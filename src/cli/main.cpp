@@ -49,10 +49,12 @@ class Main {
       return FileDescriptor(fd);
     }
 
-    mode_t mode = S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR;
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
     if (is_executable) {
       mode |= S_IXGRP | S_IXUSR;
     }
+
+    unlink(output_path.c_str());
 
     int fd = open(output_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
 
@@ -141,8 +143,8 @@ class Main {
     const auto std_path =
         Constants::GetRuntimeFilePath(Constants::std_library_relative_filepath);
     const auto link_command =
-        fmt::format("clang++ /dev/fd/{} {} -o /dev/fd/{}", std_path.string(),
-                    tmp_fd.get(), fd.get());
+        fmt::format("clang++ /dev/fd/{} {} -o /dev/fd/{}", tmp_fd.get(),
+                    std_path.string(), fd.get());
 
     int link_status = system(link_command.c_str());
     if (link_status != 0) {
