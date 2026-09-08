@@ -141,7 +141,7 @@ class Main {
     const auto std_path =
         Constants::GetRuntimeFilePath(Constants::std_library_relative_filepath);
     const auto link_command =
-        fmt::format("clang++ {} /dev/fd/{} -o /dev/fd/{}", std_path.string(),
+        fmt::format("clang++ /dev/fd/{} {} -o /dev/fd/{}", std_path.string(),
                     tmp_fd.get(), fd.get());
 
     int link_status = system(link_command.c_str());

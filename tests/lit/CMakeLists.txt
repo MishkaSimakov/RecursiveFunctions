@@ -4,8 +4,6 @@ find_program(LLVM_FILE_CHECK NAMES "FileCheck" HINTS "${LLVM_TOOLS_BINARY_DIR}" 
 find_program(LLVM_LLC NAMES "llc" HINTS "${LLVM_TOOLS_BINARY_DIR}" REQUIRED)
 find_program(LLVM_CLANG NAMES "clang++" REQUIRED)
 
-add_subdirectory(execution)
-
 # this handles variables substitution
 # like `@CMAKE_SOURCE_DIR@`
 configure_file(
@@ -25,5 +23,5 @@ file(GENERATE
 add_custom_target(
         tests.lit
         COMMAND ${LLVM_LIT} "${CMAKE_CURRENT_BINARY_DIR}" -v --timeout=10
-        DEPENDS cli tests.lit.execution.library
+        DEPENDS cli
 )
