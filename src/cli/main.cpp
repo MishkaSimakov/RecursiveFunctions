@@ -77,7 +77,10 @@ class Main {
       auto [_, inserted] = config.sources.emplace(name, path);
 
       if (!inserted) {
-        throw std::runtime_error("Duplicate module name.");
+        throw std::runtime_error(
+            fmt::format("Your module {:?} can't use the same name as a "
+                        "standard library module.",
+                        name));
       }
     }
   }
