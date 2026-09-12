@@ -1,0 +1,41 @@
+import "io"
+
+import "state"
+import "interface"
+
+export run_talk_about_dream: (state: State) -> State = {
+    vibe("Grut is awake before the fire is. He is always awake before the fire.");
+
+    say("GITS", "Grut. That thing ya said when we was drunk.");
+    say("GRUT", "I have a goal. Not a dream. People say dream. There is a difference.");
+    say("GITS", "Okay.");
+
+    say("GRUT", "I want a tank.");
+    say("GITS", "A cistern?");
+    say("GRUT", "No.");
+
+    beat();
+
+    say("GRUT", "Have you ever stood next to one. You haven't.");
+    say("GITS", "I stood next to a cow one time. She didn't care for it none.");
+
+    say("GRUT", "Everyone hears the word small. It isn't a small word.");
+    say("GRUT", "A kingdom is just a thing that is yours. Mine will be mine.");
+    say("GITS", "That's real nice, Grut.");
+
+    beat();
+
+    say("GRUT", "Do you know how many there are, Gits.");
+
+    vibe("He waits. You count the ones you have seen. You have seen none.");
+
+    say("GITS", "...one?");
+
+    vibe("Grut looks into the fire for a long time and does not correct you.");
+
+    state.talk_about_dream = 1;
+
+    state = finish_job(state, 1);
+
+    return state;
+}

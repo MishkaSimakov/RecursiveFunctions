@@ -25,8 +25,9 @@ namespace fs = std::filesystem;
 class Main {
   static FileDescriptor get_output_fd(const std::filesystem::path& output_path,
                                       Front::EmitType emit_type) {
-    const bool prohibit_stdout =
-        emit_type != Front::EmitType::AST && emit_type != Front::EmitType::IR;
+    const bool prohibit_stdout = emit_type != Front::EmitType::AST &&
+                                 emit_type != Front::EmitType::IR &&
+                                 emit_type != Front::EmitType::MODULES_LIST;
     const bool is_executable = emit_type == Front::EmitType::EXECUTABLE;
 
     if (output_path.empty()) {
@@ -66,8 +67,18 @@ class Main {
     return FileDescriptor(fd);
   }
 
+  static void emit_modules(
+      const std::unordered_map<std::string, std::filesystem::path>& sources,
+      const FileDescriptor& fd) {
+    llvm::raw_fd_stream out(fd.get(), false);
+
+    for (const auto& name : sources | std::views::keys) {
+      out << name << "\n";
+    }
+  }
+
   static void add_std_includes(Front::TeaFrontendConfiguration& config) {
-    const char* std_filenames[] = {"io"};
+    const char* std_filenames[] = {"io", "string"};
 
     for (const char* name : std_filenames) {
       auto path = Constants::GetRuntimeFilePath(
@@ -146,8 +157,8 @@ class Main {
     const auto std_path =
         Constants::GetRuntimeFilePath(Constants::std_library_relative_filepath);
     const auto link_command =
-        fmt::format(R"(clang++ "/dev/fd/{}" "{}" -o "/dev/fd/{}")", tmp_fd.get(),
-                    std_path.string(), fd.get());
+        fmt::format(R"(clang++ "/dev/fd/{}" "{}" -o "/dev/fd/{}")",
+                    tmp_fd.get(), std_path.string(), fd.get());
 
     int link_status = system(link_command.c_str());
     if (link_status != 0) {
@@ -161,6 +172,12 @@ class Main {
       auto config = ArgumentsReader::read(argc, argv);
 
       add_std_includes(config);
+
+      if (config.emit_type == Front::EmitType::MODULES_LIST) {
+        emit_modules(config.sources,
+                     get_output_fd(config.output_file, config.emit_type));
+        return;
+      }
 
       auto front = Front::TeaFrontend(config);
 

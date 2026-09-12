@@ -1,0 +1,36 @@
+import "io"
+
+import "state"
+import "interface"
+
+export run_argue_with_casca: (state: State) -> State = {
+    vibe("You see a woman with dark eyes standing and glaring at you.");
+    vibe("Looks like you did something wrong, better to ask before something bad happens.");
+
+    say("GITS", "Ahoy, you gal! My muscles obscure my vision, come over here so I can see you better.");
+
+    say("CASCA", "The name is Casca, but you can call me Helmet.");
+    say("GITS", "Omagad, why did ya kill Caesar?");
+    say("CASCA", "Things without all remedy should be without regard: what's done, is done.");
+
+    say("CASCA", "Your wages are in dispute, swordsman. This troop stood before you came.");
+    say("GITS", "Well shoot. Back home a fence don't need a reason to be a fence.");
+    say("CASCA", "That is not an argument.");
+    say("GITS", "It held up the fence.");
+
+    beat();
+
+    say("CASCA", "The fault, dear Gits, is not in our stars, but in ourselves.");
+    say("GITS", "Is that a yes on my money?");
+    say("CASCA", "Take it. There's daggers in men's smiles; I would sooner owe you nothing.");
+
+    vibe("She counts out eighty coins.");
+    vibe("You split them with Grut before she has finished counting.");
+
+    state.argue_with_casca = 1;
+
+    state = share(state, 40);
+    state = finish_job(state, 2);
+
+    return state;
+}

@@ -1,0 +1,80 @@
+import "io"
+
+import "interface"
+import "state"
+import "scenes"
+
+import "jobs.argue_with_casca"
+import "jobs.drink_with_grut"
+import "jobs.talk_about_dream"
+import "jobs.kill_banquo"
+import "jobs.lend_money"
+
+loop: (state: State) -> State = {
+    print_state(state, "CAMP");
+
+    println("  You have to get jobs to cover up the fact that you rob banks.");
+
+    if (state.argue_with_casca == 0) {
+        option(1, "argue with Casca");
+    }
+    if (state.drink_with_grut == 0) {
+        option(2, "drink with Grut");
+    }
+    if (state.talk_about_dream == 0) {
+        option(3, "talk about the Dream");
+    }
+    if (state.kill_banquo == 0) {
+        option(4, "kill Banquo");
+    }
+
+    println("");
+    println("  Choose wisely, since your fate hinges upon these very decisions:");
+
+    choice: i64 = ask();
+    println("");
+
+    if (choice == 1) {
+        if (state.argue_with_casca == 0) {
+            return run_argue_with_casca(state);
+        }
+    }
+    if (choice == 2) {
+        if (state.drink_with_grut == 0) {
+            return run_drink_with_grut(state);
+        }
+    }
+    if (choice == 3) {
+        if (state.talk_about_dream == 0) {
+            return run_talk_about_dream(state);
+        }
+    }
+    if (choice == 4) {
+        if (state.kill_banquo == 0) {
+            return run_kill_banquo(state);
+        }
+    }
+
+    vibe("You stand in the camp holding your sword. The day declines to happen.");
+
+    return state;
+}
+
+main: () -> i64 = {
+    state: State = make_state();
+
+    print_title();
+    print_introduction();
+
+    state = run_prologue(state);
+
+    while (all_jobs_done(state) == false) {
+        state = loop(state);
+    }
+
+    state = run_hangover(state);
+    state = run_lend_money(state);
+    state = run_eclipse(state);
+
+    return 0;
+}

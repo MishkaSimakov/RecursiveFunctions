@@ -4,7 +4,13 @@ import "math"
 import "rectangle"
 
 main: () -> i64 = {
-    println(math::factorial(6));
+    x: i64 = read_i64();
+
+    print("Factorial of ");
+    print_i64(x);
+    println(" is");
+
+    println_i64(math::factorial(x));
 
     rect: geometry::Rectangle = geometry::make_rectangle(1 as! u64, 2 as! u64, 3, 4);
 
@@ -12,9 +18,9 @@ main: () -> i64 = {
         .geometry::move(1, 2)
         .geometry::print_rect();
 
-    println(1);
-    println(2);
-    println(3);
+    println_i64(1);
+    println_i64(2);
+    println_i64(3);
 
     return 0;
 }

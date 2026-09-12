@@ -1,0 +1,152 @@
+import "io"
+import "string"
+
+import "state"
+
+print_spaces: (count: i64) -> () = {
+    printed: i64 = 0;
+
+    while (printed < count) {
+        print(" ");
+        printed = printed + 1;
+    }
+}
+
+count_digits: (value: i64) -> i64 = {
+    digits: i64 = 1;
+    bound: i64 = 10;
+
+    while (bound <= value) {
+        bound = bound * 10;
+        digits = digits + 1;
+    }
+
+    return digits;
+}
+
+export beat: () -> () = {
+    sleep_ms(500);
+}
+
+export rule: () -> () = {
+    println("  ------------------------------------------------------------");
+}
+
+export print_title: () -> () = {
+    println("");
+    println("        .----------------------------------------------.");
+    println("                    E V E R Y   T A N K                 ");
+    println("                 a tale of Gits and Grut                ");
+    println("        '----------------------------------------------'");
+    println("");
+    sleep_ms(1200);
+}
+
+export print_introduction: () -> () = {
+    print_slow("In this world...", 55);
+    println("");
+    sleep_ms(900);
+
+    print_slow("Is the destiny of mankind controlled by some... transcendental entity, or law?", 20);
+    println("");
+    sleep_ms(500);
+
+    print_slow("Is it like the hand of God hovering above?", 20);
+    println("");
+    sleep_ms(500);
+
+    print_slow("At least it is true; that man has no control even over his own will...", 20);
+    println("");
+    sleep_ms(1500);
+}
+
+export print_state: (state: State, location: *c8) -> () = {
+    println("");
+    rule();
+
+    // first row: where you are and how little time is left
+    print("  ");
+    print(location);
+    print_spaces(42 - get_string_length(location));
+    print("day ");
+
+    if (state.day < 10) {
+        print("0");
+        print_i64(state.day);
+    } else {
+        print_i64(state.day);
+    }
+    println("/30");
+
+    // second row: the split
+    print("  Gits: ");
+    print_i64(state.gits_money);
+    print("$");
+    print_spaces(32 - count_digits(state.gits_money));
+    print("Grut: ");
+    print_i64(state.grut_money);
+    println("$");
+
+    rule();
+    println("");
+}
+
+export vibe: (words: *c8) -> () = {
+    print("  ... ");
+    println(words);
+    sleep_ms(420 + get_string_length(words) * 9);
+}
+
+export say: (character: *c8, words: *c8) -> () = {
+    print("  ");
+    print(character);
+    print(":");
+    print_spaces(9 - get_string_length(character));
+    println(words);
+    sleep_ms(350 + get_string_length(words) * 9);
+}
+
+export say_slow: (character: *c8, words: *c8) -> () = {
+    print("  ");
+    print(character);
+    print(":");
+    print_spaces(9 - get_string_length(character));
+    print_slow(words, 55);
+    println("");
+    sleep_ms(800);
+}
+
+export option: (number: i64, text: *c8) -> () = {
+    print("    ");
+    print_i64(number);
+    print(") ");
+    println(text);
+    sleep_ms(130);
+}
+
+export ask: () -> i64 = {
+    println("");
+    print("  > ");
+    return read_i64();
+}
+
+// every rung of the last conversation offers the same question three ways
+export rung: (first: *c8, second: *c8, third: *c8) -> () = {
+    println("");
+    option(1, first);
+    option(2, second);
+    option(3, third);
+
+    choice: i64 = ask();
+    println("");
+
+    if (choice == 2) {
+        say("GITS", second);
+    } else {
+        if (choice == 3) {
+            say("GITS", third);
+        } else {
+            say("GITS", first);
+        }
+    }
+}

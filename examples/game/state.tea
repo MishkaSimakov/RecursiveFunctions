@@ -1,0 +1,61 @@
+export State: type = {
+   gits_money: i64
+   grut_money: i64
+
+   // jobs state, 0 until done
+   // TODO: these are i64 instead of b8 only because member access miscompiles
+   // offsets when fields have different sizes
+   kill_banquo: i64
+   argue_with_casca: i64
+   talk_about_dream: i64
+   drink_with_grut: i64
+
+   jobs_done: i64
+
+   // current day
+   day: i64
+}
+
+export make_state: () -> State = {
+   result: State;
+
+   result.gits_money = 0;
+   result.grut_money = 100;
+
+   result.kill_banquo = 0;
+   result.argue_with_casca = 0;
+   result.talk_about_dream = 0;
+   result.drink_with_grut = 0;
+
+   result.jobs_done = 0;
+
+   result.day = 1;
+
+   return result;
+}
+
+// every coin is split in half, always, without asking
+export share: (state: State, amount: i64) -> State = {
+   state.gits_money = state.gits_money + amount;
+   state.grut_money = state.grut_money + amount;
+
+   return state;
+}
+
+export spend: (state: State, amount: i64) -> State = {
+   state.gits_money = state.gits_money - amount;
+   state.grut_money = state.grut_money - amount;
+
+   return state;
+}
+
+export finish_job: (state: State, days: i64) -> State = {
+   state.jobs_done = state.jobs_done + 1;
+   state.day = state.day + days;
+
+   return state;
+}
+
+export all_jobs_done: (state: State) -> b8 = {
+   return state.jobs_done == 4;
+}

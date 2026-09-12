@@ -1,0 +1,90 @@
+import "io"
+
+import "state"
+import "interface"
+
+print_briefing: () -> () = {
+    say("GRUT", "There is a man named Banquo. He talks to the king about the war.");
+    say("GRUT", "He says cavalry is finished. He says the future is tanks.");
+    say("GITS", "Them water things again?");
+    say("GRUT", "He says one of them is worth a hundred of us.");
+
+    beat();
+
+    say("GRUT", "If the king believes him, nobody hires a troop again. Ever.");
+    say("GRUT", "Tanks are superior to everything. That is the whole of his argument.");
+    say("GRUT", "Go tonight.");
+
+    vibe("A hundred men guard Banquo's camp. You go alone. Grut handles the paperwork.");
+}
+
+fight_hundred_men: () -> () = {
+    men: i64 = 100;
+
+    while (men > 0) {
+        print("  men still standing: ");
+        println_i64(men);
+
+        option(1, "swing to the left");
+        option(2, "swing to the right");
+        option(3, "swing overhead, with both hands");
+
+        choice: i64 = ask();
+        println("");
+
+        killed: i64 = 0;
+
+        if (choice == 1) {
+            vibe("One stroke to the left. Thirty-five men learn they were standing too close together.");
+            killed = 35;
+        }
+        if (choice == 2) {
+            vibe("To the right. Thirty men go over the fence without using the gate.");
+            killed = 30;
+        }
+        if (choice == 3) {
+            vibe("Both hands. The ground takes a dent. Forty-five men take the rest of it.");
+            killed = 45;
+        }
+        if (killed == 0) {
+            vibe("You swing at nothing. Nothing dies. Somebody laughs and then regrets it.");
+        }
+
+        men = men - killed;
+
+        if (men < 0) {
+            men = 0;
+        }
+    }
+
+    vibe("The camp is quiet. You are the only thing standing in it.");
+}
+
+export run_kill_banquo: (state: State) -> State = {
+    print_briefing();
+    beat();
+
+    fight_hundred_men();
+    beat();
+
+    vibe("Banquo steps out of his tent holding a lamp and a map of the next hundred years.");
+
+    say("BANQUO", "If you can look into the seeds of time, and say which grain will grow...");
+    say("BANQUO", "...then you would not come at me with a sword. You would come in a tank.");
+    say("GITS", "Everybody keeps sayin' that word at me.");
+    say("BANQUO", "O, treachery! Fly, good Fleance, fly, fly, fly!");
+
+    vibe("There is nobody called Fleance here. He says it anyway. Then he stops.");
+
+    beat();
+
+    vibe("Four of your own do not walk out of that camp with you.");
+    vibe("The king pays four hundred coins for the map. You split it with Grut.");
+
+    state.kill_banquo = 1;
+
+    state = share(state, 200);
+    state = finish_job(state, 5);
+
+    return state;
+}

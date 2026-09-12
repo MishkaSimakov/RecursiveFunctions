@@ -1,0 +1,36 @@
+import "io"
+
+import "state"
+import "interface"
+
+export run_drink_with_grut: (state: State) -> State = {
+    vibe("The tavern at the edge of the camp sells beer at the price of a horse.");
+
+    say("GITS", "One of them big ones for me. And one for my friend here.");
+    say("GRUT", "Twelve.");
+    say("GITS", "Twelve what?");
+    say("GRUT", "Twelve of them.");
+
+    vibe("You drink twelve.");
+    beat();
+
+    say("GRUT", "I have a goal, Gits.");
+    say("GITS", "Yeah? Mine's them little fried things they do at the fair.");
+    say("GRUT", "A tank.");
+
+    beat();
+
+    say("GITS", "...");
+    say("GITS", "Like for water?");
+    say("GRUT", "No.");
+
+    vibe("You do not ask further.");
+    vibe("The beer costs eighty coins. You split that too.");
+
+    state.drink_with_grut = 1;
+
+    state = spend(state, 40);
+    state = finish_job(state, 3);
+
+    return state;
+}
