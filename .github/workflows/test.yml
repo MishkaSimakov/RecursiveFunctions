@@ -21,6 +21,9 @@ jobs:
       - name: Run tests inside container
         # tests must not run as root, look at tests/unit/sources/SourceManagerTests.cpp to learn more
         run: docker run --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
+      - name: Build examples inside container
+        # runs as root because installed tlang reads its files from /usr/local/share/tlang
+        run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c 'cmake --build build -t cli_installation && cmake --install build && for dir in examples/*/; do (cd "$dir" && make main) || exit 1; done'
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
         if: always()
@@ -55,6 +58,12 @@ jobs:
           export LLVM_DIR="$(brew --prefix llvm@23)/lib/cmake/llvm"
           export PATH="$(brew --prefix llvm@23)/bin:$PATH"
           ./testing.sh
+      - name: Build examples
+        run: |
+          export PATH="$(brew --prefix llvm@23)/bin:$PATH"
+          cmake --build build -t cli_installation
+          sudo cmake --install build
+          for dir in examples/*/; do (cd "$dir" && make main) || exit 1; done
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
         if: always()
