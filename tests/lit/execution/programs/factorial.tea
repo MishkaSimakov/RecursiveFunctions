@@ -8,7 +8,7 @@
 // CHECK-NEXT:  120
 // CHECK-NEXT:  720
 
-extern println: (value: i64) -> ()
+import "io"
 
 factorial: (n: i64) -> i64 = {
     if (n == 0) {
@@ -19,13 +19,13 @@ factorial: (n: i64) -> i64 = {
 }
 
 main: () -> i64 = {
-    println(factorial(0));
-    println(factorial(1));
-    println(factorial(2));
-    println(factorial(3));
-    println(factorial(4));
-    println(factorial(5));
-    println(factorial(6));
+    println_i64(factorial(0));
+    println_i64(factorial(1));
+    println_i64(factorial(2));
+    println_i64(factorial(3));
+    println_i64(factorial(4));
+    println_i64(factorial(5));
+    println_i64(factorial(6));
 
     return 0;
 }

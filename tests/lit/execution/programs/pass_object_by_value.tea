@@ -4,7 +4,7 @@
 // CHECK-NEXT:  123
 // CHECK-NEXT:  321
 
-extern println: (value: i64) -> ()
+import "io"
 
 A: type = {
     value: i64
@@ -19,12 +19,12 @@ main: () -> i64 = {
     object: A;
     object.value = 123;
 
-    println(object.value);
+    println_i64(object.value);
 
     new_object: A = object.set_value(321);
 
-    println(object.value);
-    println(new_object.value);
+    println_i64(object.value);
+    println_i64(new_object.value);
 
     return 0;
 }

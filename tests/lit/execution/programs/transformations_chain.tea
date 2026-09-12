@@ -3,7 +3,7 @@
 // CHECK:       -352
 // CHECK-NEXT:  1
 
-extern println: (value: i64) -> ()
+import "io"
 
 T: namespace = {
     add: (self: i64, value: i64) -> i64 = {
@@ -22,7 +22,7 @@ T: namespace = {
 main: () -> i64 = {
     value: i64 = 1;
 
-    println(
+    println_i64(
         value
             .T::add(123) // -> 124
             .T::sub(321) // -> -197
@@ -30,7 +30,7 @@ main: () -> i64 = {
             .T::add(42)  // -> -352
     );
 
-    println(value);
+    println_i64(value);
 
     return 0;
 }

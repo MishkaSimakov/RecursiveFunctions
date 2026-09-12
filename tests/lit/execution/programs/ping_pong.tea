@@ -4,8 +4,7 @@
 // CHECK-NEXT:  84
 // CHECK-NEXT:  84
 
-extern print: (value: i64) -> ()
-extern println: (value: i64) -> ()
+import "io"
 
 ping: (ball: (i64, i64, i64)) -> (i64, i64, i64) = {
     return (ball.0 + 1, ball.1 + 2, ball.2 + 3);
@@ -24,9 +23,9 @@ main: () -> i64 = {
         counter = counter + 1;
     }
 
-    println(ball.0);
-    println(ball.1);
-    println(ball.2);
+    println_i64(ball.0);
+    println_i64(ball.1);
+    println_i64(ball.2);
 
     return 0;
 }

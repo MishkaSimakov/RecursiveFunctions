@@ -2,7 +2,7 @@
 
 // CHECK: 144
 
-extern print: (value: i64) -> ()
+import "io"
 
 math: namespace = {
     sqr: (value: i64) -> i64 = {
@@ -14,7 +14,7 @@ main: () -> i64 = {
     value: i64 = 12;
     squared: i64 = math::sqr(value);
 
-    print(squared);
+    print_i64(squared);
 
     return 0;
 }
