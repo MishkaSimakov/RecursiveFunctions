@@ -181,6 +181,10 @@ class ASTVisitor {
     return true;
   }
   bool traverse_return_statement(wrap_const<ReturnStmt>& node) {
+    if (!node.value) {
+      return true;
+    }
+
     return traverse(*node.value);
   }
   bool traverse_integer_literal(wrap_const<IntegerLiteral>& node) {

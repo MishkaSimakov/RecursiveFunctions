@@ -72,6 +72,15 @@ bool SemanticAnalyzer::visit_return_statement(ReturnStmt& node) {
 
   FunctionType* fun_ty = std::get<FunctionSymbolInfo>(*info).type;
 
+  // `return;` is equivalent to `return ();`
+  if (node.value == nullptr) {
+    // construct fictitious empty tuple node
+    node.value = std::make_unique<TupleExpr>(
+        node.source_range, std::vector<std::unique_ptr<Expression>>());
+    node.value->type =
+        context_.types_storage.make_type<TupleType>(std::vector<Type*>());
+  }
+
   if (node.value->type != fun_ty->get_return_type()) {
     auto left_type = node.value->type->to_string(context_.get_strings_pool());
     auto right_type =
