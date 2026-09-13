@@ -1,7 +1,8 @@
 SOURCES := $(wildcard *.tea jobs/*.tea)
+TLANG := "tlang"
 
 main : $(SOURCES)
-	tlang . -o main
+	$(TLANG) . -o main
 
 run: main
 	./main
