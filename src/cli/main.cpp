@@ -125,7 +125,7 @@ class Main {
 
     llvm::TargetOptions opt;
     auto target_machine = target->createTargetMachine(
-        llvm::Triple(target_triple), CPU, features, opt, std::nullopt);
+        llvm::Triple(target_triple), CPU, features, opt, llvm::Reloc::PIC_);
 
     if (target_machine == nullptr) {
       throw std::runtime_error("Failed to load target machine info.");
