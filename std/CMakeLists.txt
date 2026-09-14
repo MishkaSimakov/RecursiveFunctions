@@ -4,7 +4,7 @@ file(GLOB_RECURSE STD_SOURCES CONFIGURE_DEPENDS "src/*.cpp" "src/*.h")
 
 add_library(std STATIC ${STD_SOURCES})
 set_target_properties(std PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY ${TEALANG_FILES_DIRECTORY}/std/lib
+        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/tlang/${CMAKE_PROJECT_VERSION}/lib
 )
 
 file(GLOB_RECURSE STD_HEADERS CONFIGURE_DEPENDS
@@ -14,7 +14,7 @@ file(GLOB_RECURSE STD_HEADERS CONFIGURE_DEPENDS
 
 set(STD_COPIED_HEADERS "")
 foreach (header ${STD_HEADERS})
-    set(copied_header ${TEALANG_FILES_DIRECTORY}/std/include/${header})
+    set(copied_header ${CMAKE_BINARY_DIR}/lib/tlang/${CMAKE_PROJECT_VERSION}/include/${header})
 
     add_custom_command(
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

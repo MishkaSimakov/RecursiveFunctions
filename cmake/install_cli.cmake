@@ -1,6 +1,10 @@
-set_target_properties(cli_installation PROPERTIES OUTPUT_NAME tlang)
+install(TARGETS tlang)
 
-install(TARGETS cli_installation)
-install(DIRECTORY ${TEALANG_FILES_DIRECTORY} DESTINATION share/tlang
-        PATTERN "*.gitkeep" EXCLUDE
+install(
+        DIRECTORY ${CMAKE_BINARY_DIR}/lib/tlang/${CMAKE_PROJECT_VERSION}/lib
+        DESTINATION                   lib/tlang/${CMAKE_PROJECT_VERSION}
+)
+install(
+        DIRECTORY ${CMAKE_BINARY_DIR}/lib/tlang/${CMAKE_PROJECT_VERSION}/include
+        DESTINATION                   lib/tlang/${CMAKE_PROJECT_VERSION}
 )
