@@ -1,16 +1,19 @@
 #pragma once
 
-#include "LRTableBuilder.h"
+#include <iostream>
+#include <vector>
+
+#include "Action.h"
 
 namespace Syntax {
 class LRTableSerializer {
  public:
-  using ActionsTableT = std::vector<std::vector<Action>>;
-  using GotoTableT = std::vector<std::vector<size_t>>;
+  static void serialize(std::ostream& os,
+                        const std::vector<std::vector<Action>>& actions_table,
+                        const std::vector<std::vector<size_t>>& goto_table);
 
-  static void serialize(std::ostream& os, const ActionsTableT& actions_table,
-                        const GotoTableT& goto_table);
+  static SerializedAction serialize_action(Action action);
 
-  static std::pair<ActionsTableT, GotoTableT> deserialize(std::istream& is);
+  static Action deserialize_action(SerializedAction action);
 };
 }  // namespace Syntax

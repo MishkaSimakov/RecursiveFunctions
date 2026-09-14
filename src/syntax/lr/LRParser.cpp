@@ -3,13 +3,18 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <cassert>
 #include <span>
+
+#include "LRTableSerializer.h"
+#include "ast/ASTBuildContext.h"
+
+namespace Syntax {
 
 using enum Front::BinaryOperator::OpType::InternalEnum;
 using namespace Front;
-#include "syntax/BuildersRegistry.h"
-
-namespace Syntax {
+#include "SyntaxASTBuildersRegistry.inc"
+#include "SyntaxLR.inc"
 
 // Recovery tree helps to recover from syntax errors.
 // When LRParser encounters error some part of program must be removed to
@@ -100,6 +105,18 @@ class RecoveryTree {
   }
 };
 
+Action LRParser::get_action(size_t state, Lexis::TokenType token) const {
+  assert(state < states_count);
+  return LRTableSerializer::deserialize_action(
+      actions_table[state * Lexis::TokenType::count +
+                    static_cast<size_t>(token)]);
+}
+
+size_t LRParser::get_goto(size_t state, NonTerminal non_terminal) const {
+  assert(state < states_count && non_terminal.get_id() < nonterms_count);
+  return goto_table[state * nonterms_count + non_terminal.get_id()];
+}
+
 void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
                      ModuleContext& context, SourceView source) const {
   ASTBuildContext build_context(context.get_strings_pool(), source);
@@ -117,8 +134,7 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
   RecoveryTree recovery_tree;
 
   while (true) {
-    Action action =
-        actions_[states_stack.back()][static_cast<size_t>(current_token.type)];
+    Action action = get_action(states_stack.back(), current_token.type);
 
     if (std::holds_alternative<AcceptAction>(action)) {
       if (errors.empty()) {
@@ -130,11 +146,9 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
     }
     if (std::holds_alternative<RejectAction>(action)) {
       std::vector<std::string_view> expected_tokens;
-      for (auto type : Lexis::TokenType::values) {
-        size_t type_id = static_cast<size_t>(type);
-
+      for (const auto type : Lexis::TokenType::values) {
         if (!std::holds_alternative<RejectAction>(
-                actions_[states_stack.back()][type_id])) {
+                get_action(states_stack.back(), type))) {
           expected_tokens.push_back(Lexis::TokenType(type).to_string());
         }
       }
@@ -201,7 +215,7 @@ void LRParser::parse(Lexis::LexicalAnalyzer& lexical_analyzer,
       }
 
       states_stack.resize(states_stack.size() - reduce.remove_count);
-      states_stack.push_back(goto_[states_stack.back()][reduce.next.get_id()]);
+      states_stack.push_back(get_goto(states_stack.back(), reduce.next));
     }
   }
 

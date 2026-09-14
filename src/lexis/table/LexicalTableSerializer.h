@@ -7,7 +7,5 @@ class LexicalTableSerializer : public Serializer {
  public:
   static void serialize(std::ostream& os,
                         const std::vector<JumpTableT>& states);
-
-  static std::vector<JumpTableT> deserialize(std::istream& is);
 };
 }  // namespace Lexis

@@ -1,6 +1,5 @@
 #include <fmt/base.h>
 
-#include "Constants.h"
 #include "lexis/Token.h"
 #include "table/LexicalAutomatonGenerator.h"
 
@@ -98,7 +97,7 @@ int main() {
   generator[TokenType::WHITESPACE] = "{space}+";
   generator[TokenType::COMMENT] = "//{comment_symbol}*";
 
-  auto absolute_lexis_filepath = Constants::GetBuildFilePath("lexis/lexis.lx");
+  const auto absolute_lexis_filepath = std::filesystem::path(LEXIS_DFA_OUTPUT);
   generator.build_and_save(absolute_lexis_filepath);
 
   fmt::print("Stored lexis table in: {:?}.\n", absolute_lexis_filepath.c_str());

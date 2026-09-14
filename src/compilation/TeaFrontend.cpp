@@ -74,11 +74,8 @@ void TeaFrontend::build_ast() {
   bool has_syntax_errors = false;
 
   // setup parser and lexical analyzer and parser
-  // loading of tables occurs only once
-  Lexis::LexicalAnalyzer lexical_analyzer(
-      Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
-  auto parser = Syntax::LRParser(
-      Constants::GetRuntimeFilePath(Constants::grammar_relative_filepath));
+  Lexis::LexicalAnalyzer lexical_analyzer;
+  Syntax::LRParser parser;
 
   // build ASTTree for each file separately
   // TODO: this can be easily parallelized

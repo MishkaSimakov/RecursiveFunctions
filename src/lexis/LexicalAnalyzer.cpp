@@ -1,12 +1,16 @@
 #include "LexicalAnalyzer.h"
 
+#include <cassert>
 #include <fstream>
 #include <variant>
 
 #include "lexis/Charset.h"
-#include "lexis/table/LexicalTableSerializer.h"
+#include "table/LexicalAutomatonState.h"
 
 namespace Lexis {
+
+#include "LexisDFA.inc"
+
 Token LexicalAnalyzer::get_token_internal(SourceLocation location) const {
   size_t current_state = 0;
   SourceLocation begin = location;
@@ -27,7 +31,9 @@ Token LexicalAnalyzer::get_token_internal(SourceLocation location) const {
       return Token{TokenType::ERROR, SourceRange{cur_loc, cur_loc}};
     }
 
-    auto jump = jumps_[current_state][symbol];
+    assert(current_state < states_count && characters_count == Charset::kCharactersCount);
+    auto jump =
+        lexis_dfa_table[current_state * Charset::kCharactersCount + symbol];
 
     if (std::holds_alternative<NextStateJump>(jump)) {
       current_state = std::get<NextStateJump>(jump).state_id;
@@ -44,17 +50,6 @@ Token LexicalAnalyzer::get_token_internal(SourceLocation location) const {
     return Token{TokenType::ERROR, {begin, cur_loc}};
   }
 }
-
-LexicalAnalyzer::LexicalAnalyzer(const std::filesystem::path& path)
-    : jumps_([&path] {
-        std::ifstream is(path);
-
-        if (!is) {
-          throw std::runtime_error("Failed to open lexis table.");
-        }
-
-        return LexicalTableSerializer::deserialize(is);
-      }()) {}
 
 void LexicalAnalyzer::set_source_view(SourceView view) {
   source_view_ = view;
@@ -78,7 +73,5 @@ Token LexicalAnalyzer::next_token() {
   return current_token_.value();
 }
 
-Token LexicalAnalyzer::current_token() const {
-  return current_token_.value();
-}
+Token LexicalAnalyzer::current_token() const { return current_token_.value(); }
 }  // namespace Lexis

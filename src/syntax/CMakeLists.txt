@@ -8,21 +8,21 @@ set(SOURCES
 add_library(grammar_table_tools INTERFACE)
 target_sources(grammar_table_tools INTERFACE ${SOURCES})
 
-set(GRAMMAR_TABLEGEN_TEXT_INPUT "${CMAKE_SOURCE_DIR}/src/syntax/grammar.txt")
-set(GRAMMAR_TABLEGEN_BUILDERS_OUTPUT "${CMAKE_SOURCE_DIR}/src/syntax/BuildersRegistry.h")
+set(GRAMMAR_TABLEGEN_TEXT_INPUT "${CMAKE_CURRENT_SOURCE_DIR}/grammar.txt")
+set(GRAMMAR_TABLEGEN_BUILDERS_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/SyntaxASTBuildersRegistry.inc")
+set(GRAMMAR_TABLEGEN_LR_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/SyntaxLR.inc")
 
-# We add lexis_table_tools as dependency, because when tokens and their representation changes
-# we must update grammar files too.
 tablegen(
         NAME grammar
         SOURCES ${SOURCES} compile_grammar.cpp
         DEPENDENCIES ${GRAMMAR_TABLEGEN_TEXT_INPUT} lexis_table_tools
-        OUTPUT ${TEALANG_FILES_DIRECTORY}/grammar/grammar.lr ${GRAMMAR_TABLEGEN_BUILDERS_OUTPUT}
+        OUTPUT ${GRAMMAR_TABLEGEN_LR_OUTPUT} ${GRAMMAR_TABLEGEN_BUILDERS_OUTPUT}
 )
 
-target_include_directories(grammar_tablegen PUBLIC ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(grammar_tablegen PUBLIC fmt::fmt)
-target_compile_definitions(grammar_tablegen PRIVATE
+target_link_libraries(grammar_gen PUBLIC fmt::fmt)
+target_include_directories(grammar_gen PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(grammar_gen PRIVATE
         GRAMMAR_TABLEGEN_TEXT_INPUT="${GRAMMAR_TABLEGEN_TEXT_INPUT}"
         GRAMMAR_TABLEGEN_BUILDERS_OUTPUT="${GRAMMAR_TABLEGEN_BUILDERS_OUTPUT}"
+        GRAMMAR_TABLEGEN_LR_OUTPUT="${GRAMMAR_TABLEGEN_LR_OUTPUT}"
 )
