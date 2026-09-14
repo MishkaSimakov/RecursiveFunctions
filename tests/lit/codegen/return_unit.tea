@@ -15,3 +15,8 @@ h: () -> () = {
     // CHECK-NOT: store
     res: () = f();
 }
+
+t: () -> () = {
+    // CHECK: ret void
+    return;
+}

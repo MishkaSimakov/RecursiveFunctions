@@ -16,6 +16,7 @@ std::string ArgumentsReader::get_default_output_name(Front::EmitType type) {
   switch (type) {
     case Front::EmitType::AST:
     case Front::EmitType::IR:
+    case Front::EmitType::MODULES_LIST:
       return "out.txt";
     case Front::EmitType::OBJECT:
       return "out.o";
@@ -104,6 +105,7 @@ std::filesystem::path ArgumentsReader::parse_output(std::string output,
     switch (emit_type) {
       case Front::EmitType::AST:
       case Front::EmitType::IR:
+      case Front::EmitType::MODULES_LIST:
         // write to stdout
         return {};
       case Front::EmitType::OBJECT:
@@ -136,6 +138,9 @@ Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
   if (name == "exe") {
     return Front::EmitType::EXECUTABLE;
   }
+  if (name == "modules_list") {
+    return Front::EmitType::MODULES_LIST;
+  }
   throw std::runtime_error("unknown compiler emit type.");
 }
 
@@ -154,9 +159,9 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
   parser.add_argument("-o", "--output").default_value("").help("output file");
 
   parser.add_argument("--emit")
-      .choices("ir", "ast", "obj", "exe")
+      .choices("ir", "ast", "obj", "exe", "modules_list")
       .default_value("exe")
-      .help("compiler output type: ir, ast, obj, exe");
+      .help("compiler output type: ir, ast, obj, exe, modules_list");
 
   try {
     parser.parse_args(argc, argv);

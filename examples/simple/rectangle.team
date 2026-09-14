@@ -21,10 +21,10 @@ make_rectangle: (width: u64, height: u64, x: i64, y: i64) -> Rectangle = {
 }
 
 print_rect: (self: Rectangle) -> () = {
-    print(self.width as! i64);
-    print(self.height as! i64);
-    print(self.x);
-    print(self.y);
+    print_i64(self.width as! i64);
+    print_i64(self.height as! i64);
+    print_i64(self.x);
+    print_i64(self.y);
 }
 
 move: (self: Rectangle, dx: i64, dy: i64) -> Rectangle = {

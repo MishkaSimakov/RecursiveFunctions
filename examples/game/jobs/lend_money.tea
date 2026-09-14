@@ -1,0 +1,42 @@
+import "io"
+
+import "state"
+import "interface"
+
+export run_lend_money: (state: State) -> State = {
+    vibe("Four graves are dug behind the camp. Nobody digs graves for free.");
+
+    say("GRUT", "I will carry them home. Their mothers are in Wyndham.");
+    say("GRUT", "The burning costs money. We split everything.");
+    say("CASCA", "He is the only one of us who can stand to do it. Let him.");
+
+    beat();
+
+    option(1, "how much");
+    option(2, "how much do ya need");
+    option(3, "no");
+
+    choice: i64 = ask();
+    println("");
+
+    if (choice == 3) {
+        say("GITS", "No.");
+        beat();
+        vibe("That is what you decide to say.");
+        vibe("It is not what you say.");
+    }
+
+    say("GITS", "Take it. Take all of it.");
+
+    say("GRUT", "All of it.");
+    say("GITS", "All of it.");
+
+    vibe("He takes it. He counts it. He thanks you, and he means it.");
+
+    state.grut_money = state.grut_money + state.gits_money;
+    state.gits_money = 0;
+
+    print_state(state, "CAMP");
+
+    return state;
+}

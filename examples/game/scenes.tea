@@ -1,0 +1,147 @@
+import "io"
+
+import "state"
+import "interface"
+
+export run_prologue: (state: State) -> State = {
+    vibe("The plain is grey. The grass gave up on it. Nothing here owes you anything.");
+    vibe("You have no money, one sword, and no particular plan for either.");
+
+    beat();
+
+    vibe("Someone sits at a fire that has no business burning out here.");
+
+    say("GRUT", "Gits.");
+    say("GITS", "Ahoy.");
+    say("GRUT", "You have nothing.");
+    say("GITS", "I got a sword an' a powerful hunger.");
+    say("GRUT", "I have a hundred.");
+
+    vibe("He puts fifty coins into your hand without counting them.");
+
+    say("GRUT", "We split everything. That is how it works now.");
+    say("GITS", "Well, golly.");
+    say("GRUT", "There is work. Come to the camp.");
+
+    state.gits_money = state.gits_money + 50;
+    state.grut_money = state.grut_money - 50;
+
+    return state;
+}
+
+export run_hangover: (state: State) -> State = {
+    vibe("The work runs out. The tavern does not.");
+
+    say("GITS", "I feel like a barn fell on another barn.");
+
+    vibe("You sleep.");
+    println("");
+
+    while (state.day < 30) {
+        state.day = state.day + 1;
+
+        print("      day ");
+        if (state.day < 10) {
+            print("0");
+        }
+        print_i64(state.day);
+        println("  ...  you sleep");
+
+        sleep_ms(170);
+    }
+
+    println("");
+    vibe("You wake on the thirtieth day. The fire is cold and the camp is quiet.");
+
+    return state;
+}
+
+print_eclipse: () -> () = {
+    println("");
+    println("                        \      |      /");
+    println("                     .    ,---------,    .");
+    println("                   ---    /#########\    ---");
+    println("                         |###########|");
+    println("                   ---    \#########/    ---");
+    println("                     '    '---------'    '");
+    println("                        /      |      \");
+    println("");
+    sleep_ms(1800);
+}
+
+print_tanks: () -> () = {
+    println("");
+    println("                         _____");
+    println("                     ___/_____\___");
+    println("                    /             \==========");
+    println("               ____|_______________|____");
+    println("              |  (O) (O) (O) (O) (O) (O) |");
+    println("              '--------------------------'");
+    sleep_ms(1200);
+    println("");
+    println("        [=]   [=]   [=]   [=]   [=]   [=]   [=]   [=]");
+    sleep_ms(700);
+    println("     [=]   [=]   [=]   [=]   [=]   [=]   [=]   [=]   [=]");
+    sleep_ms(700);
+    println("   [=]  [=]  [=]  [=]  [=]  [=]  [=]  [=]  [=]  [=]  [=]  [=]");
+    sleep_ms(1400);
+    println("");
+}
+
+the_ladder: () -> () = {
+    rung("Did ya get my money?", "So. The money.", "...");
+    say("GRUT", "Yeah.");
+
+    rung("Where is it.", "Where is my money, Grut.", "...");
+    say("GRUT", "Pissed it away.");
+
+    rung("On what.", "Pissed it away on what.", "...");
+    say("GRUT", "Spent it.");
+
+    rung("On what.", "On WHAT.", "...");
+    say("GRUT", "A tank.");
+
+    rung("Which tank?", "Every tank.", "...");
+    say_slow("GRUT", "Every tank.");
+}
+
+export run_eclipse: (state: State) -> State = {
+    print_state(state, "THE FIELD");
+
+    vibe("The sun goes out. Not behind a cloud. Out.");
+
+    print_eclipse();
+
+    say("CASCA", "By the pricking of my thumbs, something wicked this way comes.");
+
+    vibe("Grut comes up the hill. He is not carrying anything.");
+
+    beat();
+
+    the_ladder();
+
+    beat();
+
+    vibe("Beyond the hill, where the cavalry should be, something begins to idle.");
+
+    print_tanks();
+
+    say("GRUT", "Nobody hires a troop again. Ever.");
+    say("GRUT", "I told you that on the second day.");
+    say("GITS", "...");
+    say("GITS", "Y'all said cistern.");
+    say("CASCA", "Et tu, Grut?");
+
+    state.grut_money = 0;
+
+    print_state(state, "THE ECLIPSE");
+
+    vibe("The money is gone. The troop is gone. The sun does not come back.");
+    vibe("Gits walks east. It takes him a hundred years to stop walking.");
+
+    println("");
+    println("                         T H E   E N D");
+    println("");
+
+    return state;
+}

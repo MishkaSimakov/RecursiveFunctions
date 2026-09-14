@@ -38,9 +38,12 @@ Value IRGenerator::compile_member_expression(const MemberExpr& value) {
 
     Value result;
 
+    llvm::Value* zero = llvm_ir_builder_->getInt32(0);
+    llvm::Value* index =
+        llvm_ir_builder_->getInt32(info.as<VariableSymbolInfo>().index);
+
     result.llvm_value = llvm_ir_builder_->CreateGEP(
-        types_mapper_(value.type), object.llvm_value,
-        llvm_ir_builder_->getInt32(info.as<VariableSymbolInfo>().index));
+        types_mapper_(value.left->type), object.llvm_value, {zero, index});
     result.has_indirection = true;
 
     return result;

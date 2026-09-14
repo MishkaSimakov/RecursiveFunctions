@@ -1,3 +1,10 @@
-export extern print: (x: i64) -> ()
+export extern print: (str: *c8) -> ()
+export extern println: (str: *c8) -> ()
 
-export extern println: (x: i64) -> ()
+export extern print_i64: (x: i64) -> ()
+export extern println_i64: (x: i64) -> ()
+
+export extern read_i64: () -> i64
+
+export extern sleep_ms: (ms: i64) -> ()
+export extern print_slow: (str: *c8, ms_per_char: i64) -> ()

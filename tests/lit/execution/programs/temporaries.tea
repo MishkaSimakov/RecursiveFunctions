@@ -10,44 +10,44 @@
 // CHECK-NEXT:  1
 // CHECK-NEXT:  2
 
-extern println: (value: i64) -> ()
+import "io"
 
 get_tuple: () -> (i64, i64) = {
     return (1, 2);
 }
 
 print_tuple: (tuple: (i64, i64)) -> () = {
-    println(tuple.0);
-    println(tuple.1);
+    println_i64(tuple.0);
+    println_i64(tuple.1);
 }
 
 main: () -> i64 = {
     a: i64 = get_tuple().0;
     b: i64 = get_tuple().1;
 
-    println(a);
-    println(b);
+    println_i64(a);
+    println_i64(b);
 
-    println((a, b).0);
-    println((a, b).1);
+    println_i64((a, b).0);
+    println_i64((a, b).1);
 
     print_tuple((3, 4));
 
     c: i64 = (5, 6).0;
 
-    println(c);
+    println_i64(c);
 
 
     if ((true, false).0) {
-        println(1);
+        println_i64(1);
     } else {
-        println(2);
+        println_i64(2);
     }
 
     if ((true, false).1) {
-        println(1);
+        println_i64(1);
     } else {
-        println(2);
+        println_i64(2);
     }
 
     return 0;

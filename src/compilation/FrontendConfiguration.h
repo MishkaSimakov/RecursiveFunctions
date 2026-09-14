@@ -8,7 +8,7 @@
 
 namespace Front {
 
-enum class EmitType { AST, IR, OBJECT, EXECUTABLE };
+enum class EmitType { AST, IR, OBJECT, EXECUTABLE, MODULES_LIST };
 
 struct TeaFrontendConfiguration {
   std::unordered_map<std::string, std::filesystem::path> sources;
@@ -28,6 +28,8 @@ inline std::string to_string(EmitType emit_type) {
       return "OBJ";
     case EmitType::EXECUTABLE:
       return "EXE";
+    case EmitType::MODULES_LIST:
+      return "MODULES_LIST";
   }
 
   unreachable("All emit types should be enumerated above.");
