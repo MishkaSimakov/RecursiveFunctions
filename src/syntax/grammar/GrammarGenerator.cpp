@@ -8,6 +8,7 @@
 
 #include "Grammar.h"
 #include "syntax/lr/LRTableBuilder.h"
+#include "utils/IncFilesGeneration.h"
 
 namespace Syntax {
 namespace {
@@ -159,6 +160,8 @@ void generate_function_file(const std::filesystem::path& path,
   if (!os) {
     throw std::runtime_error("Failed to open functions file.");
   }
+
+  write_header(os);
 
   os << "std::unique_ptr<ASTNode> (ASTBuildContext::*const "
         "builders[])(SourceRange, std::span<std::unique_ptr<ASTNode>>) = {\n";

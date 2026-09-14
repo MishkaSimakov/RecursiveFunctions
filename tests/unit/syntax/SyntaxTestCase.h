@@ -1,6 +1,5 @@
 #pragma once
 
-#include <../../../src/Constants.h>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 #include <lexis/LexicalAnalyzer.h>
@@ -44,7 +43,8 @@ class SyntaxTestCase : public ::testing::Test {
     }
 
     for (size_t i = 0; i < expected_parts.size(); ++i) {
-      if (module().get_string(identifier.id.get_parts()[i]) != expected_parts[i]) {
+      if (module().get_string(identifier.id.get_parts()[i]) !=
+          expected_parts[i]) {
         return false;
       }
     }
@@ -56,15 +56,13 @@ class SyntaxTestCase : public ::testing::Test {
     // reset global context for each parse
     context_ = std::make_unique<GlobalContext>();
 
-    Lexis::LexicalAnalyzer lexical_analyzer(
-        Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
+    Lexis::LexicalAnalyzer lexical_analyzer;
     auto source_view = context_->source_manager.load_text(program);
     lexical_analyzer.set_source_view(source_view);
 
     auto& module_context = context_->add_module("main");
 
-    Syntax::LRParser parser(
-        Constants::GetRuntimeFilePath(Constants::grammar_relative_filepath));
+    Syntax::LRParser parser;
     parser.parse(lexical_analyzer, module_context, source_view);
 
     return module_context;

@@ -1,7 +1,9 @@
 #pragma once
+
 #include <filesystem>
 
 #include "Position.h"
+#include "Action.h"
 #include "TokensBitset.h"
 #include "lexis/LexicalAnalyzer.h"
 #include "syntax/grammar/Grammar.h"
@@ -13,20 +15,6 @@ struct StateInfo {
   size_t index;
   std::unordered_map<ssize_t, size_t> gotos;
 };
-
-struct RejectAction {};
-struct AcceptAction {};
-struct ReduceAction {
-  NonTerminal next;
-  size_t remove_count;
-  size_t production_index;
-};
-struct ShiftAction {
-  size_t next_state;
-};
-
-using Action =
-    std::variant<RejectAction, AcceptAction, ReduceAction, ShiftAction>;
 
 struct Conflict {
   State state;

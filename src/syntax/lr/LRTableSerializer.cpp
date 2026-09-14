@@ -1,100 +1,85 @@
 #include "LRTableSerializer.h"
 
-#include <iostream>
-#include <vector>
+#include <fmt/ostream.h>
 
+#include <cassert>
+
+#include "utils/IncFilesGeneration.h"
 #include "utils/TupleUtils.h"
 
 namespace Syntax {
-void LRTableSerializer::serialize(std::ostream& os,
-                                  const ActionsTableT& actions_table,
-                                  const GotoTableT& goto_table) {
-  // file format:
-  // 1. states count (size_t)
-  // 2. non-terms count (size_t)
-  // 3. actions table
-  // 4. goto table
+void LRTableSerializer::serialize(
+    std::ostream& os, const std::vector<std::vector<Action>>& actions_table,
+    const std::vector<std::vector<size_t>>& goto_table) {
+  write_header(os);
 
-  size_t states_count = actions_table.size();
-  size_t nonterms_count = goto_table.front().size();
+  fmt::println(os, "constexpr size_t states_count = {};", actions_table.size());
+  fmt::println(os, "constexpr size_t nonterms_count = {};",
+               goto_table.front().size());
 
-  // compact nonterms
-  auto write_bytes = [&os](size_t value) {
-    os.write(reinterpret_cast<const char*>(&value), sizeof(size_t));
-  };
-
-  write_bytes(states_count);
-  write_bytes(nonterms_count);
-
+  os << "constexpr SerializedAction actions_table[] = {\n";
   for (const auto& state_actions : actions_table) {
+    assert(state_actions.size() == Lexis::TokenType::count);
+
     for (Action action : state_actions) {
-      write_bytes(action.index());
-      std::visit(Overloaded{[](AcceptAction) {}, [](RejectAction) {},
-                            [&write_bytes](ShiftAction shift) {
-                              write_bytes(shift.next_state);
-                            },
-                            [&write_bytes](ReduceAction reduce) {
-                              write_bytes(reduce.next.get_id());
-                              write_bytes(reduce.remove_count);
-                              write_bytes(reduce.production_index);
-                            }},
-                 action);
-    }
-  }
+      const auto serialized = serialize_action(action);
 
+      os << fmt::format("SerializedAction({}, {}, {}, {}), ", serialized.index,
+                        serialized.field1, serialized.field2,
+                        serialized.field3);
+    }
+    os << "\n";
+  }
+  os << "};\n\n";
+
+  os << "constexpr size_t goto_table[] = {\n";
   for (const auto& state_gotos : goto_table) {
+    assert(state_gotos.size() == goto_table.front().size());
+
     for (size_t next_state : state_gotos) {
-      write_bytes(next_state);
+      os << next_state << ", ";
     }
+    os << "\n";
+  }
+  os << "};\n\n";
+}
+
+SerializedAction LRTableSerializer::serialize_action(Action action) {
+  SerializedAction result{};
+
+  std::visit(Overloaded{
+                 [&result](RejectAction) { result.index = 0; },
+                 [&result](AcceptAction) { result.index = 1; },
+                 [&result](ReduceAction reduce) {
+                   result.index = 2;
+                   result.field1 = reduce.next.get_id();
+                   result.field2 = reduce.remove_count;
+                   result.field3 = reduce.production_index;
+                 },
+                 [&result](ShiftAction shift) {
+                   result.index = 3;
+                   result.field1 = shift.next_state;
+                 },
+             },
+             action);
+
+  return result;
+}
+
+Action LRTableSerializer::deserialize_action(SerializedAction action) {
+  switch (action.index) {
+    case 0:
+      return RejectAction();
+    case 1:
+      return AcceptAction();
+    case 2:
+      return ReduceAction(NonTerminal(action.field1), action.field2,
+                          action.field3);
+    case 3:
+      return ShiftAction(action.field1);
+    default:
+      throw std::runtime_error("Error during deserialization.");
   }
 }
 
-std::pair<LRTableSerializer::ActionsTableT, LRTableSerializer::GotoTableT>
-LRTableSerializer::deserialize(std::istream& is) {
-  auto read_bytes = [&is]() {
-    size_t result;
-    is.read(reinterpret_cast<char*>(&result), sizeof(size_t));
-    return result;
-  };
-
-  size_t states_count = read_bytes();
-  size_t nonterms_count = read_bytes();
-  size_t tokens_count = Lexis::TokenType::count;
-
-  ActionsTableT actions_table(states_count);
-
-  for (size_t i = 0; i < states_count; ++i) {
-    actions_table[i].resize(tokens_count);
-    for (size_t j = 0; j < tokens_count; ++j) {
-      size_t index = read_bytes();
-      switch (index) {
-        case variant_type_index_v<AcceptAction, Action>:
-          actions_table[i][j] = AcceptAction();
-          break;
-        case variant_type_index_v<RejectAction, Action>:
-          actions_table[i][j] = RejectAction();
-          break;
-        case variant_type_index_v<ShiftAction, Action>:
-          actions_table[i][j] = ShiftAction{read_bytes()};
-          break;
-        case variant_type_index_v<ReduceAction, Action>:
-          actions_table[i][j] = ReduceAction{NonTerminal{read_bytes()},
-                                             read_bytes(), read_bytes()};
-          break;
-      }
-    }
-  }
-
-  GotoTableT goto_table(states_count);
-
-  for (size_t i = 0; i < states_count; ++i) {
-    goto_table[i].resize(nonterms_count);
-
-    for (size_t j = 0; j < nonterms_count; ++j) {
-      goto_table[i][j] = read_bytes();
-    }
-  }
-
-  return {std::move(actions_table), std::move(goto_table)};
-}
 }  // namespace Syntax

@@ -1,51 +1,43 @@
 #include "LexicalTableSerializer.h"
 
+#include "fmt/format.h"
+#include "utils/IncFilesGeneration.h"
 #include "utils/TupleUtils.h"
 
 namespace Lexis {
 void LexicalTableSerializer::serialize(std::ostream& os,
                                        const std::vector<JumpTableT>& states) {
-  write_bytes(states.size(), os);
+  write_header(os);
 
+  // write prologue
+  os << fmt::format("constexpr size_t states_count = {};\n", states.size());
+  os << fmt::format("constexpr size_t characters_count = {};\n",
+                    Charset::kCharactersCount);
+  os << "constexpr JumpT lexis_dfa_table[] = {\n";
+
+  // write jumps
   for (const auto& node : states) {
     for (const auto& jump : node) {
-      write_bytes(jump.index(), os);
-      std::visit(Overloaded{[](RejectJump) {},
-                            [&os](NextStateJump jump) {
-                              write_bytes(jump.state_id, os);
-                            },
-                            [&os](FinishJump jump) {
-                              write_bytes(jump.forward_shift, os);
-                              write_bytes(static_cast<size_t>(jump.token), os);
-                            }},
+      std::visit(Overloaded{
+                     [&os](RejectJump) { os << "RejectJump()"; },
+                     [&os](NextStateJump jump) {
+                       os << fmt::format("NextStateJump({})", jump.state_id);
+                     },
+                     [&os](FinishJump jump) {
+                       os << fmt::format("FinishJump({}, TokenType({}))",
+                                         jump.forward_shift,
+                                         static_cast<size_t>(jump.token));
+                     },
+                 },
                  jump);
-    }
-  }
-}
 
-std::vector<JumpTableT> LexicalTableSerializer::deserialize(std::istream& is) {
-  size_t states_count = read_bytes(is);
-  std::vector<JumpTableT> result(states_count);
-
-  for (size_t i = 0; i < states_count; ++i) {
-    for (size_t j = 0; j < Charset::kCharactersCount; ++j) {
-      size_t index = read_bytes(is);
-      switch (index) {
-        case variant_type_index_v<RejectJump, JumpT>:
-          result[i][j] = RejectJump();
-          break;
-        case variant_type_index_v<NextStateJump, JumpT>:
-          result[i][j] = NextStateJump{read_bytes(is)};
-          break;
-        case variant_type_index_v<FinishJump, JumpT>:
-          size_t forward_shift{read_bytes(is)};
-          TokenType token{read_bytes(is)};
-          result[i][j] = FinishJump{forward_shift, token};
-          break;
-      }
+      os << ", ";
     }
+
+    os << "\n";
   }
 
-  return result;
+  // write epilogue
+  os << "};\n";
 }
 }  // namespace Lexis

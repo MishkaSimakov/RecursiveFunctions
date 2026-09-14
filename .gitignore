@@ -14,9 +14,6 @@ bin
 **/.DS_Store
 
 # generated files
-files/grammar/grammar.lr
-files/lexis/lexis.lx
-src/syntax/BuildersRegistry.h
 files/std/lib
 files/std/include
 

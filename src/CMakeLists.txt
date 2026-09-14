@@ -33,8 +33,8 @@ target_link_libraries(TeaLang
 )
 target_include_directories(TeaLang PUBLIC ${LLVM_INCLUDE_DIRS})
 
-# TeaLang requires grammar and lexis tables to work
-add_dependencies(TeaLang run_grammar_tablegen run_lexis_tablegen)
+# TeaLang requires grammar and lexis tables to compile
+target_link_libraries(TeaLang PUBLIC grammar lexis)
 
 # TeaLang comes with a standard library
 add_dependencies(TeaLang std std_headers)
