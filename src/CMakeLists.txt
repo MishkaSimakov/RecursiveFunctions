@@ -26,7 +26,6 @@ list(APPEND CoreFiles
 
 add_library(TeaLang ${CoreFiles})
 target_include_directories(TeaLang PUBLIC .)
-target_include_directories(TeaLang PUBLIC ../files/lexis)
 target_link_libraries(TeaLang
         PUBLIC fmt::fmt
         PUBLIC argparse::argparse

@@ -5,7 +5,7 @@ function(tablegen)
 
     add_custom_command(
             # run tablegen executable
-            COMMAND ${CMAKE_BINARY_DIR}/${TABLEGEN_NAME}_gen > ${TABLEGEN_OUTPUT}
+            COMMAND ${TABLEGEN_NAME}_gen
 
             DEPENDS
             ${TABLEGEN_NAME}_gen
@@ -16,14 +16,16 @@ function(tablegen)
             COMMENT "Running ${TABLEGEN_NAME} generator"
     )
 
+    add_custom_target(${TABLEGEN_NAME}_run DEPENDS ${TABLEGEN_OUTPUT})
+
     add_library(${TABLEGEN_NAME} INTERFACE)
-    add_dependencies(${TABLEGEN_NAME} DEPENDS ${TABLEGEN_OUTPUT})
+    add_dependencies(${TABLEGEN_NAME} DEPENDS ${TABLEGEN_OUTPUT} ${TABLEGEN_NAME}_run)
 
     # extract directories from TABLEGEN_OUTPUT
-    foreach(FILE IN LISTS TABLEGEN_OUTPUT)
+    foreach (FILE IN LISTS TABLEGEN_OUTPUT)
         cmake_path(GET FILE PARENT_PATH FILE_DIRECTORY)
         list(APPEND TABLEGEN_OUTPUT_DIRS ${FILE_DIRECTORY})
-    endforeach()
+    endforeach ()
 
     target_include_directories(${TABLEGEN_NAME} INTERFACE ${TABLEGEN_OUTPUT_DIRS})
 endfunction()
