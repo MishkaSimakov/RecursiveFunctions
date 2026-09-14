@@ -13,12 +13,9 @@ bin
 # macos info
 **/.DS_Store
 
-# generated files
-files/std/lib
-files/std/include
-
-examples/build
-examples/exe
+# examples build
+examples/**/main
+examples/**/out.o
 
 # folder for experiments
 experiments
