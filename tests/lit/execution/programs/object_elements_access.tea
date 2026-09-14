@@ -1,0 +1,25 @@
+// RUN: %execute "%s" | %FileCheck %s
+
+// CHECK:       50
+// CHECK-NEXT:  7
+
+import "io"
+
+Struct: type = {
+    before: i64
+    flag: b8
+    after: i64
+}
+
+main: () -> i64 = {
+    value: Struct;
+
+    value.before = 50;
+    value.after = 7;
+    value.flag = true;
+
+    println_i64(value.before);
+    println_i64(value.after);
+
+    return 0;
+}
