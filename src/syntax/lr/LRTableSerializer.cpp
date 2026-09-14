@@ -11,19 +11,12 @@ namespace Syntax {
 void LRTableSerializer::serialize(
     std::ostream& os, const std::vector<std::vector<Action>>& actions_table,
     const std::vector<std::vector<size_t>>& goto_table) {
-  // file format:
-  // 1. states count (size_t)
-  // 2. non-terms count (size_t)
-  // 3. actions table
-  // 4. goto table
-
   write_header(os);
 
   fmt::println(os, "constexpr size_t states_count = {};", actions_table.size());
   fmt::println(os, "constexpr size_t nonterms_count = {};",
                goto_table.front().size());
 
-  // serialize each action into 4 size_t
   os << "constexpr SerializedAction actions_table[] = {\n";
   for (const auto& state_actions : actions_table) {
     assert(state_actions.size() == Lexis::TokenType::count);
@@ -39,7 +32,7 @@ void LRTableSerializer::serialize(
   }
   os << "};\n\n";
 
-  os << "const size_t goto_table[] = {\n";
+  os << "constexpr size_t goto_table[] = {\n";
   for (const auto& state_gotos : goto_table) {
     assert(state_gotos.size() == goto_table.front().size());
 

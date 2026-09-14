@@ -10,10 +10,10 @@ void LexicalTableSerializer::serialize(std::ostream& os,
   write_header(os);
 
   // write prologue
-  os << fmt::format("const size_t states_count = {};\n", states.size());
-  os << fmt::format("const size_t characters_count = {};\n",
+  os << fmt::format("constexpr size_t states_count = {};\n", states.size());
+  os << fmt::format("constexpr size_t characters_count = {};\n",
                     Charset::kCharactersCount);
-  os << "const JumpT lexis_dfa_table[] = {\n";
+  os << "constexpr JumpT lexis_dfa_table[] = {\n";
 
   // write jumps
   for (const auto& node : states) {

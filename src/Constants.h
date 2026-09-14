@@ -30,11 +30,6 @@ inline std::filesystem::path GetRuntimeFilePath(
   }
 }
 
-inline std::filesystem::path GetBuildFilePath(
-    std::filesystem::path relative_path) {
-  return std::filesystem::path(FILES_DIRECTORY) / relative_path;
-}
-
 #ifdef NDEBUG
 constexpr inline bool debug = false;
 #else

@@ -1,7 +1,6 @@
 #include "LexicalAnalyzer.h"
 
 #include <cassert>
-#include <fstream>
 #include <variant>
 
 #include "lexis/Charset.h"

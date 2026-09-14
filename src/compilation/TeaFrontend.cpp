@@ -15,9 +15,10 @@
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
 
 #include <deque>
+#include <fstream>
 #include <iostream>
 
-#include "../Constants.h"
+#include "Constants.h"
 #include "ast/ASTPrinter.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
 #include "ir/IRGenerator.h"

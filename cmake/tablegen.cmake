@@ -19,7 +19,7 @@ function(tablegen)
     add_custom_target(${TABLEGEN_NAME}_run DEPENDS ${TABLEGEN_OUTPUT})
 
     add_library(${TABLEGEN_NAME} INTERFACE)
-    add_dependencies(${TABLEGEN_NAME} DEPENDS ${TABLEGEN_OUTPUT} ${TABLEGEN_NAME}_run)
+    add_dependencies(${TABLEGEN_NAME} ${TABLEGEN_NAME}_run)
 
     # extract directories from TABLEGEN_OUTPUT
     foreach (FILE IN LISTS TABLEGEN_OUTPUT)
