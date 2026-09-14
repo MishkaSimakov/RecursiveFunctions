@@ -27,7 +27,7 @@ export run_drink_with_grut: (state: State) -> State = {
     vibe("You do not ask further.");
     vibe("The beer costs eighty coins. You split that too.");
 
-    state.drink_with_grut = 1;
+    state.drink_with_grut = true;
 
     state = spend(state, 40);
     state = finish_job(state, 3);

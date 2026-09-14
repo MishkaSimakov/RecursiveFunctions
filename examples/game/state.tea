@@ -2,13 +2,11 @@ export State: type = {
    gits_money: i64
    grut_money: i64
 
-   // jobs state, 0 until done
-   // TODO: these are i64 instead of b8 only because member access miscompiles
-   // offsets when fields have different sizes
-   kill_banquo: i64
-   argue_with_casca: i64
-   talk_about_dream: i64
-   drink_with_grut: i64
+   // jobs state, false until done
+   kill_banquo: b8
+   argue_with_casca: b8
+   talk_about_dream: b8
+   drink_with_grut: b8
 
    jobs_done: i64
 
@@ -22,10 +20,10 @@ export make_state: () -> State = {
    result.gits_money = 0;
    result.grut_money = 100;
 
-   result.kill_banquo = 0;
-   result.argue_with_casca = 0;
-   result.talk_about_dream = 0;
-   result.drink_with_grut = 0;
+   result.kill_banquo = false;
+   result.argue_with_casca = false;
+   result.talk_about_dream = false;
+   result.drink_with_grut = false;
 
    result.jobs_done = 0;
 

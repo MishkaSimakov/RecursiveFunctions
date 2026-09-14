@@ -15,16 +15,16 @@ loop: (state: State) -> State = {
 
     println("  You have to get jobs to cover up the fact that you rob banks.");
 
-    if (state.argue_with_casca == 0) {
+    if (!state.argue_with_casca) {
         option(1, "argue with Casca");
     }
-    if (state.drink_with_grut == 0) {
+    if (!state.drink_with_grut) {
         option(2, "drink with Grut");
     }
-    if (state.talk_about_dream == 0) {
+    if (!state.talk_about_dream) {
         option(3, "talk about the Dream");
     }
-    if (state.kill_banquo == 0) {
+    if (!state.kill_banquo) {
         option(4, "kill Banquo");
     }
 
@@ -35,22 +35,22 @@ loop: (state: State) -> State = {
     println("");
 
     if (choice == 1) {
-        if (state.argue_with_casca == 0) {
+        if (!state.argue_with_casca) {
             return run_argue_with_casca(state);
         }
     }
     if (choice == 2) {
-        if (state.drink_with_grut == 0) {
+        if (!state.drink_with_grut) {
             return run_drink_with_grut(state);
         }
     }
     if (choice == 3) {
-        if (state.talk_about_dream == 0) {
+        if (!state.talk_about_dream) {
             return run_talk_about_dream(state);
         }
     }
     if (choice == 4) {
-        if (state.kill_banquo == 0) {
+        if (!state.kill_banquo) {
             return run_kill_banquo(state);
         }
     }

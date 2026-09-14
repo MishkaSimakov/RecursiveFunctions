@@ -33,7 +33,7 @@ export run_talk_about_dream: (state: State) -> State = {
 
     vibe("Grut looks into the fire for a long time and does not correct you.");
 
-    state.talk_about_dream = 1;
+    state.talk_about_dream = true;
 
     state = finish_job(state, 1);
 

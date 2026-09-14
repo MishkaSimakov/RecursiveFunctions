@@ -81,7 +81,7 @@ export run_kill_banquo: (state: State) -> State = {
     vibe("Four of your own do not walk out of that camp with you.");
     vibe("The king pays four hundred coins for the map. You split it with Grut.");
 
-    state.kill_banquo = 1;
+    state.kill_banquo = true;
 
     state = share(state, 200);
     state = finish_job(state, 5);
