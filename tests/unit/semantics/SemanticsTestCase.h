@@ -3,7 +3,6 @@
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
-#include "Constants.h"
 #include "compilation/GlobalContext.h"
 #include "compilation/semantics/SemanticAnalyzer.h"
 #include "lexis/LexicalAnalyzer.h"
@@ -34,7 +33,8 @@ class SemanticsTestCase : public ::testing::Test {
     }
 
     for (size_t i = 0; i < expected_parts.size(); ++i) {
-      if (module().get_string(identifier.id.get_parts()[i]) != expected_parts[i]) {
+      if (module().get_string(identifier.id.get_parts()[i]) !=
+          expected_parts[i]) {
         return false;
       }
     }
@@ -46,15 +46,13 @@ class SemanticsTestCase : public ::testing::Test {
     // reset global context for each analyze call
     context_ = std::make_unique<GlobalContext>();
 
-    Lexis::LexicalAnalyzer lexical_analyzer(
-        Constants::GetRuntimeFilePath(Constants::lexis_relative_filepath));
+    Lexis::LexicalAnalyzer lexical_analyzer;
     auto source_view = context_->source_manager.load_text(program);
     lexical_analyzer.set_source_view(source_view);
 
     auto& module = context_->add_module("main");
 
-    Syntax::LRParser parser(
-        Constants::GetRuntimeFilePath(Constants::grammar_relative_filepath));
+    Syntax::LRParser parser;
     parser.parse(lexical_analyzer, module, source_view);
 
     SemanticAnalyzer analyzer(module);
