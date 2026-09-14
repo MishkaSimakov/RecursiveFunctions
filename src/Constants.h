@@ -14,8 +14,6 @@ constexpr inline auto constructor_name = "make";
 constexpr inline auto entrypoint = "main";
 extern const bool is_installed_build;
 
-constexpr inline auto lexis_relative_filepath = "lexis/lexis.lx";
-constexpr inline auto grammar_relative_filepath = "grammar/grammar.lr";
 constexpr inline auto std_library_relative_filepath = "std/lib/libstd.a";
 constexpr inline auto std_include_relative_path = "std/include";
 

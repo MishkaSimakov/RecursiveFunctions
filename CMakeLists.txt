@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 project(TeaLang)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 set(TEALANG_FILES_DIRECTORY "${CMAKE_SOURCE_DIR}/files")
@@ -28,7 +29,6 @@ file(GLOB_RECURSE CLI_SOURCES
 add_executable(cli ${CLI_SOURCES})
 target_link_libraries(cli PUBLIC TeaLang)
 target_compile_definitions(cli PUBLIC BUILD_FOR_INSTALLATION=false)
-set_target_properties(cli PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(cli_installation ${CLI_SOURCES})
 target_link_libraries(cli_installation PUBLIC TeaLang)
