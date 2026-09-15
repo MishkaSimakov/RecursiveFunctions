@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <regex>
 
+#include "Constants.h"
 #include "Exceptions.h"
 
 namespace fs = std::filesystem;
@@ -144,8 +145,8 @@ Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
   throw std::runtime_error("unknown compiler emit type.");
 }
 
-Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
-  argparse::ArgumentParser parser("compiler");
+Config ArgumentsReader::read(int argc, char* argv[]) {
+  argparse::ArgumentParser parser("tlang", Constants::version);
   parser.add_description("Compiler for TeaLang ☕️");
 
   parser.add_argument("sources")
@@ -163,17 +164,22 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
       .default_value("exe")
       .help("compiler output type: ir, ast, obj, exe, modules_list");
 
+  parser.add_argument("--resource-dir")
+      .default_value("")
+      .help("Path to std library and headers.");
+
   try {
     parser.parse_args(argc, argv);
   } catch (const std::exception& err) {
     throw ArgumentsParseException(err.what());
   }
 
-  Front::TeaFrontendConfiguration result;
+  Config result;
 
   parse_source_paths(parser.get<std::vector<std::string>>("sources"), result);
   result.emit_type = get_emit_type(parser.get<std::string>("emit"));
   result.output_file = parse_output(parser.get("output"), result.emit_type);
+  result.resource_dir = parser.get<std::string>("resource-dir");
 
   return result;
 }

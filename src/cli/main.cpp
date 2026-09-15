@@ -182,9 +182,11 @@ class Main {
  public:
   static int main(int argc, char* argv[]) {
     return ExceptionsHandler::execute([argc, argv] {
-      const auto resource_dir = get_resource_dir(argv[0]);
-
       auto config = ArgumentsReader::read(argc, argv);
+
+      const auto resource_dir = config.resource_dir.empty()
+                                    ? get_resource_dir(argv[0])
+                                    : fs::path(config.resource_dir);
 
       add_std_includes(config, resource_dir);
 
