@@ -79,12 +79,18 @@ class Main {
   }
 
   static void emit_modules(
-      const std::unordered_map<std::string, std::filesystem::path>& sources,
+      const std::unordered_map<std::string, Front::SourceConfig>& sources,
       const FileDescriptor& fd) {
     llvm::raw_fd_stream out(fd.get(), false);
 
-    for (const auto& name : sources | std::views::keys) {
-      out << name << "\n";
+    for (const auto& [name, config] : sources) {
+      out << name << ":" << config.path;
+
+      if (config.is_std) {
+        out << " (std module)";
+      }
+
+      out << "\n";
     }
   }
 
@@ -97,14 +103,8 @@ class Main {
           resource_dir / fs::path(Constants::std_include_relative_path) / name;
       path.replace_extension(".tea");
 
-      auto [_, inserted] = config.sources.emplace(name, path);
-
-      if (!inserted) {
-        throw std::runtime_error(
-            fmt::format("Your module {:?} can't use the same name as a "
-                        "standard library module.",
-                        name));
-      }
+      config.add_source(name,
+                        Front::SourceConfig{.path = path, .is_std = true});
     }
   }
 

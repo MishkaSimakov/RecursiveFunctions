@@ -50,7 +50,8 @@ void ArgumentsReader::parse_source_paths(
             "Named include \"{}\" must refer to regular file.", name));
       }
 
-      config.add_source(name, path);
+      config.add_source(name,
+                        Front::SourceConfig{.path = path, .is_std = false});
     } else {
       // unnamed include
       // for this type of include name is a stem part of path
@@ -68,7 +69,8 @@ void ArgumentsReader::parse_source_paths(
         auto include_name = std::regex_replace(std::string{path_copy},
                                                std::regex(separator), ".");
 
-        config.add_source(include_name, path);
+        config.add_source(include_name,
+                          Front::SourceConfig{.path = path, .is_std = false});
 
         continue;
       }
@@ -93,7 +95,9 @@ void ArgumentsReader::parse_source_paths(
         auto include_name =
             std::regex_replace(relative_path, std::regex(separator), ".");
 
-        config.add_source(include_name, subfile.path());
+        config.add_source(
+            include_name,
+            Front::SourceConfig{.path = subfile.path(), .is_std = false});
       }
     }
   }

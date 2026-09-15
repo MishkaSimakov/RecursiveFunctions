@@ -1,0 +1,7 @@
+// RUN: not %tlang %s --resource-dir "/dev/null" 2>&1 | %FileCheck %s
+
+// CHECK: standard library
+
+main: () -> i64 = {
+    return 0;
+}

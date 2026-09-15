@@ -80,10 +80,24 @@ void TeaFrontend::build_ast() {
 
   // build ASTTree for each file separately
   // TODO: this can be easily parallelized
-  for (const auto& [name, path] : files_) {
+  for (const auto& [name, source_config] : files_) {
     auto& module_context = context_.get_module(name);
 
-    SourceView source_view = source_manager.load(path);
+    SourceView source_view;
+
+    try {
+      source_view = source_manager.load(source_config.path);
+    } catch (...) {
+      if (source_config.is_std) {
+        throw std::runtime_error(
+            fmt::format("Failed to load standard library source {}:{}.", name,
+                        source_config.path.string()));
+      } else {
+        throw std::runtime_error(
+            fmt::format("Failed to load source file {}:{}.", name,
+                        source_config.path.string()));
+      }
+    }
     lexical_analyzer.set_source_view(source_view);
 
     try {

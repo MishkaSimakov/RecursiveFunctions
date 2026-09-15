@@ -18,7 +18,7 @@ class TeaFrontend : OneShotObject {
   std::unique_ptr<llvm::LLVMContext> llvm_context_;
   std::vector<std::unique_ptr<llvm::Module>> llvm_modules_;
 
-  std::unordered_map<std::string, std::filesystem::path> files_;
+  std::unordered_map<std::string, SourceConfig> files_;
   std::filesystem::path output_file_;
   EmitType emit_type_;
 

@@ -10,12 +10,20 @@ namespace Front {
 
 enum class EmitType { AST, IR, OBJECT, EXECUTABLE, MODULES_LIST };
 
+struct SourceConfig {
+  std::filesystem::path path;
+
+  // sources that were added as part of the standard library
+  bool is_std;
+};
+
 struct TeaFrontendConfiguration {
-  std::unordered_map<std::string, std::filesystem::path> sources;
+  // source name + source config
+  std::unordered_map<std::string, SourceConfig> sources;
   std::filesystem::path output_file;
   EmitType emit_type;
 
-  void add_source(std::string name, std::filesystem::path path);
+  void add_source(std::string name, SourceConfig config);
 };
 
 inline std::string to_string(EmitType emit_type) {
