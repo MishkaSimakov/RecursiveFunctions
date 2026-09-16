@@ -16,6 +16,7 @@ bin
 # examples build
 examples/**/main
 examples/**/out.o
+examples/**/out
 
 # folder for experiments
 experiments
