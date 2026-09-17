@@ -3,7 +3,7 @@ FROM ubuntu:26.04
 RUN apt update
 
 # a few tools for LLVM installation
-RUN apt install -y lsb-release wget software-properties-common gnupg
+RUN apt install -y curl lsb-release wget software-properties-common gnupg
 
 # LLVM 23
 # install GPG key first so that llvm.sh doesn't fail
@@ -37,7 +37,7 @@ RUN apt install -y git
 RUN apt install -y cmake
 
 # some libs for llvm
-RUN apt install -y zstd libedit-dev curl libcurl4-openssl-dev
+RUN apt install -y zstd libedit-dev libcurl4-openssl-dev
 
 # use clang as compiler
 ENV CC="clang"
