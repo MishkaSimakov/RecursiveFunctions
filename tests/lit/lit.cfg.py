@@ -18,6 +18,11 @@ config.substitutions.append(("%clang", config.llvm_clang))
 
 executor = os.path.join(config.src_root, 'tests/lit/execution/executor.py')
 execute_order = f"{executor} {config.tea_path} {config.llvm_llc} {config.llvm_clang}"
+
+resource_dir_executor = os.path.join(config.src_root, 'tests/lit/execution/resource_dir_executor.py')
+resource_dir_execute_order = f"{resource_dir_executor} {config.tea_path} {config.tea_resource_dir}"
+config.substitutions.append(("%execute_with_resource_dir", resource_dir_execute_order))
+
 config.substitutions.append(("%execute", execute_order))
 
 config.test_format = lit.formats.ShTest()

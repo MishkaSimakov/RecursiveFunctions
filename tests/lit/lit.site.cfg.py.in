@@ -5,6 +5,7 @@ config.obj_root = r'@CMAKE_BINARY_DIR@'
 
 # tea compiler
 config.tea_path = r'$<TARGET_FILE:tlang>'
+config.tea_resource_dir = r'@CMAKE_BINARY_DIR@/lib/tlang/@CMAKE_PROJECT_VERSION@'
 
 # llvm tools
 config.llvm_filecheck = r'@LLVM_FILE_CHECK@'
