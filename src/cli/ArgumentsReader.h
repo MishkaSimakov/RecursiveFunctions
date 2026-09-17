@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Config.h"
 #include "compilation/FrontendConfiguration.h"
 
 namespace Cli {
@@ -24,7 +25,7 @@ class ArgumentsReader {
   static Front::EmitType get_emit_type(std::string_view name);
 
  public:
-  static Front::TeaFrontendConfiguration read(int argc, char* argv[]);
+  static Config read(int argc, char* argv[]);
 };
 
 }  // namespace Cli

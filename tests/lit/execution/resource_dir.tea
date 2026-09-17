@@ -1,0 +1,13 @@
+// RUN: %execute_with_resource_dir "%s" | %FileCheck %s
+
+// CHECK: hello from std
+// CHECK: 42
+
+import "io"
+
+main: () -> i64 = {
+    println("hello from std");
+    println_i64(42);
+
+    return 0;
+}

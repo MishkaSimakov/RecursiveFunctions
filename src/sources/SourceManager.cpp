@@ -13,21 +13,28 @@
 #include <fstream>
 #include <iostream>
 
+#include "compilation/FrontendConfiguration.h"
 #include "utils/Defer.h"
 
-SourceView SourceManager::load(const std::filesystem::path& path) {
-  const int fd = open(path.c_str(), O_RDONLY);
+SourceView SourceManager::load(const Front::SourceConfig& source) {
+  const char* source_type =
+      source.is_std ? "standard library source file" : "source file";
+
+  const int fd = open(source.path.c_str(), O_RDONLY);
 
   if (fd == -1) {
-    throw std::runtime_error(
-        fmt::format("Failed to open source file at {:?}.", path.string()));
+    throw std::runtime_error(fmt::format("Failed to open {} at {:?}: {}.",
+                                         source_type, source.path.string(),
+                                         strerror(errno)));
   }
 
   const auto defer = Defer([&fd] { close(fd); });
 
   struct stat statbuf;
   if (fstat(fd, &statbuf) == -1) {
-    throw std::runtime_error("Failed to read file stat.");
+    throw std::runtime_error(
+        std::format("Failed to read fstat for {} at {:?}: {}.", source_type,
+                    source.path.string(), strerror(errno)));
   }
 
   off_t file_size = statbuf.st_size;
@@ -42,14 +49,15 @@ SourceView SourceManager::load(const std::filesystem::path& path) {
   }
 
   if (mapped_ptr == MAP_FAILED) {
-    throw std::runtime_error(
-        fmt::format("Failed to load source file: {}", strerror(errno)));
+    throw std::runtime_error(fmt::format("Failed to mmap {} at {:?}: {}.",
+                                         source_type, source.path.string(),
+                                         strerror(errno)));
   }
 
   char* begin = static_cast<char*>(mapped_ptr);
 
   size_t file_id = loaded_.size();
-  loaded_.emplace_back(begin, file_size, path);
+  loaded_.emplace_back(begin, file_size, source.path);
 
   return get_file_view(SourceLocation(file_id, 0));
 }

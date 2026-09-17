@@ -1,34 +1,19 @@
 #pragma once
 
-#include <filesystem>
-#include <utility>
-
 namespace Constants {
 // constexpr inline double infinity = 1e10;
 //
 // // isn't seven the most powerfully magical number
 // constexpr inline size_t max_arguments = 7;
 
+constexpr inline auto version = TLANG_VERSION;
+
 constexpr inline auto constructor_name = "make";
 
 constexpr inline auto entrypoint = "main";
-extern const bool is_installed_build;
 
-constexpr inline auto std_library_relative_filepath = "std/lib/libstd.a";
-constexpr inline auto std_include_relative_path = "std/include";
-
-inline std::filesystem::path GetRuntimeFilePath(
-    std::filesystem::path relative_path) {
-  {
-    if (is_installed_build) {
-      // TODO: get this path from OS
-      return std::filesystem::path("/usr/local/share/tlang/files") /
-             relative_path;
-    } else {
-      return std::filesystem::path(FILES_DIRECTORY) / relative_path;
-    }
-  }
-}
+constexpr inline auto std_library_relative_filepath = "lib/libstd.a";
+constexpr inline auto std_include_relative_path = "include";
 
 #ifdef NDEBUG
 constexpr inline bool debug = false;

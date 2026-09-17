@@ -14,8 +14,9 @@ class SourceManagerTestCase : public ::testing::Test {
   std::vector<std::filesystem::path> created_;
 
  protected:
-  std::filesystem::path create_source(std::string_view content,
-                                      std::filesystem::perms permissions) {
+  Front::SourceConfig create_source(std::string_view content,
+                                    std::filesystem::perms permissions,
+                                    bool is_std = false) {
     auto name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
     std::filesystem::path path =
         std::filesystem::temp_directory_path() /
@@ -25,7 +26,7 @@ class SourceManagerTestCase : public ::testing::Test {
     std::filesystem::permissions(path, permissions);
     created_.push_back(path);
 
-    return path;
+    return Front::SourceConfig{.path = std::move(path), .is_std = is_std};
   }
 
   void TearDown() override {

@@ -17,10 +17,21 @@
 #include "llvm/Support/FileSystem.h"
 #include "utils/FileDescriptor.h"
 
-const bool Constants::is_installed_build = BUILD_FOR_INSTALLATION;
-
 namespace Cli {
 namespace fs = std::filesystem;
+
+static fs::path get_resource_dir(const char* argv0) {
+  static int anchor;
+  const std::string executable =
+      llvm::sys::fs::getMainExecutable(argv0, &anchor);
+
+  if (executable.empty()) {
+    throw std::runtime_error("Failed to determine compiler executable path.");
+  }
+
+  return fs::path(executable).parent_path().parent_path() / "lib" / "tlang" /
+         Constants::version;
+}
 
 class Main {
   static FileDescriptor get_output_fd(const std::filesystem::path& output_path,
@@ -68,31 +79,32 @@ class Main {
   }
 
   static void emit_modules(
-      const std::unordered_map<std::string, std::filesystem::path>& sources,
+      const std::unordered_map<std::string, Front::SourceConfig>& sources,
       const FileDescriptor& fd) {
     llvm::raw_fd_stream out(fd.get(), false);
 
-    for (const auto& name : sources | std::views::keys) {
-      out << name << "\n";
+    for (const auto& [name, config] : sources) {
+      out << name << ":" << config.path;
+
+      if (config.is_std) {
+        out << " (std module)";
+      }
+
+      out << "\n";
     }
   }
 
-  static void add_std_includes(Front::TeaFrontendConfiguration& config) {
+  static void add_std_includes(Front::TeaFrontendConfiguration& config,
+                               const fs::path& resource_dir) {
     const char* std_filenames[] = {"io", "string"};
 
     for (const char* name : std_filenames) {
-      auto path = Constants::GetRuntimeFilePath(
-          fs::path(Constants::std_include_relative_path) / name);
+      auto path =
+          resource_dir / fs::path(Constants::std_include_relative_path) / name;
       path.replace_extension(".tea");
 
-      auto [_, inserted] = config.sources.emplace(name, path);
-
-      if (!inserted) {
-        throw std::runtime_error(
-            fmt::format("Your module {:?} can't use the same name as a "
-                        "standard library module.",
-                        name));
-      }
+      config.add_source(name,
+                        Front::SourceConfig{.path = path, .is_std = true});
     }
   }
 
@@ -147,7 +159,8 @@ class Main {
   }
 
   static void emit_executable(std::unique_ptr<llvm::Module> module,
-                              const FileDescriptor& fd) {
+                              const FileDescriptor& fd,
+                              const fs::path& resource_dir) {
     const auto tmp_fd = FileDescriptor::make_temp();
 
     // write object file
@@ -155,7 +168,7 @@ class Main {
 
     // link with std
     const auto std_path =
-        Constants::GetRuntimeFilePath(Constants::std_library_relative_filepath);
+        resource_dir / fs::path(Constants::std_library_relative_filepath);
     const auto link_command =
         fmt::format(R"(clang++ "/dev/fd/{}" "{}" -o "/dev/fd/{}")",
                     tmp_fd.get(), std_path.string(), fd.get());
@@ -171,7 +184,11 @@ class Main {
     return ExceptionsHandler::execute([argc, argv] {
       auto config = ArgumentsReader::read(argc, argv);
 
-      add_std_includes(config);
+      const auto resource_dir = config.resource_dir.empty()
+                                    ? get_resource_dir(argv[0])
+                                    : fs::path(config.resource_dir);
+
+      add_std_includes(config, resource_dir);
 
       if (config.emit_type == Front::EmitType::MODULES_LIST) {
         emit_modules(config.sources,
@@ -202,7 +219,7 @@ class Main {
           emit_object(std::move(llvm_module), fd);
           break;
         case Front::EmitType::EXECUTABLE:
-          emit_executable(std::move(llvm_module), fd);
+          emit_executable(std::move(llvm_module), fd, resource_dir);
           break;
       }
     });

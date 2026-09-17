@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <regex>
 
+#include "Constants.h"
 #include "Exceptions.h"
 
 namespace fs = std::filesystem;
@@ -49,7 +50,8 @@ void ArgumentsReader::parse_source_paths(
             "Named include \"{}\" must refer to regular file.", name));
       }
 
-      config.add_source(name, path);
+      config.add_source(name,
+                        Front::SourceConfig{.path = path, .is_std = false});
     } else {
       // unnamed include
       // for this type of include name is a stem part of path
@@ -67,7 +69,8 @@ void ArgumentsReader::parse_source_paths(
         auto include_name = std::regex_replace(std::string{path_copy},
                                                std::regex(separator), ".");
 
-        config.add_source(include_name, path);
+        config.add_source(include_name,
+                          Front::SourceConfig{.path = path, .is_std = false});
 
         continue;
       }
@@ -92,7 +95,9 @@ void ArgumentsReader::parse_source_paths(
         auto include_name =
             std::regex_replace(relative_path, std::regex(separator), ".");
 
-        config.add_source(include_name, subfile.path());
+        config.add_source(
+            include_name,
+            Front::SourceConfig{.path = subfile.path(), .is_std = false});
       }
     }
   }
@@ -144,8 +149,8 @@ Front::EmitType ArgumentsReader::get_emit_type(std::string_view name) {
   throw std::runtime_error("unknown compiler emit type.");
 }
 
-Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
-  argparse::ArgumentParser parser("compiler");
+Config ArgumentsReader::read(int argc, char* argv[]) {
+  argparse::ArgumentParser parser("tlang", Constants::version);
   parser.add_description("Compiler for TeaLang ☕️");
 
   parser.add_argument("sources")
@@ -156,12 +161,16 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
           "automatically or <directory path> to include all files in "
           "directory recursively.");
 
-  parser.add_argument("-o", "--output").default_value("").help("output file");
+  parser.add_argument("-o", "--output").default_value("").help("Output file");
 
   parser.add_argument("--emit")
       .choices("ir", "ast", "obj", "exe", "modules_list")
       .default_value("exe")
-      .help("compiler output type: ir, ast, obj, exe, modules_list");
+      .help("Compiler output type: ir, ast, obj, exe, modules_list");
+
+  parser.add_argument("--resource-dir")
+      .default_value("")
+      .help("Path to std library and headers.");
 
   try {
     parser.parse_args(argc, argv);
@@ -169,11 +178,12 @@ Front::TeaFrontendConfiguration ArgumentsReader::read(int argc, char* argv[]) {
     throw ArgumentsParseException(err.what());
   }
 
-  Front::TeaFrontendConfiguration result;
+  Config result;
 
   parse_source_paths(parser.get<std::vector<std::string>>("sources"), result);
   result.emit_type = get_emit_type(parser.get<std::string>("emit"));
   result.output_file = parse_output(parser.get("output"), result.emit_type);
+  result.resource_dir = parser.get<std::string>("resource-dir");
 
   return result;
 }

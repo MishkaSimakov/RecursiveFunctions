@@ -13,7 +13,7 @@ configure_file(
 )
 
 # this handles generator expressions substitutions
-# like `$<TARGET_FILE:cli>`
+# like `$<TARGET_FILE:tlang>`
 file(GENERATE
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
         INPUT ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py.in
@@ -23,5 +23,5 @@ file(GENERATE
 add_custom_target(
         tests.lit
         COMMAND ${LLVM_LIT} "${CMAKE_CURRENT_BINARY_DIR}" -v --timeout=10
-        DEPENDS cli
+        DEPENDS tlang
 )

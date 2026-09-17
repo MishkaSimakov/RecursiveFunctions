@@ -8,4 +8,4 @@ run: main
 	./main
 
 clean:
-	rm main
+	rm -f main

@@ -20,11 +20,10 @@ jobs:
         run: docker build -t tlang-dev .
       - name: Run tests inside container
         # tests must not run as root, look at tests/unit/sources/SourceManagerTests.cpp to learn more
-        run: docker run --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./testing.sh
+        run: docker run --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c ./scripts/testing.sh
       - name: Build examples inside container
         id: examples
-        # runs as root because installed tlang reads its files from /usr/local/share/tlang
-        run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c 'cmake --build build -t cli_installation && cmake --install build && for dir in examples/*/; do (cd "$dir" && make main) || exit 1; done'
+        run: docker run -v $(pwd):/tlang -w /tlang --entrypoint /bin/sh tlang-dev -c './scripts/build_examples.sh'
       - name: Examples Build Report
         if: always()
         run: |
@@ -35,14 +34,12 @@ jobs:
           esac >> "$GITHUB_STEP_SUMMARY"
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Unit Test Report (linux)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Lit Test Report (linux)
           path: build/lit-report.xml
@@ -66,14 +63,12 @@ jobs:
         run: |
           export LLVM_DIR="$(brew --prefix llvm@23)/lib/cmake/llvm"
           export PATH="$(brew --prefix llvm@23)/bin:$PATH"
-          ./testing.sh
+          ./scripts/testing.sh
       - name: Build examples
         id: examples
         run: |
           export PATH="$(brew --prefix llvm@23)/bin:$PATH"
-          cmake --build build -t cli_installation
-          sudo cmake --install build
-          for dir in examples/*/; do (cd "$dir" && make main) || exit 1; done
+          ./scripts/build_examples.sh
       - name: Examples Build Report
         if: always()
         run: |
@@ -84,14 +79,12 @@ jobs:
           esac >> "$GITHUB_STEP_SUMMARY"
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Unit Test Report (macos)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Lit Test Report (macos)
           path: build/lit-report.xml

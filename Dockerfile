@@ -3,9 +3,14 @@ FROM ubuntu:26.04
 RUN apt update
 
 # a few tools for LLVM installation
-RUN apt install -y lsb-release wget software-properties-common gnupg
+RUN apt install -y curl lsb-release wget software-properties-common gnupg
 
 # LLVM 23
+# install GPG key first so that llvm.sh doesn't fail
+RUN curl -fsSL --retry 5 --retry-all-errors --retry-delay 5 \
+      https://apt.llvm.org/llvm-snapshot.gpg.key \
+      -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+
 # llvm.sh can break if ubuntu version becomes outdated.
 # Information about this behaviour can be found on https://apt.llvm.org.
 RUN wget https://apt.llvm.org/llvm.sh && \
@@ -32,7 +37,7 @@ RUN apt install -y git
 RUN apt install -y cmake
 
 # some libs for llvm
-RUN apt install -y zstd libedit-dev curl libcurl4-openssl-dev
+RUN apt install -y zstd libedit-dev libcurl4-openssl-dev
 
 # use clang as compiler
 ENV CC="clang"

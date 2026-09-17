@@ -25,6 +25,7 @@ list(APPEND CoreFiles
 )
 
 add_library(TeaLang ${CoreFiles})
+target_compile_definitions(TeaLang PUBLIC TLANG_VERSION="${CMAKE_PROJECT_VERSION}")
 target_include_directories(TeaLang PUBLIC .)
 target_link_libraries(TeaLang
         PUBLIC fmt::fmt

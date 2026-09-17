@@ -5,12 +5,27 @@
 namespace Front {
 
 void TeaFrontendConfiguration::add_source(std::string name,
-                                          std::filesystem::path path) {
-  auto [_, inserted] = sources.emplace(name, path);
+                                          SourceConfig config) {
+  auto [itr, inserted] = sources.emplace(name, config);
 
   if (!inserted) {
-    throw std::runtime_error(fmt::format(
-        "File {} was already included with different name.", path.c_str()));
+    if (!itr->second.is_std && !config.is_std) {
+      throw std::runtime_error(
+          fmt::format("Two sources must not share the same name. {:?} and {:?} "
+                      "are both named {:?}.",
+                      itr->second.path.string(), config.path.string(), name));
+    }
+
+    if (!itr->second.is_std || !config.is_std) {
+      const auto& user_file_path =
+          config.is_std ? itr->second.path : config.path;
+      throw std::runtime_error(
+          fmt::format("The source file {:?} named {:?} conflicts with a "
+                      "standard library source.",
+                      user_file_path.string(), name));
+    }
+
+    unreachable("Two std sources can't share the same name.");
   }
 }
 
