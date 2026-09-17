@@ -6,11 +6,9 @@
 
 ## What is TeaLang?
 
-It is a compiler for a tea language. You can write programs in it, compile and run them! TeaLang is currently
+TeaLang is a compiler for Tea, a C-like language with [cpp2](https://github.com/hsutter/cppfront) syntax. You can write programs in it, compile and run them! TeaLang is currently
 implemented as a frontend for LLVM. It has its own tokenizer, parser, AST, semantic analysis and LLVM IR generator. Then
 LLVM does its magic to produce an executable from LLVM IR.
-
-Tea language uses [cpp2](https://github.com/hsutter/cppfront) grammar.
 
 ![Hello world example](docs/gifs/demo.gif)
 
@@ -35,7 +33,6 @@ cd RecursiveFunctions
 # macOS/Homebrew: 
 export LLVM_DIR="$(brew --prefix llvm)/lib/cmake/llvm"
 
-mkdir build
 cmake -S . -B build
 cmake --build build -t tlang
 ```
