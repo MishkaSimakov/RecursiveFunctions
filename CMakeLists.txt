@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
-project(TeaLang VERSION 0.0)
+project(TeaLang VERSION 0.1)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+
+option(TLANG_TEST "Generate the test target." ON)
 
 # load libraries
 include(load_libraries)
@@ -24,6 +26,11 @@ file(GLOB_RECURSE CLI_SOURCES
 add_executable(tlang ${CLI_SOURCES})
 target_link_libraries(tlang PUBLIC TeaLang)
 
-add_subdirectory(tests)
+if (TLANG_TEST)
+    set(INSTALL_GTEST OFF)
+    add_subdirectory(${CMAKE_SOURCE_DIR}/lib/googletest EXCLUDE_FROM_ALL)
+
+    add_subdirectory(tests)
+endif ()
 
 include(install_cli)

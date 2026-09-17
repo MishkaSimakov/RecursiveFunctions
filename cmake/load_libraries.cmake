@@ -6,8 +6,8 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-if (NOT ${LLVM_VERSION_MAJOR} EQUAL 23)
-    message(FATAL_ERROR "Support for LLVM ${LLVM_VERSION_MAJOR} is not guaranteed. Use LLVM 23.")
+if (LLVM_VERSION_MAJOR LESS 22 OR LLVM_VERSION_MAJOR GREATER 23)
+    message(FATAL_ERROR "Support for LLVM ${LLVM_VERSION_MAJOR} is not guaranteed. Use LLVM 22-23.")
 endif ()
 
 llvm_map_components_to_libnames(llvm_libs support core irreader linker
@@ -29,8 +29,3 @@ add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 # -- argparse --
 add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)
 # -- argparse end --
-
-# -- google test --
-set(INSTALL_GTEST OFF)
-add_subdirectory(lib/googletest EXCLUDE_FROM_ALL)
-# -- google test end --

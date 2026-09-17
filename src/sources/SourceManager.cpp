@@ -33,7 +33,7 @@ SourceView SourceManager::load(const Front::SourceConfig& source) {
   struct stat statbuf;
   if (fstat(fd, &statbuf) == -1) {
     throw std::runtime_error(
-        std::format("Failed to read fstat for {} at {:?}: {}.", source_type,
+        fmt::format("Failed to read fstat for {} at {:?}: {}.", source_type,
                     source.path.string(), strerror(errno)));
   }
 
