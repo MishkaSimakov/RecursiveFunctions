@@ -8,5 +8,5 @@ cmake --build . -t tlang || exit 1
 cd .. || exit 1
 
 for dir in examples/*/; do
-  (cd "$dir" && make clean && make main) || exit 1;
+  (cd "$dir" && make clean && make main TLANG=../../build/bin/tlang) || exit 1;
 done
