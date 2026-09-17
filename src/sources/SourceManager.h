@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "SourceLocation.h"
+#include "compilation/FrontendConfiguration.h"
 
 struct SourceAnnotation {
   SourceRange range;
@@ -88,7 +89,7 @@ class SourceManager {
   SourceManager(SourceManager&&) = delete;
   SourceManager& operator=(SourceManager&&) = delete;
 
-  SourceView load(const std::filesystem::path& path);
+  SourceView load(const Front::SourceConfig& source);
   SourceView load_text(std::string_view text);
 
   SourceView get_file_view(SourceLocation location) const;

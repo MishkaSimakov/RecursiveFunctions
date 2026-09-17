@@ -6,7 +6,7 @@ namespace Front {
 
 void TeaFrontendConfiguration::add_source(std::string name,
                                           SourceConfig config) {
-  auto [itr, inserted] = sources.emplace(std::move(name), config);
+  auto [itr, inserted] = sources.emplace(name, config);
 
   if (!inserted) {
     if (!itr->second.is_std && !config.is_std) {

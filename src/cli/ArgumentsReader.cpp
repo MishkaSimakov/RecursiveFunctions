@@ -161,12 +161,12 @@ Config ArgumentsReader::read(int argc, char* argv[]) {
           "automatically or <directory path> to include all files in "
           "directory recursively.");
 
-  parser.add_argument("-o", "--output").default_value("").help("output file");
+  parser.add_argument("-o", "--output").default_value("").help("Output file");
 
   parser.add_argument("--emit")
       .choices("ir", "ast", "obj", "exe", "modules_list")
       .default_value("exe")
-      .help("compiler output type: ir, ast, obj, exe, modules_list");
+      .help("Compiler output type: ir, ast, obj, exe, modules_list");
 
   parser.add_argument("--resource-dir")
       .default_value("")
