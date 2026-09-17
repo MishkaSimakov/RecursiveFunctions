@@ -16,7 +16,8 @@ Tea language uses [cpp2](https://github.com/hsutter/cppfront) grammar.
 
 ## How to use it?
 
-Note: the project assumes that LLVM 22 or 23 is installed in your system. `clang++` must be in your PATH. You can use docker image described in
+Note: the project assumes that LLVM 22 or 23 is installed in your system. `clang++` must be in your PATH. You can use
+docker image described in
 `Dockerfile` to quickly set up all required dependencies. Testing additionally requires the following LLVM tools: `lit`,
 `FileCheck`, and `llc`. You can disable testing targets
 by passing `-DTLANG_TEST=OFF`.
@@ -31,6 +32,9 @@ cd RecursiveFunctions
 ### Step 2: build tlang cli with CMake
 
 ```shell
+# macOS/Homebrew: 
+export LLVM_DIR="$(brew --prefix llvm)/lib/cmake/llvm"
+
 mkdir build
 cmake -S . -B build
 cmake --build build -t tlang
