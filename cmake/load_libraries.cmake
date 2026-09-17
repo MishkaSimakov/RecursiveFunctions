@@ -29,8 +29,3 @@ add_subdirectory(lib/fmt EXCLUDE_FROM_ALL)
 # -- argparse --
 add_subdirectory(lib/argparse EXCLUDE_FROM_ALL)
 # -- argparse end --
-
-# -- google test --
-set(INSTALL_GTEST OFF)
-add_subdirectory(lib/googletest EXCLUDE_FROM_ALL)
-# -- google test end --
