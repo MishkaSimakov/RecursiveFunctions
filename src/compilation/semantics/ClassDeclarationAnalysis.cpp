@@ -1,6 +1,4 @@
-#include "Constants.h"
 #include "SemanticAnalyzer.h"
-#include "ast/ASTConstructor.h"
 
 namespace Front {
 
