@@ -34,14 +34,12 @@ jobs:
           esac >> "$GITHUB_STEP_SUMMARY"
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Unit Test Report (linux)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Lit Test Report (linux)
           path: build/lit-report.xml
@@ -81,14 +79,12 @@ jobs:
           esac >> "$GITHUB_STEP_SUMMARY"
       - name: Unit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Unit Test Report (macos)
           path: build/unit-report.xml
           reporter: jest-junit
       - name: Lit Test Report
         uses: dorny/test-reporter@v3
-        if: always()
         with:
           name: Lit Test Report (macos)
           path: build/lit-report.xml
